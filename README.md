@@ -16,13 +16,21 @@ Everything runs in the browser. There is no server and no account: the catalog i
 
 **As a real, permanent app**: put the folder on any free static host. Netlify (drag the folder onto app.netlify.com/drop), Cloudflare Pages, GitHub Pages and Vercel all work; they serve it over HTTPS, which lets the phone install it as a proper app with an icon and offline shell. If the folder lives in a GitHub repo, those hosts republish automatically on every change.
 
+## Discogs as the catalog (recommended)
+
+With a Discogs personal access token connected in Settings, Discogs becomes the catalog: artwork for nearly everything from a fast CDN, genres and styles on every record, artist photos and bios, "most collected" ordering on label and genre pages, Discogs' own community rating and have/want counts on album pages, YouTube links, and your Discogs collection as a third shelf. Exact Spotify/Qobuz links are still looked up from MusicBrainz in the background, and ratings, reviews and press still come from Wikipedia and Google Books.
+
+Without a token (or with *Catalog: MusicBrainz* in Settings) everything runs on MusicBrainz and the Cover Art Archive as before.
+
+Album, artist and label addresses from the two catalogs are different (`#/album/dm123` is a Discogs master, `#/album/<uuid>` a MusicBrainz release group); both keep working, so a shelf built on one survives switching to the other.
+
 ## Settings (all optional)
 
 Open the Settings tab inside the app.
 
 - **Main service**: which "Hear on…" button is the big one (Spotify or Qobuz).
 - **Qobuz store region**: used for Qobuz search links, e.g. `us-en`.
-- **Discogs personal access token**: adds Discogs genres/styles and extra cover art to album pages. Create one at discogs.com/settings/developers (free).
+- **Discogs personal access token**: paste it and tap *Connect*; the app checks the token, remembers your username, and switches the catalog to Discogs. Create one at discogs.com/settings/developers (free).
 - **Claude API key**: powers the "Describe it" search ("hazy late-night dub-tinged post-punk…") and the AI mood tags on album pages. Get one at console.anthropic.com; usage is pay-as-you-go and tiny for this. Keys are stored only in your browser.
 
 Without a Claude key, "Describe it" offers an **Ask Claude** button that opens claude.ai with your description typed in; paste the list it gives you back into the app and the albums appear as cards. (A rough MusicBrainz tag search is also there, but tags can't follow a real description.) With a key, searches run inside the app and you can refine the results in follow-ups ("less jazzy", "more 70s").

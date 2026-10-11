@@ -14,6 +14,11 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://api.discogs.com">
+<link rel="preconnect" href="https://i.discogs.com">
+<link rel="preconnect" href="https://musicbrainz.org">
+<link rel="preconnect" href="https://coverartarchive.org">
+<link rel="preconnect" href="https://en.wikipedia.org">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -210,6 +215,7 @@ textarea.area { width: 100%; resize: vertical; min-height: 84px; border: 1px sol
 .ta-row .cover { width: 36px; height: 36px; flex-shrink: 0; }
 .ta-ic { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 18px; background: var(--chip); color: var(--muted); flex-shrink: 0; }
 .ta-ic svg { width: 18px; height: 18px; }
+.ta-img { width: 36px; height: 36px; border-radius: 18px; object-fit: cover; flex-shrink: 0; background: var(--chip); }
 .ta-main { display: flex; flex-direction: column; min-width: 0; }
 .ta-t { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ta-s { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -232,6 +238,13 @@ textarea.area { width: 100%; resize: vertical; min-height: 84px; border: 1px sol
 .sheet { width: 100%; max-width: 720px; max-height: 84vh; overflow: auto; background: var(--bg); color: var(--ink); border-radius: 18px 18px 0 0; padding: 10px 20px calc(24px + env(safe-area-inset-bottom, 0px)); box-shadow: var(--shadow); }
 @media (min-width: 720px) { .sheet-back { align-items: center; } .sheet { border-radius: 18px; max-height: 80vh; } }
 .sheet .handle { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 14px; }
+
+/* Skeletons while a row loads */
+.skel .cover { background: linear-gradient(90deg, var(--chip) 25%, var(--surface) 50%, var(--chip) 75%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+.skel .a, .skel .b { height: 12px; border-radius: 6px; background: var(--chip); }
+.skel .b { width: 60%; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skel .cover { animation: none; } }
 
 /* Segmented control */
 .seg { display: flex; background: var(--chip); border-radius: 12px; padding: 3px; }
@@ -314,7 +327,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { } }
 };
-const DEFAULTS = { discogsToken: '', anthropicKey: '', model: 'claude-sonnet-5-5', qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
+const DEFAULTS = { discogsToken: '', discogsUser: '', discogsOk: null, source: 'auto', anthropicKey: '', model: 'claude-sonnet-5-5', qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
 let settings = Object.assign({}, DEFAULTS, store.get('hear.settings', {}));
 function saveSettings(patch) { settings = Object.assign({}, settings, patch); store.set('hear.settings', settings); applyTheme(); }
 function applyTheme() {
@@ -398,16 +411,55 @@ const diskCache = {
 
 const caa = (rgid, size) => `https://coverartarchive.org/release-group/${rgid}/front-${size || 250}`;
 
-// ---------- Discogs (optional) ----------
-const Discogs = {
-  async get(path, params = {}) {
-    if (!settings.discogsToken) return null;
-    const qs = new URLSearchParams(Object.assign({}, params, { token: settings.discogsToken }));
-    const res = await fetch('https://api.discogs.com/' + path + '?' + qs.toString(), { headers: { Accept: 'application/vnd.discogs.v2.discogs+json' } });
-    if (!res.ok) throw new Error('Discogs ' + res.status);
-    return res.json();
+// ---------- Discogs: the primary catalog once a token is connected ----------
+const DG = {
+  base: 'https://api.discogs.com/',
+  mem: new Map(), times: [], waiting: [], active: 0, max: 3, _t: null,
+  on() { return !!settings.discogsToken && settings.discogsOk === true && settings.source !== 'musicbrainz'; },
+  clean(name) { return (name || '').replace(/\s*\(\d+\)\s*$/, '').trim(); },
+  splitTitle(t) { const i = (t || '').indexOf(' - '); return i < 0 ? { artist: '', title: t || '' } : { artist: this.clean(t.slice(0, i)), title: t.slice(i + 3).trim() }; },
+  text(s) { return (s || '').replace(/\[(?:a|l|r|m)=([^\]]+)\]/g, '$1').replace(/\[(?:a|l|r|m)\d+\]/g, '').replace(/\[url=[^\]]*\]([^\[]*)\[\/url\]/g, '$1').replace(/\[\/?(?:b|i|u)\]/g, '').replace(/\r\n/g, '\n').trim(); },
+  bucket(fmt) { const f = fmt || ''; if (/\bComp\b|Compilation/i.test(f)) return 'comp'; if (/\bAlbum\b|\bLP\b/i.test(f)) return 'album'; if (/\bEP\b|Mini-Album/i.test(f)) return 'ep'; if (/\bSingle\b|\bMaxi\b|\b7"/i.test(f)) return 'single'; return 'other'; },
+  slot() { return new Promise(resolve => { this.waiting.push(resolve); this.pump(); }); },
+  pump() {
+    const now = Date.now(); this.times = this.times.filter(t => now - t < 60000);
+    while (this.waiting.length && this.active < this.max && this.times.length < 55) { this.active++; this.times.push(Date.now()); this.waiting.shift()(); }
+    if (this.waiting.length && !this._t) this._t = setTimeout(() => { this._t = null; this.pump(); }, 1100);
+  },
+  async get(path, params = {}, opts = {}) {
+    const qs = new URLSearchParams(params); const key = path + '?' + qs.toString();
+    if (this.mem.has(key)) return this.mem.get(key);
+    const cached = opts.nocache ? null : diskCache.get('dg:' + key);
+    if (cached) { this.mem.set(key, cached); return cached; }
+    await this.slot();
+    try {
+      const url = this.base + path + '?' + qs.toString() + (qs.toString() ? '&' : '') + 'token=' + encodeURIComponent(settings.discogsToken || '');
+      let res = await fetch(url);
+      if (res.status === 429) { await sleep(2500); res = await fetch(url); }
+      if (!res.ok) throw new Error('Discogs ' + res.status);
+      const data = await res.json();
+      this.mem.set(key, data); if (!opts.nocache) diskCache.set('dg:' + key, data);
+      return data;
+    } finally { this.active--; this.pump(); }
+  },
+  async post(path) { const res = await fetch(this.base + path + '?token=' + encodeURIComponent(settings.discogsToken || ''), { method: 'POST' }); if (!res.ok) throw new Error('Discogs ' + res.status); try { return await res.json(); } catch (e) { return {}; } },
+  identity() { return this.get('oauth/identity', {}, { nocache: true }); },
+  item(r, type) {
+    if (type === 'artist') return { kind: 'artist', id: 'da' + r.id, name: this.clean(r.title), sub: '', img: r.thumb || '' };
+    if (type === 'label') return { kind: 'label', id: 'dl' + r.id, name: r.title, sub: '', img: r.thumb || '' };
+    const s = this.splitTitle(r.title);
+    const id = (r.type === 'master' || r.master_id) ? 'dm' + (r.master_id || r.id) : 'dr' + r.id;
+    return { kind: 'album', id, name: s.title, title: s.title, artist: s.artist, year: r.year ? String(r.year) : '', img: r.cover_image || r.thumb || '', thumb: r.thumb || '', styles: r.style || [], genres: r.genre || [], labels: (r.label || []).slice(0, 2), type: this.bucket((r.format || []).join(', ')), sub: [s.artist, r.year, (r.style || [])[0]].filter(Boolean).join(' · ') };
+  },
+  async search(mode, q, opts = {}) {
+    const type = mode === 'album' ? 'master' : mode;
+    const d = await this.get('database/search', Object.assign({ type, per_page: opts.limit || 12 }, opts.params || (q ? { q } : {})));
+    const seen = new Set(); const out = [];
+    for (const r of d.results || []) { const it = this.item(r, type); if (seen.has(it.id)) continue; seen.add(it.id); out.push(it); }
+    return out;
   }
 };
+const Discogs = { get: (path, params) => DG.get(path, params) };
 
 // ---------- Claude (optional) ----------
 async function askClaude(input, maxTokens = 1500) {
@@ -640,9 +692,14 @@ function parseAlbumList(text) {
 }
 async function resolveAlbum(artist, title) {
   try {
+    if (DG.on()) {
+      const d = await DG.get('database/search', { artist, release_title: title, type: 'master', per_page: 3 });
+      const r = (d.results || [])[0]; if (!r) return null;
+      const it = DG.item(r, 'master'); return { id: it.id, img: it.img };
+    }
     const d = await MB.get('release-group', { query: `releasegroup:"${luceneEscape(title)}" AND artist:"${luceneEscape(artist)}"`, limit: 3 }, { bg: true });
     const g = (d['release-groups'] || [])[0];
-    return g && g.score >= 50 ? g.id : null;
+    return g && g.score >= 50 ? { id: g.id, img: null } : null;
   } catch (e) { return null; }
 }
 async function askPicks(text) {
@@ -696,15 +753,15 @@ function renderPicks(out, res, opts = {}) {
   const list = el('div', { class: 'list' });
   for (const a of res.albums) {
     const links = serviceLinks(a.artist, a.title);
-    const cov = coverEl(a.id || null, a.title, 250);
+    const cov = coverEl(a.id || null, a.title, 250, null, a.img);
     const row = el('div', { class: 'item', style: { alignItems: 'flex-start' } }, cov,
       el('div', { class: 'main' }, el('div', { class: 't', text: a.title }), el('div', { class: 's', text: [a.artist, a.year].filter(Boolean).join(' · ') }), el('div', { class: 'rbslot' }, ratingBadge(a)), a.why ? el('div', { style: { fontSize: '13px', lineHeight: 1.35, whiteSpace: 'normal', paddingTop: '2px' } }, a.why) : null,
         el('div', { class: 'row', style: { paddingTop: '6px', gap: '8px', flexWrap: 'wrap' } },
           el('a', { class: 'btn sm primary', href: links.spotify, target: '_blank', rel: 'noopener' }, icon('play'), 'Spotify'),
           el('a', { class: 'btn sm', href: links.qobuz, target: '_blank', rel: 'noopener' }, icon('play'), 'Qobuz'),
-          a.id ? el('a', { class: 'btn sm quiet', href: `#/album/${a.id}` }, 'Details') : el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Finding…'; const id = await resolveAlbum(a.artist, a.title); if (id) { a.id = id; if (opts.onChange) opts.onChange(); location.hash = `#/album/${id}`; } else { b.textContent = 'Not in catalog'; } } }, 'Details'))));
+          a.id ? el('a', { class: 'btn sm quiet', href: `#/album/${a.id}` }, 'Details') : el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Finding…'; const hit = await resolveAlbum(a.artist, a.title); if (hit) { a.id = hit.id; a.img = hit.img || a.img; if (opts.onChange) opts.onChange(); location.hash = `#/album/${hit.id}`; } else { b.textContent = 'Not in catalog'; } } }, 'Details'))));
     list.append(row);
-    if (!a.id) resolveAlbum(a.artist, a.title).then(id => { if (!id || !row.isConnected) return; a.id = id; if (opts.onChange) opts.onChange(); cov.replaceWith(coverEl(id, a.title, 250)); const slot = row.querySelector('.rbslot'); if (slot) { slot.innerHTML = ''; slot.append(ratingBadge(a)); } const b = row.querySelector('button.quiet'); if (b) b.replaceWith(el('a', { class: 'btn sm quiet', href: `#/album/${id}` }, 'Details')); });
+    if (!a.id) resolveAlbum(a.artist, a.title).then(hit => { if (!hit || !row.isConnected) return; a.id = hit.id; a.img = hit.img || a.img; if (opts.onChange) opts.onChange(); cov.replaceWith(coverEl(a.id, a.title, 250, null, a.img)); const slot = row.querySelector('.rbslot'); if (slot) { slot.innerHTML = ''; slot.append(ratingBadge(a)); } const b = row.querySelector('button.quiet'); if (b) b.replaceWith(el('a', { class: 'btn sm quiet', href: `#/album/${a.id}` }, 'Details')); });
   }
   out.append(list);
 }
@@ -812,7 +869,7 @@ function ratingBadge(item, opts = {}) {
 }
 function albumTile(item, opts = {}) {
   const tile = el('div', { class: 'tile' });
-  const link = el(item.id ? 'a' : 'div', Object.assign({ class: 'tl', title: item.why || '' }, item.id ? { href: `#/album/${item.id}` } : {}), coverEl(item.id || null, item.title, 250), el('div', { class: opts.twoLine ? 'a2' : 'a', text: opts.primary === 'title' ? item.title : (item.artist || item.title) }), el('div', { class: 'b', text: opts.primary === 'title' ? [item.year, item.type && item.type !== 'Album' ? item.type : ''].filter(Boolean).join(' · ') : [item.title, item.year].filter(Boolean).join(' · ') }));
+  const link = el(item.id ? 'a' : 'div', Object.assign({ class: 'tl', title: item.why || '' }, item.id ? { href: `#/album/${item.id}` } : {}), coverEl(item.id || null, item.title, 250, null, item.img), el('div', { class: opts.twoLine ? 'a2' : 'a', text: opts.primary === 'title' ? item.title : (item.artist || item.title) }), el('div', { class: 'b', text: opts.primary === 'title' ? [item.year, item.type && item.type !== 'Album' ? item.type : ''].filter(Boolean).join(' · ') : [item.title, item.year].filter(Boolean).join(' · ') }));
   tile.append(link, ratingBadge(item));
   return tile;
 }
@@ -824,7 +881,7 @@ function openRatingSheet(item) {
   document.addEventListener('keydown', onKey);
   function close() { back.remove(); document.removeEventListener('keydown', onKey); }
   sheet.append(el('div', { class: 'handle' }),
-    el('div', { class: 'row', style: { gap: '12px' } }, el('div', { style: { width: '56px', flexShrink: 0 } }, coverEl(item.id, item.title, 250)), el('div', { style: { minWidth: 0 } }, el('div', { style: { fontWeight: 700, fontSize: '16px', lineHeight: 1.2 } }, item.title), el('div', { class: 'mono' }, [item.artist, item.year].filter(Boolean).join(' · ')))),
+    el('div', { class: 'row', style: { gap: '12px' } }, el('div', { style: { width: '56px', flexShrink: 0 } }, coverEl(item.id, item.title, 250, null, item.img)), el('div', { style: { minWidth: 0 } }, el('div', { style: { fontWeight: 700, fontSize: '16px', lineHeight: 1.2 } }, item.title), el('div', { class: 'mono' }, [item.artist, item.year].filter(Boolean).join(' · ')))),
     el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Gathering the reviews…'));
   Ratings.get(item.id, item.title, item.artist, { full: true }).then(r => {
     if (!back.isConnected) return;
@@ -851,18 +908,13 @@ const Shelf = {
 };
 
 // ---------- cover element ----------
-function coverEl(rgid, title, size, extra) {
+function coverEl(rgid, title, size, extra, imgUrl) {
   const wrap = el('div', { class: 'cover' + (extra ? ' ' + extra : '') });
   const ph = el('div', { class: 'ph', style: { background: `hsl(${hue(title || rgid || '')} 28% 48%)` }, text: initials(title) });
   wrap.append(ph);
-  if (rgid) {
-    const img = el('img', { alt: '', loading: 'lazy', decoding: 'async' });
-    img.addEventListener('load', () => wrap.classList.add('has-img'));
-    img.addEventListener('error', () => { img.remove(); wrap.dispatchEvent(new CustomEvent('nocover')); });
-    img.src = caa(rgid, size || 250);
-    wrap.append(img);
-    wrap.setImage = (src) => { const i = el('img', { alt: '', loading: 'lazy', decoding: 'async' }); i.addEventListener('load', () => wrap.classList.add('has-img')); i.src = src; wrap.append(i); };
-  }
+  wrap.setImage = (src) => { const i = el('img', { alt: '', loading: 'lazy', decoding: 'async' }); i.addEventListener('load', () => wrap.classList.add('has-img')); i.addEventListener('error', () => i.remove()); i.src = src; wrap.append(i); };
+  const src = imgUrl || (rgid && !/^d[amrl]\d/.test(rgid) ? caa(rgid, size || 250) : null);
+  if (src) wrap.setImage(src);
   return wrap;
 }
 
@@ -938,6 +990,13 @@ function homeSection(eyebrow, title) {
   return { root, body, setTitle: (s) => { t.textContent = s; }, setSub: (s) => { sub.textContent = s; sub.hidden = !s; }, setLink: (href, label, onclick) => { link.href = href; link.textContent = label; link.hidden = false; if (onclick) link.addEventListener('click', onclick); } };
 }
 async function labelStrip(name) {
+  if (DG.on()) {
+    const key = 'hear.home.dglabel.' + slug(name); const c = store.get(key, null);
+    if (c && Date.now() - c.t < 14 * 864e5) return c;
+    const [ls, albums] = await Promise.all([DG.search('label', name, { limit: 3 }), DG.search('album', '', { limit: 40, params: { label: name, type: 'master', sort: 'have', sort_order: 'desc', per_page: 40 } })]);
+    const l = ls.find(x => WP.norm(x.name) === WP.norm(name)) || ls[0];
+    const data = { t: Date.now(), id: l ? l.id : null, name: l ? l.name : name, all: albums }; store.set(key, data); return data;
+  }
   const key = 'hear.home.label.' + slug(name); const c = store.get(key, null);
   if (c && Date.now() - c.t < 14 * 864e5) return c;
   const s = await MB.get('label', { query: `label:"${luceneEscape(name)}"`, limit: 5 });
@@ -949,6 +1008,13 @@ async function labelStrip(name) {
 }
 async function artistStrip(a) {
   let id = a.id, name = a.name;
+  if ((id && /^da\d/.test(id)) || (!id && DG.on())) {
+    if (!id) { const hit = await resolveArtist(name); if (!hit) return null; id = hit.id; name = hit.name; }
+    const d = await DG.get(`artists/${id.slice(2)}/releases`, { sort: 'year', sort_order: 'desc', per_page: 100, page: 1 });
+    const seen = new Set();
+    const items = (d.releases || []).filter(r => r.role === 'Main' && DG.bucket(r.format) === 'album').map(r => ({ id: r.type === 'master' ? 'dm' + r.id : 'dr' + r.id, title: r.title, artist: DG.clean(r.artist) || name, artistId: id, year: r.year ? String(r.year) : '', type: 'Album', img: r.thumb || '' })).filter(it => !seen.has(it.id) && seen.add(it.id)).sort((x, y) => (x.year || '9999').localeCompare(y.year || '9999'));
+    return { id, name, items };
+  }
   if (!id) {
     const key = 'hear.home.artist.' + slug(name); const c = store.get(key, null);
     if (c) { id = c.id; name = c.name; }
@@ -959,8 +1025,16 @@ async function artistStrip(a) {
   return { id, name, items };
 }
 async function genreStrip(genre) {
-  const key = 'hear.home.genre.' + slug(genre); let data = store.get(key, null);
+  const key = (DG.on() ? 'hear.home.dggenre.' : 'hear.home.genre.') + slug(genre); let data = store.get(key, null);
   if (data && Date.now() - data.t < 30 * 864e5 && data.items.length) return { key, data };
+  if (DG.on()) {
+    let items = [];
+    for (const params of [{ style: genre }, { genre: genre }, { q: genre }]) {
+      items = await DG.search('album', '', { limit: 16, params: Object.assign({ type: 'master', sort: 'have', sort_order: 'desc', per_page: 16 }, params) });
+      if (items.length >= 4) break;
+    }
+    data = { t: Date.now(), source: 'discogs', items }; store.set(key, data); return { key, data };
+  }
   if (settings.anthropicKey) {
     const reply = await askClaude(`List 12 essential ${genre} albums: a mix of foundational classics and lesser-known gems that a serious fan would call definitive. No more than one album per artist, real releases only. Reply with ONLY JSON: {"albums":[{"artist":"...","title":"...","year":1972,"why":"one short sentence"}]}`, 1400);
     data = { t: Date.now(), source: settings.model || DEFAULTS.model, items: (parseJSON(reply).albums || []).slice(0, 12).map(a => ({ title: a.title, artist: a.artist, year: a.year ? String(a.year) : '', why: a.why })) };
@@ -990,19 +1064,19 @@ async function HomeView(rid) {
     try {
       const r = await genreStrip(p.genre); if (rid !== routeSeq) return;
       const items = r.data.items; if (!items.length) { fail(genreSec, 'Nothing came back for this genre. Shuffle for another.'); return; }
-      genreSec.setSub(r.data.source === 'tags' ? 'from MusicBrainz tags · add a Claude key for curated picks' : `picked by ${r.data.source}`);
+      genreSec.setSub(r.data.source === 'tags' ? 'from MusicBrainz tags · add a Claude key for curated picks' : r.data.source === 'discogs' ? 'most collected on Discogs' : `picked by ${r.data.source}`);
       genreSec.setLink('#/search', 'Dig deeper →', (e) => { e.preventDefault(); searchState.mode = 'describe'; searchState.describe = `${p.genre}: deeper cuts beyond the obvious classics`; store.set('hear.search', { mode: 'describe', q: searchState.q, results: searchState.results, describe: searchState.describe, describeOut: null }); location.hash = '#/search'; });
       genreSec.body.innerHTML = '';
       const flow = coverFlow(items, { size: 180, years: false, showArtist: true, actions: 'light', label: p.genre + ' essentials' });
       genreSec.body.append(flow);
-      (async () => { for (let i = 0; i < items.length; i++) { if (items[i].id) continue; const id = await resolveAlbum(items[i].artist, items[i].title); if (rid !== routeSeq) return; if (id) { flow.setId(i, id); store.set(r.key, r.data); } } })();
+      (async () => { for (let i = 0; i < items.length; i++) { if (items[i].id) continue; const hit = await resolveAlbum(items[i].artist, items[i].title); if (rid !== routeSeq) return; if (hit) { flow.setId(i, hit.id, hit.img); store.set(r.key, r.data); } } })();
     } catch (e) { if (e.message === 'stale') return; fail(genreSec, "Couldn't load this genre (" + e.message + ')'); }
   })();
   (async () => {
     try {
       const d = await labelStrip(p.label); if (rid !== routeSeq) return;
       if (!d || !d.all.length) { fail(labelSec, 'Nothing found for this label. Shuffle for another.'); return; }
-      labelSec.setTitle(d.name); labelSec.setLink(`#/label/${d.id}`, 'Browse the label →');
+      labelSec.setTitle(d.name); if (d.id) labelSec.setLink(`#/label/${d.id}`, 'Browse the label →');
       labelSec.body.innerHTML = '';
       labelSec.body.append(coverFlow(sample(d.all, 14).sort((x, y) => (x.year || '9999').localeCompare(y.year || '9999')), { size: 180, years: false, showArtist: true, actions: 'light', label: d.name }));
     } catch (e) { if (e.message === 'stale') return; fail(labelSec, "Couldn't load this label (" + e.message + ')'); }
@@ -1026,6 +1100,7 @@ function taQuery(q) {
   return last.length >= 3 ? `(${base}) OR (${tokens.slice(0, -1).concat([last + '*']).join(' ')})` : base;
 }
 async function searchEntity(mode, q, opts = {}) {
+  if (DG.on()) return DG.search(mode, q, { limit: mode === 'album' ? 20 : 12 });
   const query = opts.partial ? taQuery(q) : luceneEscape(q);
   const o = { ta: !!opts.ta };
   if (mode === 'artist') { const d = await MB.get('artist', { query, limit: 12 }, o); return (d.artists || []).map(a => ({ kind: 'artist', id: a.id, name: a.name, sub: [a.disambiguation, a.type, a.country, lifespan(a['life-span'])].filter(Boolean).join(' · ') })); }
@@ -1035,7 +1110,7 @@ async function searchEntity(mode, q, opts = {}) {
 function remember(it) {
   if (!it || !it.id) return;
   const known = store.get('hear.known', []).filter(k => k.id !== it.id);
-  known.unshift({ kind: it.kind, id: it.id, name: it.name, sub: it.sub || '', artist: it.artist || '' });
+  known.unshift({ kind: it.kind, id: it.id, name: it.name, sub: it.sub || '', artist: it.artist || '', img: it.img || '' });
   store.set('hear.known', known.slice(0, 300));
 }
 const foldText = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -1063,7 +1138,7 @@ function attachTypeahead(input, opts = {}) {
       box.append(el('div', { class: 'ta-h', text: g.label }));
       for (const it of rows.slice(0, g.max || 6)) {
         const row = el('button', { type: 'button', class: 'ta-row', role: 'option', onclick: () => pick(it) },
-          it.kind === 'album' ? coverEl(it.id, it.name, 250) : el('span', { class: 'ta-ic', html: it.kind === 'artist' ? ICONS.artist : ICONS.label }),
+          it.kind === 'album' ? coverEl(it.id, it.name, 250, null, it.img) : it.img ? el('img', { class: 'ta-img', src: it.img, alt: '' }) : el('span', { class: 'ta-ic', html: it.kind === 'artist' ? ICONS.artist : ICONS.label }),
           el('span', { class: 'ta-main' }, el('span', { class: 'ta-t', text: it.name }), el('span', { class: 'ta-s', text: [it.kind === 'label' ? 'Label' : it.kind === 'album' ? '' : 'Artist', it.sub].filter(Boolean).join(' · ') })));
         row.addEventListener('pointerdown', (e) => e.preventDefault());
         it.el = row; items.push(it); box.append(row);
@@ -1149,7 +1224,7 @@ function SearchView() {
       const list = el('div', { class: 'list' });
       for (const it of r.items) {
         const href = it.kind === 'artist' ? `#/artist/${it.id}` : it.kind === 'album' ? `#/album/${it.id}` : `#/label/${it.id}`;
-        const row = el('a', { class: 'item', href, onclick: () => remember(it) }, it.kind === 'album' ? coverEl(it.id, it.name, 250) : null, el('div', { class: 'main' }, el('div', { class: 't', text: it.name }), el('div', { class: 's', text: it.sub }), it.kind === 'album' ? ratingBadge({ id: it.id, title: it.name, artist: it.artist }) : null), el('span', { class: 'arrow' }, icon('chevron')));
+        const row = el('a', { class: 'item', href, onclick: () => remember(it) }, it.kind === 'album' ? coverEl(it.id, it.name, 250, null, it.img) : it.img ? el('img', { class: 'ta-img', src: it.img, alt: '', style: { width: '52px', height: '52px' } }) : null, el('div', { class: 'main' }, el('div', { class: 't', text: it.name }), el('div', { class: 's', text: it.sub }), it.kind === 'album' ? ratingBadge({ id: it.id, title: it.name, artist: it.artist }) : null), el('span', { class: 'arrow' }, icon('chevron')));
         list.append(row);
       }
       results.append(list);
@@ -1286,9 +1361,113 @@ function artistGenres(artist) {
   return out;
 }
 const BUCKET_LABELS = { album: 'Albums', ep: 'EPs', single: 'Singles', comp: 'Compilations', live: 'Live', other: 'Other releases' };
-async function ArtistView(id, rid) {
+function skeletonStrip(n = 4) { const s = el('div', { class: 'strip', 'aria-hidden': 'true' }); for (let i = 0; i < n; i++) s.append(el('div', { class: 'tile skel' }, el('div', { class: 'cover' }), el('div', { class: 'a' }), el('div', { class: 'b' }))); return s; }
+function dgLinkLabel(u) { const h = hostOf(u); if (/bandcamp\.com/.test(h)) return 'Bandcamp'; if (/wikipedia\.org/.test(h)) return 'Wikipedia'; if (/allmusic\.com/.test(h)) return 'AllMusic'; if (/facebook|instagram|twitter|x\.com|youtube|soundcloud|myspace|last\.fm|tiktok|spotify|apple\.com|discogs\.com|imdb|rateyourmusic|setlist|songkick/.test(h)) return null; return 'Website'; }
+function stripSection(label, items, opts = {}) {
+  const sec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, label), el('div', { class: 'mono', text: String(items.length) })));
+  const strip = el('div', { class: 'strip' });
+  for (const it of items) strip.append(albumTile(it, opts));
+  sec.append(strip); return sec;
+}
+async function ArtistViewDG(rawId, rid) {
+  const num = rawId.slice(2);
   setTop({ back: true, title: '' });
   view.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading artist…'));
+  const [a, rel1] = await Promise.all([DG.get(`artists/${num}`), DG.get(`artists/${num}/releases`, { sort: 'year', sort_order: 'desc', per_page: 100, page: 1 })]);
+  if (rid !== routeSeq) return;
+  const name = DG.clean(a.name);
+  const primaryImg = (a.images || []).find(i => i.type === 'primary') || (a.images || [])[0];
+  remember({ kind: 'artist', id: rawId, name, sub: a.realname && a.realname !== name ? a.realname : '', img: primaryImg ? primaryImg.uri150 : '' });
+  view.innerHTML = ''; setTop({ back: true, title: name });
+  const ph = el('div', { class: 'aimg ph', style: { background: `hsl(${hue(name)} 28% 48%)` }, text: initials(name) });
+  let img = ph;
+  if (primaryImg) { img = el('img', { class: 'aimg', src: primaryImg.uri, alt: name }); img.addEventListener('error', () => img.replaceWith(ph)); }
+  const members = (a.members || []).filter(m => m.active !== false).map(m => DG.clean(m.name)).slice(0, 6);
+  const textCol = el('div', { class: 'stack', style: { gap: '6px', minWidth: 0, flex: 1 } }, el('h1', { text: name }));
+  const metaBits = [a.realname && a.realname !== name ? a.realname : '', members.length ? 'Members: ' + members.join(', ') : ''].filter(Boolean);
+  if (metaBits.length) textCol.append(el('div', { class: 'mono' }, metaBits.join(' · ')));
+  const styleHost = el('div', { class: 'wrap' }); textCol.append(styleHost);
+  const bioHost = el('div', { class: 'stack', style: { gap: '4px', paddingTop: '12px' } });
+  const profile = DG.text(a.profile);
+  if (profile) {
+    const bio = el('div', { class: 'bio', text: profile });
+    const more = el('button', { class: 'link', style: { background: 'none', border: 0, padding: 0, fontSize: '13px', textAlign: 'left' }, onclick: () => { bio.classList.toggle('open'); more.textContent = bio.classList.contains('open') ? 'Less' : 'More'; } }, 'More');
+    bioHost.append(bio, el('div', { class: 'row', style: { gap: '10px' } }, more, el('a', { class: 'mono', href: a.uri, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, 'Discogs ↗')));
+  }
+  const extLinks = el('div', { class: 'wrap', style: { paddingTop: '10px' } });
+  const seenKinds = new Set();
+  for (const u of a.urls || []) { const lab = dgLinkLabel(u); if (!lab || seenKinds.has(lab)) continue; seenKinds.add(lab); extLinks.append(el('a', { class: 'tag soft', href: u, target: '_blank', rel: 'noopener' }, lab + ' ↗')); }
+  extLinks.append(el('a', { class: 'tag soft', href: a.uri, target: '_blank', rel: 'noopener' }, 'Discogs ↗'));
+  view.append(el('div', { class: 'ahead' }, img, textCol), bioHost, extLinks);
+  DG.get('database/search', { artist: name, type: 'master', per_page: 30 }).then(d => {
+    if (rid !== routeSeq) return;
+    const counts = {}; for (const r of d.results || []) for (const s of [...(r.style || []), ...(r.genre || [])]) counts[s] = (counts[s] || 0) + 1;
+    const top = Object.entries(counts).sort((x, y) => y[1] - x[1]).slice(0, 7).map(x => x[0]);
+    for (const s of top) styleHost.append(el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(s)}` }, s));
+  }).catch(() => { });
+  const disco = el('div');
+  view.append(disco);
+  disco.append(el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'eyebrow' }, 'Albums'), skeletonStrip(4)));
+  let items = rel1.releases || [];
+  const pages = Math.min((rel1.pagination || {}).pages || 1, 3);
+  const rest = []; for (let p = 2; p <= pages; p++) rest.push(DG.get(`artists/${num}/releases`, { sort: 'year', sort_order: 'desc', per_page: 100, page: p }));
+  for (const d of await Promise.all(rest)) items = items.concat(d.releases || []);
+  if (rid !== routeSeq) return;
+  const main = items.filter(r => r.role === 'Main');
+  const seen = new Set();
+  const toItem = (r) => ({ id: r.type === 'master' ? 'dm' + r.id : 'dr' + r.id, title: r.title, artist: DG.clean(r.artist) || name, artistId: rawId, year: r.year ? String(r.year) : '', type: BUCKET_LABELS[DG.bucket(r.format)].replace(/s$/, ''), img: r.thumb || '' });
+  const buckets = {};
+  for (const r of main) { const it = toItem(r); if (seen.has(it.id)) continue; seen.add(it.id); const b = DG.bucket(r.format); (buckets[b] = buckets[b] || []).push(it); }
+  disco.innerHTML = '';
+  let any = false;
+  for (const [k, label] of Object.entries(BUCKET_LABELS)) { if (!buckets[k] || !buckets[k].length) continue; any = true; disco.append(stripSection(label, buckets[k], { primary: 'title', twoLine: true })); }
+  const appear = items.filter(r => r.role !== 'Main' && r.role !== 'UnofficialRelease').slice(0, 30).map(toItem).filter(it => !seen.has(it.id) && seen.add(it.id));
+  if (appear.length) disco.append(stripSection('Appears on', appear, { primary: 'title', twoLine: true }));
+  if (!any && !appear.length) disco.append(el('div', { class: 'empty' }, 'Discogs lists no releases for this artist yet.'));
+}
+async function LabelViewDG(rawId, rid) {
+  const num = rawId.slice(2);
+  setTop({ back: true, title: '' });
+  view.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading label…'));
+  const l = await DG.get(`labels/${num}`);
+  if (rid !== routeSeq) return;
+  remember({ kind: 'label', id: rawId, name: l.name, sub: '', img: (l.images && l.images[0] && l.images[0].uri150) || '' });
+  view.innerHTML = ''; setTop({ back: true, title: l.name });
+  const head = el('div', { class: 'stack', style: { gap: '6px' } }, el('div', { class: 'eyebrow' }, 'Label'), el('h1', { text: l.name }));
+  if (l.parent_label) head.append(el('div', { class: 'mono' }, 'Part of ', el('a', { class: 'link', href: `#/label/dl${l.parent_label.id}` }, l.parent_label.name)));
+  const profile = DG.text(l.profile);
+  if (profile) { const bio = el('div', { class: 'bio', text: profile }); const more = el('button', { class: 'link', style: { background: 'none', border: 0, padding: 0, fontSize: '13px', textAlign: 'left' }, onclick: () => { bio.classList.toggle('open'); more.textContent = bio.classList.contains('open') ? 'Less' : 'More'; } }, 'More'); head.append(bio, el('div', { class: 'row', style: { gap: '10px' } }, more, el('a', { class: 'mono', href: l.uri, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, 'Discogs ↗'))); }
+  const subs = (l.sublabels || []).slice(0, 10);
+  if (subs.length) head.append(el('div', { class: 'wrap' }, subs.map(s => el('a', { class: 'tag soft', href: `#/label/dl${s.id}` }, s.name))));
+  view.append(head);
+  const status = el('div', { class: 'mono', style: { paddingTop: '14px' } }, 'Loading the catalog…');
+  const chips = el('div', { class: 'chips', style: { paddingTop: '10px' } });
+  const grid = el('div', { class: 'grid', style: { paddingTop: '12px' } });
+  view.append(status, chips, grid);
+  const seen = new Set(); let items = []; let total = 0;
+  for (let p = 1; p <= 2; p++) {
+    const d = await DG.get('database/search', { label: l.name, type: 'master', sort: 'have', sort_order: 'desc', per_page: 50, page: p });
+    if (rid !== routeSeq) return;
+    total = (d.pagination || {}).items || total;
+    for (const r of d.results || []) { const it = DG.item(r, 'master'); if (seen.has(it.id)) continue; seen.add(it.id); items.push(it); }
+    if (!(d.pagination && d.pagination.pages > p)) break;
+  }
+  let filter = 'all';
+  const draw = () => {
+    grid.innerHTML = '';
+    for (const it of items.filter(x => filter === 'all' || x.type === filter)) grid.append(albumTile(it));
+    chips.innerHTML = '';
+    const counts = { all: items.length }; for (const it of items) counts[it.type] = (counts[it.type] || 0) + 1;
+    for (const [k, lab] of [['all', 'All'], ...FILTERS]) { if (!counts[k]) continue; chips.append(el('button', { class: 'chip' + (filter === k ? ' on' : ''), onclick: () => { filter = k; draw(); } }, `${lab} · ${counts[k]}`)); }
+  };
+  status.textContent = items.length ? `${total.toLocaleString()} releases on Discogs · most collected first` : 'Discogs lists nothing for this label.';
+  draw();
+}
+async function ArtistView(id, rid) {
+  if (/^da\d/.test(id)) return ArtistViewDG(id, rid);
+  setTop({ back: true, title: '' });
+  view.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading artist…'));
+  const firstPage = MB.get('release-group', { artist: id, limit: 100, offset: 0, inc: 'artist-credits' });
   const artist = await MB.get(`artist/${id}`, { inc: 'url-rels+genres+tags' });
   if (rid !== routeSeq) return;
   remember({ kind: 'artist', id: artist.id, name: artist.name, sub: [artist.disambiguation, artist.type, artist.country].filter(Boolean).join(' · ') });
@@ -1319,10 +1498,10 @@ async function ArtistView(id, rid) {
   });
   const disco = el('div', { class: 'stack', style: { gap: '0' } });
   view.append(disco);
-  disco.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading discography…'));
+  disco.append(el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'eyebrow' }, 'Albums'), skeletonStrip(4)));
   let groups = []; let offset = 0; let total = Infinity;
   while (offset < total && offset < 600) {
-    const d = await MB.get('release-group', { artist: id, limit: 100, offset, inc: 'artist-credits' });
+    const d = offset === 0 ? await firstPage : await MB.get('release-group', { artist: id, limit: 100, offset, inc: 'artist-credits' });
     if (rid !== routeSeq) return;
     groups = groups.concat(d['release-groups'] || []);
     total = d['release-group-count'] || 0; offset += 100;
@@ -1352,10 +1531,10 @@ async function GenreView(name, rid) {
     el('div', { class: 'wrap' }, el('a', { class: 'tag soft', href: '#/search', onclick: (e) => { e.preventDefault(); searchState.mode = 'describe'; searchState.describe = `${genre}: deeper cuts beyond the obvious classics`; store.set('hear.search', { mode: 'describe', q: searchState.q, results: searchState.results, describe: searchState.describe, describeOut: null }); location.hash = '#/search'; } }, 'Dig deeper with Describe it →'))));
   const artistsSec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Essential artists'), el('div', { class: 'mono', text: settings.anthropicKey ? 'picked by ' + (settings.model || DEFAULTS.model) : '' })), el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading…'));
   const albumsSec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Essential albums')), el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading…'));
-  const moreSec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, `Artists tagged “${genre}”`), el('div', { class: 'mono' }, 'MusicBrainz')), el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading…'));
+  const moreSec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, DG.on() ? `Most collected ${genre} artists` : `Artists tagged “${genre}”`), el('div', { class: 'mono' }, DG.on() ? 'Discogs' : 'MusicBrainz')), el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading…'));
   view.append(settings.anthropicKey ? artistsSec : null, albumsSec, moreSec);
   const artistRow = (a) => {
-    const row = el(a.id ? 'a' : 'button', Object.assign({ class: 'item' }, a.id ? { href: `#/artist/${a.id}` } : { type: 'button' }), el('span', { class: 'ta-ic' }, icon('artist')), el('div', { class: 'main' }, el('div', { class: 't', text: a.name }), el('div', { class: 's', text: a.sub || a.why || '' })), el('span', { class: 'arrow' }, icon('chevron')));
+    const row = el(a.id ? 'a' : 'button', Object.assign({ class: 'item' }, a.id ? { href: `#/artist/${a.id}` } : { type: 'button' }), a.img ? el('img', { class: 'ta-img', src: a.img, alt: '', style: { width: '44px', height: '44px', borderRadius: '22px' } }) : el('span', { class: 'ta-ic' }, icon('artist')), el('div', { class: 'main' }, el('div', { class: 't', text: a.name }), el('div', { class: 's', text: a.sub || a.why || '' })), el('span', { class: 'arrow' }, icon('chevron')));
     if (!a.id) row.addEventListener('click', async () => { row.style.opacity = '0.5'; const hit = await resolveArtist(a.name); if (hit) location.hash = `#/artist/${hit.id}`; else { row.style.opacity = '1'; toast('Not found in the catalog'); } });
     return row;
   };
@@ -1382,21 +1561,36 @@ async function GenreView(name, rid) {
       albumsSec.querySelector('.sechead').append(el('div', { class: 'mono', text: r.data.source === 'tags' ? 'MusicBrainz tags' : 'picked by ' + r.data.source }));
       const strip = el('div', { class: 'strip' }); albumsSec.append(strip);
       const tiles = r.data.items.map(it => { const t = albumTile(it); strip.append(t); return t; });
-      (async () => { for (let i = 0; i < r.data.items.length; i++) { const it = r.data.items[i]; if (it.id) continue; const id = await resolveAlbum(it.artist, it.title); if (rid !== routeSeq) return; if (id) { it.id = id; store.set(r.key, r.data); tiles[i].replaceWith(albumTile(it)); } } })();
+      (async () => { for (let i = 0; i < r.data.items.length; i++) { const it = r.data.items[i]; if (it.id) continue; const hit = await resolveAlbum(it.artist, it.title); if (rid !== routeSeq) return; if (hit) { it.id = hit.id; it.img = hit.img || it.img; store.set(r.key, r.data); tiles[i].replaceWith(albumTile(it)); } } })();
     } catch (e) { if (e.message === 'stale') return; albumsSec.querySelector('.loading').replaceWith(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load albums: " + e.message)); }
   })();
   (async () => {
     try {
-      const d = await MB.get('artist', { query: `tag:"${luceneEscape(genre)}"`, limit: 40 }); if (rid !== routeSeq) return;
+      let as;
+      if (DG.on()) {
+        let results = [];
+        for (const params of [{ style: genre }, { genre: genre }, { q: genre }]) { const d = await DG.get('database/search', Object.assign({ type: 'master', sort: 'have', sort_order: 'desc', per_page: 100 }, params)); results = d.results || []; if (results.length >= 10) break; }
+        if (rid !== routeSeq) return;
+        const counts = new Map();
+        for (const r of results) { const a = DG.splitTitle(r.title).artist; if (!a || /^various$/i.test(a)) continue; const c = counts.get(a) || { name: a, n: 0 }; c.n++; counts.set(a, c); }
+        as = [...counts.values()].sort((x, y) => y.n - x.n).slice(0, 30).map(c => ({ name: c.name, sub: `${c.n} of the most collected ${genre} records` }));
+      } else {
+        const d = await MB.get('artist', { query: `tag:"${luceneEscape(genre)}"`, limit: 40 });
+        as = (d.artists || []).map(a => ({ id: a.id, name: a.name, sub: [a.disambiguation, a.type, a.country, lifespan(a['life-span'])].filter(Boolean).join(' · ') }));
+      }
+      if (rid !== routeSeq) return;
       moreSec.querySelector('.loading').remove();
-      const as = (d.artists || []).map(a => ({ id: a.id, name: a.name, sub: [a.disambiguation, a.type, a.country, lifespan(a['life-span'])].filter(Boolean).join(' · ') }));
       if (!as.length) { moreSec.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'No artists carry this tag yet.')); return; }
       const list = el('div', { class: 'list' }); for (const a of as) list.append(artistRow(a)); moreSec.append(list);
-    } catch (e) { if (e.message === 'stale') return; moreSec.querySelector('.loading').replaceWith(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load: " + e.message)); }
+      if (DG.on()) (async () => { for (const a of as) { if (a.id) continue; const hit = await resolveArtist(a.name); if (rid !== routeSeq) return; if (hit) { a.id = hit.id; a.img = hit.img; const old = [...list.children].find(r => r.querySelector('.t') && r.querySelector('.t').textContent === a.name); if (old) old.replaceWith(artistRow(a)); } } })();
+    } catch (e) { if (e.message === 'stale') return; const ld = moreSec.querySelector('.loading'); if (ld) ld.replaceWith(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load: " + e.message)); }
   })();
 }
 async function resolveArtist(name) {
-  try { const d = await MB.get('artist', { query: `artist:"${luceneEscape(name)}"`, limit: 3 }, { bg: true }); const as = d.artists || []; return as.find(a => WP.norm(a.name) === WP.norm(name)) || (as[0] && as[0].score >= 70 ? as[0] : null); } catch (e) { return null; }
+  try {
+    if (DG.on()) { const as = await DG.search('artist', name, { limit: 3 }); return as.find(a => WP.norm(a.name) === WP.norm(name)) || as[0] || null; }
+    const d = await MB.get('artist', { query: `artist:"${luceneEscape(name)}"`, limit: 3 }, { bg: true }); const as = d.artists || []; return as.find(a => WP.norm(a.name) === WP.norm(name)) || (as[0] && as[0].score >= 70 ? as[0] : null);
+  } catch (e) { return null; }
 }
 function collectArtistLinks(rels) {
   const out = {};
@@ -1410,7 +1604,7 @@ function coverFlow(items, opts = {}) {
   const flow = el('div', { class: 'flow', tabindex: '0', role: 'listbox', 'aria-label': opts.label || 'Albums', style: { height: STAGE + 'px', padding: `0 calc(50% - ${SLOT / 2}px)` } });
   const covers = [];
   const slots = items.map((g, i) => {
-    const c = coverEl(g.id || null, g.title, COVER > 200 ? 500 : 250); covers[i] = c;
+    const c = coverEl(g.id || null, g.title, COVER > 200 ? 500 : 250, null, g.img); covers[i] = c;
     c.style.width = COVER + 'px'; c.style.height = COVER + 'px';
     const btn = el('button', { class: 'fc', role: 'option', 'aria-label': `${g.title}${g.artist ? ' by ' + g.artist : ''}${g.year ? ', ' + g.year : ''}`, style: { width: COVER + 'px', height: COVER + 'px', marginLeft: (-COVER / 2) + 'px' }, onclick: () => { if (i === current) { if (g.id) location.hash = `#/album/${g.id}`; else toast('Still matching this one to the catalog…'); } else goTo(i); } }, c);
     return el('div', { class: 'slot', style: { flex: `0 0 ${SLOT}px`, height: COVER + 'px' } }, btn);
@@ -1455,7 +1649,7 @@ function coverFlow(items, opts = {}) {
   flow.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; layout(); }); clearTimeout(settleT); settleT = setTimeout(settle, 90); }, { passive: true });
   flow.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') { e.preventDefault(); goTo(Math.min(items.length - 1, current + 1)); } if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(Math.max(0, current - 1)); } if (e.key === 'Enter' && current >= 0 && items[current].id) location.hash = `#/album/${items[current].id}`; });
   requestAnimationFrame(() => { layout(); if (opts.start) { flow.scrollLeft = opts.start * SLOT; layout(); } settle(); });
-  root.setId = (i, id) => { items[i].id = id; const c = coverEl(id, items[i].title, COVER > 200 ? 500 : 250); c.style.width = COVER + 'px'; c.style.height = COVER + 'px'; covers[i].replaceWith(c); covers[i] = c; if (i === current) { current = -1; settle(); } };
+  root.setId = (i, id, img) => { items[i].id = id; if (img) items[i].img = img; const c = coverEl(id, items[i].title, COVER > 200 ? 500 : 250, null, items[i].img); c.style.width = COVER + 'px'; c.style.height = COVER + 'px'; covers[i].replaceWith(c); covers[i] = c; if (i === current) { current = -1; settle(); } };
   return root;
 }
 function shelfButton(item, compact) {
@@ -1469,25 +1663,71 @@ function shelfButton(item, compact) {
 // ============================================================
 // Album
 // ============================================================
+async function albumFromMB(id) {
+  const g = await MB.get(`release-group/${id}`, { inc: 'artist-credits+url-rels+genres+tags' });
+  const artistName = credit(g['artist-credit']); const fa = firstArtist(g['artist-credit']);
+  const tags = [...(g.genres || []), ...(g.tags || [])].filter(t => t.count > 0).sort((a, b) => b.count - a.count);
+  const seen = new Set(); const tagNames = tags.map(t => t.name).filter(n => { const k = n.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 12);
+  const album = { id: g.id, source: 'mb', title: g.title, artistName, artists: fa ? [{ id: fa.id, name: fa.name }] : [], primaryArtist: fa ? fa.name : artistName, year: year(g['first-release-date']), type: rgType(g), img: null, exact: collectLinks(g.relations), styles: [], tags: tagNames, tagSource: 'MusicBrainz', labels: [], formats: [], discs: null, community: null, videos: [], notes: '', releasesCount: 0 };
+  album.more = async () => {
+    const rd = await MB.get('release', { 'release-group': id, inc: 'url-rels+labels+media', limit: 100 });
+    const releases = (rd.releases || []).slice().sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
+    for (const r of releases) collectLinks(r.relations, album.exact);
+    const labels = []; const seenL = new Set();
+    for (const r of releases) for (const li of r['label-info'] || []) { if (!li.label || seenL.has(li.label.id)) continue; seenL.add(li.label.id); labels.push({ id: li.label.id, name: li.label.name, catno: li['catalog-number'] }); }
+    const formats = new Set(); for (const r of releases) for (const m of r.media || []) if (m.format) formats.add(m.format);
+    album.labels = labels; album.formats = [...formats]; album.releasesCount = releases.length;
+    const primary = releases.find(r => r.status === 'Official' && (r.media || []).some(m => m['track-count'])) || releases[0];
+    if (primary) {
+      try {
+        const rel = await MB.get(`release/${primary.id}`, { inc: 'recordings' });
+        album.discs = (rel.media || []).map((m, mi) => ({ title: (rel.media || []).length > 1 ? `${m.format || 'Disc'} ${m.position || mi + 1}${m.title ? ' · ' + m.title : ''}` : '', tracks: (m.tracks || []).map(t => ({ n: t.number, title: t.title, len: fmtLen(t.length) })) }));
+        album.released = primary.date || ''; album.country = primary.country || '';
+      } catch (e) { }
+    }
+    return album;
+  };
+  return album;
+}
+async function albumFromDiscogs(rawId) {
+  const isMaster = rawId.startsWith('dm'); const num = rawId.slice(2);
+  const m = isMaster ? await DG.get(`masters/${num}`) : null;
+  const r = await DG.get(`releases/${isMaster ? m.main_release : num}`);
+  const base = m || r;
+  const artists = (base.artists || []).map(a => ({ id: 'da' + a.id, name: DG.clean(a.name), join: (a.join || '').trim() }));
+  const artistName = artists.map((a, i) => a.name + (i < artists.length - 1 ? (a.join ? ' ' + a.join + ' ' : ', ') : '')).join('').trim() || 'Various';
+  const discs = []; let cur = null;
+  for (const t of base.tracklist || []) { if (t.type_ === 'heading') { cur = { title: t.title, tracks: [] }; discs.push(cur); continue; } if (!cur) { cur = { title: '', tracks: [] }; discs.push(cur); } cur.tracks.push({ n: t.position, title: t.title, len: t.duration || '' }); }
+  const fmt = (r.formats || []).map(f => [f.name, ...(f.descriptions || [])].join(', '));
+  const kind = DG.bucket(fmt.join(' '));
+  const img = (base.images && base.images[0] && base.images[0].uri) || (r.images && r.images[0] && r.images[0].uri) || null;
+  return {
+    id: rawId, source: 'dg', title: base.title, artistName, artists, primaryArtist: artists[0] ? artists[0].name : artistName, year: base.year ? String(base.year) : '', type: BUCKET_LABELS[kind] ? BUCKET_LABELS[kind].replace(/s$/, '') : '',
+    img, exact: { discogs: base.uri || r.uri }, styles: [...(base.genres || []), ...(base.styles || [])], tags: [], tagSource: 'Discogs',
+    labels: (r.labels || []).map(l => ({ id: 'dl' + l.id, name: l.name, catno: l.catno })), formats: fmt, country: r.country || '', released: r.released || '',
+    discs, community: r.community ? { rating: r.community.rating && r.community.rating.average, count: r.community.rating && r.community.rating.count, have: r.community.have, want: r.community.want } : null,
+    videos: (base.videos || r.videos || []).slice(0, 6).map(v => ({ url: v.uri, title: v.title })), notes: DG.text(base.notes || r.notes || '').slice(0, 700), releaseId: r.id, masterId: m ? m.id : null, releasesCount: 0
+  };
+}
 async function AlbumView(id, rid) {
   setTop({ back: true, title: '' });
   view.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading album…'));
-  const g = await MB.get(`release-group/${id}`, { inc: 'artist-credits+url-rels+genres+tags' });
+  const album = /^d[mr]\d/.test(id) ? await albumFromDiscogs(id) : await albumFromMB(id);
   if (rid !== routeSeq) return;
-  const artistName = credit(g['artist-credit']); const fa = firstArtist(g['artist-credit']);
-  remember({ kind: 'album', id: g.id, name: g.title, artist: artistName, sub: [artistName, year(g['first-release-date'])].filter(Boolean).join(' · ') });
+  const { title, artistName } = album; const fa = album.artists[0] || null;
+  remember({ kind: 'album', id: album.id, name: title, artist: artistName, sub: [artistName, album.year].filter(Boolean).join(' · '), img: album.img || '' });
   view.innerHTML = '';
-  setTop({ back: true, title: g.title });
-  const exact = collectLinks(g.relations);
-  let links = serviceLinks(artistName, g.title, exact);
-  const cover = coverEl(g.id, g.title, 500, 'big');
-  const meta = el('div', { class: 'mono' }, [year(g['first-release-date']), rgType(g)].filter(Boolean).join(' · '));
+  setTop({ back: true, title });
+  let links = serviceLinks(artistName, title, album.exact);
+  const cover = coverEl(album.id, title, 500, 'big', album.img);
+  const meta = el('div', { class: 'mono' }, [album.year, album.type].filter(Boolean).join(' · '));
   const ratingLine = el('div', { style: { paddingTop: '2px', minHeight: '20px' } });
-  Ratings.get(g.id, g.title, fa ? fa.name : artistName).then(r => { if (r && r.score != null && !ratingLine.children.length) ratingLine.append(ratingBadge({ id: g.id, title: g.title, artist: artistName }, { now: true, count: true, size: 'lg' })); });
-  try { const rv = store.get('hear.recentAlbums', []).filter(x => x.id !== g.id); rv.unshift({ id: g.id, title: g.title, artist: artistName, artistId: fa && fa.id, year: year(g['first-release-date']), type: rgType(g) }); store.set('hear.recentAlbums', rv.slice(0, 12)); } catch (e) { }
+  const ratingItem = { id: album.id, title, artist: album.primaryArtist, img: album.img };
+  Ratings.get(album.id, title, album.primaryArtist).then(r => { if (r && r.score != null && !ratingLine.children.length) ratingLine.append(ratingBadge(ratingItem, { now: true, count: true, size: 'lg' })); });
+  try { const rv = store.get('hear.recentAlbums', []).filter(x => x.id !== album.id); rv.unshift({ id: album.id, title, artist: artistName, artistId: fa && fa.id, year: album.year, type: album.type, img: album.img || '' }); store.set('hear.recentAlbums', rv.slice(0, 12)); } catch (e) { }
   const linkRow = el('div', { class: 'stack' });
   const secondary = el('div', { class: 'wrap' });
-  const shelfItem = { id: g.id, title: g.title, artist: artistName, artistId: fa && fa.id, year: year(g['first-release-date']), type: rgType(g), labels: [] };
+  const shelfItem = { id: album.id, title, artist: artistName, artistId: fa && fa.id, year: album.year, type: album.type, labels: album.labels.map(l => l.name), img: album.img || '' };
   const shelfBtn = shelfButton(shelfItem, false);
   function drawLinks() {
     linkRow.innerHTML = '';
@@ -1499,23 +1739,23 @@ async function AlbumView(id, rid) {
     if (links.deezer) add('Deezer', links.deezer, true);
     if (links.tidal) add('Tidal', links.tidal, true);
     add('Discogs', links.discogs, links.discogsExact);
+    for (const v of album.videos.slice(0, 3)) secondary.append(el('a', { class: 'tag', href: v.url, target: '_blank', rel: 'noopener', title: v.title }, 'YouTube ↗'));
     linkRow.append(secondary);
   }
   drawLinks();
+  const artistLine = album.artists.length ? el('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap' } }, album.artists.map(a => el('a', { class: 'link', href: `#/artist/${a.id}`, style: { fontSize: '15px' } }, a.name))) : el('div', { text: artistName });
+  const collBtn = album.source === 'dg' && settings.discogsUser && album.releaseId ? el('button', { class: 'btn quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Adding…'; try { await DG.post(`users/${encodeURIComponent(settings.discogsUser)}/collection/folders/1/releases/${album.releaseId}`); b.textContent = 'In your Discogs collection'; toast('Added to your Discogs collection'); } catch (err) { b.disabled = false; b.textContent = 'Add to Discogs collection'; toast("Discogs wouldn't take it from the browser; use the Discogs link to add it there.", 5000); } } }, 'Add to Discogs collection') : null;
   view.append(el('div', { class: 'stack' },
     el('div', { style: { padding: '4px 12px 0' } }, cover),
-    el('div', { class: 'stack', style: { gap: '4px', paddingTop: '6px' } },
-      el('h1', { text: g.title }),
-      fa ? el('a', { class: 'link', href: `#/artist/${fa.id}`, style: { fontSize: '15px' } }, artistName) : el('div', { text: artistName }),
-      meta,
-      ratingLine),
+    el('div', { class: 'stack', style: { gap: '4px', paddingTop: '6px' } }, el('h1', { text: title }), artistLine, meta, ratingLine),
     linkRow,
-    el('div', { class: 'btnrow' }, shelfBtn)));
+    el('div', { class: 'btnrow' }, shelfBtn, collBtn)));
+  if (album.community && (album.community.rating || album.community.have)) view.append(el('div', { class: 'mono', style: { paddingTop: '10px' } }, [album.community.rating ? `Discogs members rate it ${Number(album.community.rating).toFixed(2)}/5 (${album.community.count})` : '', album.community.have ? `in ${album.community.have.toLocaleString()} collections` : '', album.community.want ? `${album.community.want.toLocaleString()} want it` : ''].filter(Boolean).join(' · ')));
 
   // Coverage: ratings, reviews, interviews & period press
   const coverage = el('div');
   view.append(coverage);
-  const ry = +year(g['first-release-date']) || null;
+  const ry = +album.year || null;
   let covData = null;
   const byYear = (a, b) => (a.year || 9999) - (b.year || 9999);
   function drawCoverage(cov) {
@@ -1551,8 +1791,8 @@ async function AlbumView(id, rid) {
     const hasHost = (h) => reviews.some(r => hostOf(r.url).endsWith(h));
     revSec.append(el('div', { class: 'wrap', style: { paddingTop: '6px' } },
       !hasHost('allmusic.com') ? el('a', { class: 'tag soft', href: links.allmusic, target: '_blank', rel: 'noopener' }, 'Find on AllMusic ↗') : null,
-      !hasHost('pitchfork.com') ? el('a', { class: 'tag soft', href: `https://pitchfork.com/search/?query=${enc(artistName + ' ' + g.title)}`, target: '_blank', rel: 'noopener' }, 'Find on Pitchfork ↗') : null,
-      el('a', { class: 'tag soft', href: `https://www.metacritic.com/search/${enc(g.title)}/?category=2`, target: '_blank', rel: 'noopener' }, 'Metacritic ↗')));
+      !hasHost('pitchfork.com') ? el('a', { class: 'tag soft', href: `https://pitchfork.com/search/?query=${enc(artistName + ' ' + title)}`, target: '_blank', rel: 'noopener' }, 'Find on Pitchfork ↗') : null,
+      el('a', { class: 'tag soft', href: `https://www.metacritic.com/search/${enc(title)}/?category=2`, target: '_blank', rel: 'noopener' }, 'Metacritic ↗')));
     coverage.append(revSec);
 
     const arts = (cov.entries || []).filter(e => e.kind !== 'review' && e.kind !== 'aggregate');
@@ -1568,48 +1808,50 @@ async function AlbumView(id, rid) {
     if (atTime.length) artSec.append(el('div', { class: 'subhead', text: `At the time · ${ry - 1}–${ry + 2}` }), el('div', { class: 'list' }, atTime.map(rowFor)));
     if (later.length) artSec.append(el('div', { class: 'subhead', text: atTime.length ? 'Later & undated' : 'Found' }), el('div', { class: 'list' }, later.map(rowFor)));
     if (!atTime.length && !later.length) artSec.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Nothing found automatically. Try the searches below.'));
-    const q = enc(`"${g.title}" ${artistName}`);
+    const q = enc(`"${title}" ${artistName}`);
     artSec.append(el('div', { class: 'wrap', style: { paddingTop: '8px' } },
       el('a', { class: 'tag soft', href: `https://archive.org/search?query=${q}&sin=TXT`, target: '_blank', rel: 'noopener' }, 'Internet Archive magazines ↗'),
       el('a', { class: 'tag soft', href: `https://www.google.com/search?tbm=bks&q=${q}`, target: '_blank', rel: 'noopener' }, 'Google Books ↗')));
-    const digKey = 'hear.dig.' + g.id; const dug = store.get(digKey, null);
+    const digKey = 'hear.dig.' + album.id; const dug = store.get(digKey, null);
     const digHost = el('div', { class: 'stack', style: { paddingTop: '10px' } });
     const drawDug = (items) => { digHost.innerHTML = ''; digHost.append(el('div', { class: 'subhead', text: `Found on the web by Claude · ${items.length}` }), el('div', { class: 'list' }, items.map(i => el('a', { class: 'crow', href: i.url, target: '_blank', rel: 'noopener' }, el('div', { class: 't' }, el('span', { class: 'kind', text: i.kind }), i.title), el('div', { class: 'm', text: [i.work || hostOf(i.url), i.date, i.score].filter(Boolean).join(' · ') }))))); };
     if (dug) drawDug(dug.items);
-    else if (settings.anthropicKey) digHost.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Searching the web…'; try { const items = await digDeeper(artistName, g.title, ry); store.set(digKey, { t: Date.now(), items }); drawDug(items); } catch (err) { b.disabled = false; b.textContent = 'Dig deeper with Claude'; toast(err.message, 4000); } } }, icon('spark'), 'Dig deeper with Claude'));
+    else if (settings.anthropicKey) digHost.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Searching the web…'; try { const items = await digDeeper(artistName, title, ry); store.set(digKey, { t: Date.now(), items }); drawDug(items); } catch (err) { b.disabled = false; b.textContent = 'Dig deeper with Claude'; toast(err.message, 4000); } } }, icon('spark'), 'Dig deeper with Claude'));
     else digHost.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to search the web for more reviews and interviews.'));
     artSec.append(digHost);
     coverage.append(artSec);
 
     if (cov.summary) coverage.append(el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'About'), el('a', { class: 'mono', href: cov.wikiUrl, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, 'Wikipedia · CC BY-SA ↗')), el('div', { class: 'about', text: cov.summary.length > 600 ? cov.summary.slice(0, 600).replace(/\s+\S*$/, '') + '…' : cov.summary })));
+    else if (album.notes) coverage.append(el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Notes'), el('div', { class: 'mono' }, 'Discogs')), el('div', { class: 'about', style: { whiteSpace: 'pre-line' } }, album.notes)));
   }
   (async () => {
-    const cacheKey = 'hear.cov.' + g.id;
+    const cacheKey = 'hear.cov.' + album.id;
     let cov = store.get(cacheKey, null);
     if (cov && Date.now() - cov.t > 7 * 864e5) cov = null;
     const status = el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Looking up ratings, reviews and press…');
     coverage.append(status);
     if (!cov) {
       cov = { t: Date.now(), wikiUrl: null, wikiTitle: null, summary: null, ratings: [], metacritic: null, entries: [], press: [] };
-      const who = fa ? fa.name : artistName;
+      const who = album.primaryArtist;
       const wikiP = (async () => {
         try {
-          const t = await WP.findAlbumPage(g.title, who, exact);
+          const t = await WP.findAlbumPage(title, who, album.exact);
           if (!t) return;
           const p = await WP.page(t);
           const parsed = parseWikipedia(p.html);
           cov.wikiTitle = p.title; cov.wikiUrl = p.url; cov.ratings = parsed.ratings; cov.metacritic = parsed.metacritic; cov.entries = parsed.entries;
-          store.set('hear.wptitle.' + g.id, p.title);
+          store.set('hear.wptitle.' + album.id, p.title);
           const rs0 = parsed.ratings; const mean0 = rs0.length ? rs0.reduce((s, r) => s + r.norm, 0) / rs0.length : (parsed.metacritic ? parsed.metacritic.norm : null);
-          Ratings.put(g.id, { score: mean0, n: rs0.length, mc: parsed.metacritic ? parsed.metacritic.raw : null, mcUrl: parsed.metacritic ? parsed.metacritic.url : null, hasBox: !!(rs0.length || parsed.metacritic), title: p.title, sources: rs0.map(r => ({ source: r.source, raw: r.raw, norm: r.norm, url: r.url || null })), blurb: parsed.blurb || (store.get('hear.rating.' + g.id, {}) || {}).blurb || '' });
-          ratingLine.innerHTML = ''; if (mean0 != null) ratingLine.append(ratingBadge({ id: g.id, title: g.title, artist: artistName }, { now: true, count: true, size: 'lg' }));
+          Ratings.put(album.id, { score: mean0, n: rs0.length, mc: parsed.metacritic ? parsed.metacritic.raw : null, mcUrl: parsed.metacritic ? parsed.metacritic.url : null, hasBox: !!(rs0.length || parsed.metacritic), title: p.title, sources: rs0.map(r => ({ source: r.source, raw: r.raw, norm: r.norm, url: r.url || null })), blurb: parsed.blurb || (store.get('hear.rating.' + album.id, {}) || {}).blurb || '' });
+          ratingLine.innerHTML = ''; if (mean0 != null) ratingLine.append(ratingBadge(ratingItem, { now: true, count: true, size: 'lg' }));
           cov.summary = await WP.summary(p.title);
         } catch (e) { console.warn('Wikipedia', e); }
       })();
-      const booksP = googleBooks(who, g.title).then(x => { cov.press = x; }).catch(e => console.warn('Google Books', e));
+      const booksP = googleBooks(who, title).then(x => { cov.press = x; }).catch(e => console.warn('Google Books', e));
       await Promise.all([wikiP, booksP]);
       store.set(cacheKey, cov);
     }
+    if (rid !== routeSeq) return;
     status.remove();
     covData = cov;
     drawCoverage(cov);
@@ -1619,103 +1861,103 @@ async function AlbumView(id, rid) {
   const likeSec = el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'More like this'), el('div', { class: 'mono' }, 'Claude')));
   const likeBody = el('div', { class: 'stack' });
   likeSec.append(likeBody); view.append(likeSec);
-  const likeKey = 'hear.like.' + g.id; const liked = store.get(likeKey, null);
-  function likeTile(a) { return albumTile(a); }
+  const likeKey = 'hear.like.' + album.id; const liked = store.get(likeKey, null);
   function drawLike(items) {
     likeBody.innerHTML = '';
     const grid = el('div', { class: 'grid' });
     for (const a of items) {
-      const tile = likeTile(a); grid.append(tile);
-      if (!a.id) resolveAlbum(a.artist, a.title).then(id => { if (!id || !tile.isConnected) return; a.id = id; store.set(likeKey, { t: Date.now(), items }); tile.replaceWith(likeTile(a)); });
+      const tile = albumTile(a); grid.append(tile);
+      if (!a.id) resolveAlbum(a.artist, a.title).then(hit => { if (!hit || !tile.isConnected) return; a.id = hit.id; a.img = hit.img || a.img; store.set(likeKey, { t: Date.now(), items }); tile.replaceWith(albumTile(a)); });
     }
     likeBody.append(grid);
     const whys = items.filter(a => a.why);
     if (whys.length) likeBody.append(el('div', { class: 'list' }, whys.map(a => el('div', { class: 'crow' }, el('div', { class: 't', text: `${a.artist} — ${a.title}` }), el('div', { class: 'snip', text: a.why })))));
   }
   if (liked) drawLike(liked.items);
-  else if (settings.anthropicKey) likeBody.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const reply = await askClaude(`A listener loves the album "${g.title}" by ${artistName}${ry ? ' (' + ry + ')' : ''}. Recommend 6 albums to hear next: three close to it in sound and era, three that share its spirit but come from a different scene or decade. No other albums by ${artistName}; real releases only. Reply with ONLY JSON: {"albums":[{"artist":"...","title":"...","year":1999,"why":"one short sentence on the connection"}]}`, 900); const items = (parseJSON(reply).albums || []).slice(0, 8); store.set(likeKey, { t: Date.now(), items }); drawLike(items); } catch (err) { b.disabled = false; b.textContent = 'Find similar albums'; toast(err.message, 4000); } } }, icon('spark'), 'Find similar albums'));
+  else if (settings.anthropicKey) likeBody.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const reply = await askClaude(`A listener loves the album "${title}" by ${artistName}${ry ? ' (' + ry + ')' : ''}. Recommend 6 albums to hear next: three close to it in sound and era, three that share its spirit but come from a different scene or decade. No other albums by ${artistName}; real releases only. Reply with ONLY JSON: {"albums":[{"artist":"...","title":"...","year":1999,"why":"one short sentence on the connection"}]}`, 900); const items = (parseJSON(reply).albums || []).slice(0, 8); store.set(likeKey, { t: Date.now(), items }); drawLike(items); } catch (err) { b.disabled = false; b.textContent = 'Find similar albums'; toast(err.message, 4000); } } }, icon('spark'), 'Find similar albums'));
   else likeBody.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to get recommendations.'));
 
-  // Tags / genres from the community
-  const tags = [...(g.genres || []), ...(g.tags || [])].filter(t => t.count > 0).sort((a, b) => b.count - a.count);
-  const seen = new Set(); const tagNames = tags.map(t => t.name).filter(n => { const k = n.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 12);
-  const tagSection = el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Styles & tags'), el('div', { class: 'mono' }, 'MusicBrainz')), el('div', { class: 'wrap', id: 'tags' }, tagNames.length ? tagNames.map(n => el('a', { class: 'tag', href: `#/?${enc(n)}`, onclick: (e) => { e.preventDefault(); searchState = Object.assign(searchState, { mode: 'describe', describe: n }); store.set('hear.search', { mode: 'describe', q: '', results: null, describe: n }); location.hash = '#/search'; } }, titleCase(n))) : el('div', { class: 'muted', style: { fontSize: '13px' } }, 'No tags yet.')));
+  // Styles & tags
+  const styleNames = album.styles.length ? album.styles : album.tags;
+  const tagHost = el('div', { class: 'wrap', id: 'tags' });
+  const tagSection = el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Styles & tags'), el('div', { class: 'mono' }, album.tagSource)), tagHost);
+  const drawTags = (names) => { tagHost.innerHTML = ''; if (!names.length) { tagHost.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'No tags yet.')); return; } for (const n of names) tagHost.append(el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(n)}` }, titleCase(n))); };
+  drawTags(styleNames);
   view.append(tagSection);
 
   // Moods: AI-generated (optional)
   const moodSection = el('div', { class: 'section' });
-  const moodHead = el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Moods'), el('div', { class: 'mono' }, 'AI-generated'));
   const moodBody = el('div', { class: 'stack' });
-  moodSection.append(moodHead, moodBody);
+  moodSection.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Moods'), el('div', { class: 'mono' }, 'AI-generated')), moodBody);
   view.append(moodSection);
-  const cachedMood = store.get('hear.ai.' + g.id, null);
+  const cachedMood = store.get('hear.ai.' + album.id, null);
   function drawMoods(m) {
     moodBody.innerHTML = '';
     moodBody.append(el('div', { class: 'wrap' }, (m.moods || []).map(x => el('span', { class: 'tag soft', text: x }))));
     if (m.blurb) moodBody.append(el('div', { style: { fontSize: '14px', lineHeight: 1.45 } }, m.blurb));
-    moodBody.append(el('div', { class: 'mono' }, `Written by ${settings.model || DEFAULTS.model} — may be wrong; check the links below.`));
+    moodBody.append(el('div', { class: 'mono' }, `Written by ${settings.model || DEFAULTS.model} — may be wrong; check the links above.`));
   }
   if (cachedMood) drawMoods(cachedMood);
-  else if (settings.anthropicKey) moodBody.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const m = parseJSON(await askClaude(`Album: "${g.title}" by ${artistName}${year(g['first-release-date']) ? ' (' + year(g['first-release-date']) + ')' : ''}.\nGive AllMusic-style mood descriptors for this specific album. Reply with ONLY JSON: {"moods":["six to eight single words or two-word phrases"],"blurb":"two plain sentences describing how it sounds and when to play it; no superlatives; if you are not confident you know this album, say so in the blurb"}`, 600)); store.set('hear.ai.' + g.id, m); drawMoods(m); } catch (err) { b.disabled = false; b.textContent = 'Generate moods'; toast(err.message, 3500); } } }, icon('spark'), 'Generate moods'));
+  else if (settings.anthropicKey) moodBody.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const m = parseJSON(await askClaude(`Album: "${title}" by ${artistName}${album.year ? ' (' + album.year + ')' : ''}.\nGive AllMusic-style mood descriptors for this specific album. Reply with ONLY JSON: {"moods":["six to eight single words or two-word phrases"],"blurb":"two plain sentences describing how it sounds and when to play it; no superlatives; if you are not confident you know this album, say so in the blurb"}`, 600)); store.set('hear.ai.' + album.id, m); drawMoods(m); } catch (err) { b.disabled = false; b.textContent = 'Generate moods'; toast(err.message, 3500); } } }, icon('spark'), 'Generate moods'));
   else moodBody.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to generate mood tags.'));
 
-  // Releases: labels, formats, exact streaming links, tracklist
-  const relSection = el('div', { class: 'section' }, el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading releases & links…'));
-  view.append(relSection);
-  try {
-    const rd = await MB.get('release', { 'release-group': id, inc: 'url-rels+labels+media', limit: 100 });
-    if (rid !== routeSeq) return;
-    const releases = (rd.releases || []).slice().sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
-    for (const r of releases) collectLinks(r.relations, exact);
-    links = serviceLinks(artistName, g.title, exact); drawLinks(); if (covData) drawCoverage(covData);
-    const labels = []; const seenL = new Set();
-    for (const r of releases) for (const li of r['label-info'] || []) { if (!li.label) continue; const key = li.label.id; if (seenL.has(key)) continue; seenL.add(key); labels.push({ id: li.label.id, name: li.label.name, catno: li['catalog-number'] }); }
-    shelfItem.labels = labels.map(l => l.name);
-    const formats = new Set(); for (const r of releases) for (const m of r.media || []) if (m.format) formats.add(m.format);
+  // Labels, formats, tracks
+  const relSection = el('div', { class: 'section' });
+  const trackHost = el('div', { class: 'section' });
+  view.append(relSection, trackHost);
+  function drawRelease() {
     relSection.innerHTML = '';
-    if (labels.length) relSection.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Labels'), el('div', { class: 'mono' }, `${releases.length} release${releases.length === 1 ? '' : 's'}${formats.size ? ' · ' + [...formats].slice(0, 4).join(', ') : ''}`)),
-      el('div', { class: 'wrap' }, labels.slice(0, 8).map(l => el('a', { class: 'tag', href: `#/label/${l.id}` }, l.name + (l.catno ? ` · ${l.catno}` : '')))));
-    const primary = releases.find(r => r.status === 'Official' && (r.media || []).some(m => m['track-count'])) || releases[0];
-    if (primary) {
-      const trackHost = el('div', { class: 'section' }, el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading tracks…'));
-      view.append(trackHost);
-      try {
-        const rel = await MB.get(`release/${primary.id}`, { inc: 'recordings' });
-        if (rid !== routeSeq) return;
-        trackHost.innerHTML = '';
-        const media = rel.media || [];
-        const total = media.reduce((n, m) => n + (m.tracks || []).length, 0);
-        trackHost.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Tracks'), el('div', { class: 'mono' }, `${total} track${total === 1 ? '' : 's'}${primary.date ? ' · ' + primary.date : ''}${primary.country ? ' · ' + primary.country : ''}`)));
-        media.forEach((m, mi) => {
-          if (media.length > 1) trackHost.append(el('div', { class: 'mono', style: { paddingTop: '6px' } }, `${m.format || 'Disc'} ${m.position || mi + 1}${m.title ? ' · ' + m.title : ''}`));
-          for (const t of m.tracks || []) trackHost.append(el('div', { class: 'track' }, el('span', { class: 'n', text: t.number }), el('span', { class: 'tt', text: t.title }), el('span', { class: 'len', text: fmtLen(t.length) })));
-        });
-      } catch (e) { trackHost.innerHTML = ''; trackHost.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load the tracklist.")); }
+    const detail = [album.releasesCount ? `${album.releasesCount} release${album.releasesCount === 1 ? '' : 's'}` : '', album.formats.length ? album.formats.slice(0, 3).join(' · ') : '', album.country, album.released].filter(Boolean).join(' · ');
+    if (album.labels.length || detail) relSection.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, album.labels.length ? 'Labels' : 'Release'), el('div', { class: 'mono' }, detail)));
+    if (album.labels.length) relSection.append(el('div', { class: 'wrap' }, album.labels.slice(0, 8).map(l => el('a', { class: 'tag', href: `#/label/${l.id}` }, l.name + (l.catno ? ` · ${l.catno}` : '')))));
+    trackHost.innerHTML = '';
+    if (album.discs && album.discs.length) {
+      const total = album.discs.reduce((n, d) => n + d.tracks.length, 0);
+      trackHost.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Tracks'), el('div', { class: 'mono' }, `${total} track${total === 1 ? '' : 's'}`)));
+      for (const d of album.discs) { if (d.title) trackHost.append(el('div', { class: 'mono', style: { paddingTop: '6px' } }, d.title)); for (const t of d.tracks) trackHost.append(el('div', { class: 'track' }, el('span', { class: 'n', text: t.n }), el('span', { class: 'tt', text: t.title }), el('span', { class: 'len', text: t.len }))); }
     }
-  } catch (e) { relSection.innerHTML = ''; relSection.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load release details.")); }
+    shelfItem.labels = album.labels.map(l => l.name);
+  }
+  if (album.more) {
+    relSection.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading releases & tracks…'));
+    album.more().then(() => { if (rid !== routeSeq) return; links = serviceLinks(artistName, title, album.exact); drawLinks(); if (covData) drawCoverage(covData); drawRelease(); }).catch(() => { relSection.innerHTML = ''; relSection.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load release details.")); });
+  } else drawRelease();
 
-  // Discogs enrichment (optional): styles and a cover fallback
-  if (settings.discogsToken) {
+  // Exact streaming links from MusicBrainz, in the background, for Discogs-sourced albums
+  if (album.source === 'dg') (async () => {
+    try {
+      const d = await MB.get('release-group', { query: `releasegroup:"${luceneEscape(title)}" AND artist:"${luceneEscape(album.primaryArtist)}"`, limit: 2 }, { bg: true });
+      const g = (d['release-groups'] || [])[0]; if (!g || g.score < 60) return;
+      const rg = await MB.get(`release-group/${g.id}`, { inc: 'url-rels' }, { bg: true });
+      collectLinks(rg.relations, album.exact);
+      const rd = await MB.get('release', { 'release-group': g.id, inc: 'url-rels', limit: 50 }, { bg: true });
+      for (const r of rd.releases || []) collectLinks(r.relations, album.exact);
+      if (rid !== routeSeq) return;
+      links = serviceLinks(artistName, title, album.exact); drawLinks(); if (covData) drawCoverage(covData);
+    } catch (e) { }
+  })();
+
+  // Styles and a cover from Discogs for MusicBrainz-sourced albums when a token is set
+  if (album.source === 'mb' && settings.discogsToken) (async () => {
     try {
       let master = null;
-      const m = exact.discogs && exact.discogs.match(/master\/(\d+)/);
-      if (m) master = await Discogs.get(`masters/${m[1]}`);
-      else { const s = await Discogs.get('database/search', { type: 'master', artist: artistName, release_title: g.title, per_page: 1 }); const hit = s && s.results && s.results[0]; if (hit && hit.master_id) master = await Discogs.get(`masters/${hit.master_id}`); }
-      if (master) {
-        const styles = [...(master.genres || []), ...(master.styles || [])];
-        const host = $('#tags');
-        if (styles.length && host) { host.innerHTML = ''; styles.forEach(s => host.append(el('span', { class: 'tag', text: s }))); tagSection.querySelector('.mono').textContent = 'Discogs'; }
-        if (!cover.classList.contains('has-img') && master.images && master.images[0] && cover.setImage) cover.setImage(master.images[0].uri);
-        if (!links.discogsExact) { links.discogs = master.uri; links.discogsExact = true; drawLinks(); }
-      }
+      const m = album.exact.discogs && album.exact.discogs.match(/master\/(\d+)/);
+      if (m) master = await DG.get(`masters/${m[1]}`);
+      else { const s = await DG.get('database/search', { type: 'master', artist: artistName, release_title: title, per_page: 1 }); const hit = s && s.results && s.results[0]; if (hit && hit.master_id) master = await DG.get(`masters/${hit.master_id}`); }
+      if (!master || rid !== routeSeq) return;
+      const styles = [...(master.genres || []), ...(master.styles || [])];
+      if (styles.length) { drawTags(styles); tagSection.querySelector('.mono').textContent = 'Discogs'; }
+      if (!cover.classList.contains('has-img') && master.images && master.images[0]) cover.setImage(master.images[0].uri);
+      if (!links.discogsExact) { album.exact.discogs = master.uri; links = serviceLinks(artistName, title, album.exact); drawLinks(); }
     } catch (e) { console.warn('Discogs', e); }
-  }
+  })();
 }
 
 // ============================================================
 // Label
 // ============================================================
 async function LabelView(id, rid) {
+  if (/^dl\d/.test(id)) return LabelViewDG(id, rid);
   setTop({ back: true, title: '' });
   view.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading label…'));
   const label = await MB.get(`label/${id}`, {});
@@ -1772,7 +2014,9 @@ function ShelfView() {
   const chips = el('div', { class: 'chips', style: { paddingTop: '12px' } });
   const body = el('div', { class: 'stack' });
   view.append(head, seg, chips, body);
-  function drawSeg() { seg.innerHTML = ''; for (const [k, l] of [['albums', 'Albums'], ['crates', 'Crates']]) seg.append(el('button', { class: mode === k ? 'on' : '', onclick: () => { mode = k; store.set('hear.shelfMode', k); drawSeg(); draw(); } }, l)); }
+  const segs = [['albums', 'Albums'], ['crates', 'Crates']]; if (settings.discogsUser && DG.on()) segs.push(['discogs', 'Discogs']);
+  if (!segs.some(s => s[0] === mode)) mode = 'albums';
+  function drawSeg() { seg.innerHTML = ''; for (const [k, l] of segs) seg.append(el('button', { class: mode === k ? 'on' : '', onclick: () => { mode = k; store.set('hear.shelfMode', k); drawSeg(); draw(); } }, l)); }
   const groupings = [['added', 'Recently added'], ['artist', 'By artist'], ['label', 'By label'], ['decade', 'By decade']];
   function drawChips() { chips.innerHTML = ''; for (const [k, l] of groupings) chips.append(el('button', { class: 'chip' + (group === k ? ' on' : ''), onclick: () => { group = k; store.set('hear.shelfGroup', k); drawChips(); draw(); } }, l)); }
   function tile(it) { return albumTile(it); }
@@ -1805,7 +2049,24 @@ function ShelfView() {
     for (const c of crates) list.append(el('a', { class: 'item', href: `#/crate/${c.id}` }, el('div', { class: 'main' }, el('div', { class: 't', text: c.name }), el('div', { class: 's', text: `${c.albums.length} albums · ${c.createdAt.slice(0, 10)}${c.text && c.text !== c.name ? ' · “' + c.text + '”' : ''}` })), el('span', { class: 'arrow' }, icon('chevron'))));
     body.append(list);
   }
-  function draw() { body.innerHTML = ''; if (mode === 'crates') drawCrates(); else drawAlbums(); }
+  async function drawDiscogs() {
+    chips.hidden = true;
+    body.append(el('div', { class: 'mono', style: { paddingTop: '8px' } }, `Your Discogs collection · ${settings.discogsUser}`));
+    const grid = el('div', { class: 'grid', style: { paddingTop: '12px' } }); body.append(grid);
+    const status = el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading your collection…'); body.append(status);
+    try {
+      const seen = new Set(); let total = 0;
+      for (let p = 1; p <= 5; p++) {
+        const d = await DG.get(`users/${encodeURIComponent(settings.discogsUser)}/collection/folders/0/releases`, { per_page: 100, page: p, sort: 'added', sort_order: 'desc' }, { nocache: p === 1 });
+        if (mode !== 'discogs' || !grid.isConnected) return;
+        total = (d.pagination || {}).items || total;
+        for (const r of d.releases || []) { const bi = r.basic_information || {}; const id = bi.master_id ? 'dm' + bi.master_id : 'dr' + bi.id; if (seen.has(id)) continue; seen.add(id); grid.append(albumTile({ id, title: bi.title, artist: DG.clean((bi.artists || [{}])[0].name), year: bi.year ? String(bi.year) : '', img: bi.cover_image || bi.thumb || '' })); }
+        if (!(d.pagination && d.pagination.pages > p)) break;
+      }
+      status.innerHTML = ''; status.append(el('div', { class: 'mono' }, `${total.toLocaleString()} record${total === 1 ? '' : 's'}${total > seen.size ? ` · showing ${seen.size}` : ''} · `, el('a', { class: 'link', href: `https://www.discogs.com/user/${encodeURIComponent(settings.discogsUser)}/collection`, target: '_blank', rel: 'noopener' }, 'open on Discogs ↗')));
+    } catch (e) { status.innerHTML = ''; status.append(el('div', { class: 'notice warn' }, "Couldn't load your Discogs collection: " + e.message)); }
+  }
+  function draw() { body.innerHTML = ''; if (mode === 'crates') drawCrates(); else if (mode === 'discogs') drawDiscogs(); else drawAlbums(); }
   drawSeg(); drawChips(); draw();
 }
 function CrateView(id) {
@@ -1890,16 +2151,18 @@ function SettingsView() {
   function select(key, label, options, help) { const s = el('select', { id: 's-' + key }, options.map(([v, l]) => el('option', { value: v, selected: settings[key] === v ? true : null }, l))); f[key] = s; return el('div', { class: 'setting' }, el('label', { for: 's-' + key, text: label }), s, help ? el('div', { class: 'help' }, help) : null); }
   const statusRow = el('div', { class: 'stack', style: { gap: '6px' } },
     el('div', { class: 'status' }, el('span', { class: 'dot ok' }), 'MusicBrainz & Cover Art Archive — always on, no key'),
-    el('div', { class: 'status' }, el('span', { class: 'dot' + (settings.discogsToken ? ' ok' : '') }), settings.discogsToken ? 'Discogs — token set' : 'Discogs — optional, not set'),
+    el('div', { class: 'status' }, el('span', { class: 'dot' + (DG.on() ? ' ok' : '') }), DG.on() ? `Discogs — connected as ${settings.discogsUser || '?'} · main catalog` : settings.discogsToken ? (settings.discogsOk === false ? 'Discogs — token set but the connection test failed' : 'Discogs — token set, not connected yet') : 'Discogs — not connected (MusicBrainz is the catalog)'),
     el('div', { class: 'status' }, el('span', { class: 'dot' + (settings.anthropicKey ? ' ok' : '') }), settings.anthropicKey ? 'Claude — key set' : 'Claude — optional, not set'));
-  const form = el('form', { class: 'stack', style: { gap: '18px', paddingTop: '18px' }, onsubmit: (e) => { e.preventDefault(); saveSettings({ discogsToken: f.discogsToken.value.trim(), anthropicKey: f.anthropicKey.value.trim(), model: f.model.value.trim() || DEFAULTS.model, qobuzRegion: f.qobuzRegion.value.trim() || 'us-en', primary: f.primary.value, theme: f.theme.value, showApple: f.showApple.value === 'yes' }); toast('Settings saved'); route(); } },
+  const form = el('form', { class: 'stack', style: { gap: '18px', paddingTop: '18px' }, onsubmit: (e) => { e.preventDefault(); const tok = f.discogsToken.value.trim(); saveSettings({ discogsToken: tok, discogsOk: tok ? settings.discogsOk : null, discogsUser: tok ? settings.discogsUser : '', source: f.source.value, anthropicKey: f.anthropicKey.value.trim(), model: f.model.value.trim() || DEFAULTS.model, qobuzRegion: f.qobuzRegion.value.trim() || 'us-en', primary: f.primary.value, theme: f.theme.value, showApple: f.showApple.value === 'yes' }); toast('Settings saved'); route(); } },
     el('div', { class: 'eyebrow' }, 'Listening'),
     select('primary', 'Main service', [['spotify', 'Spotify first'], ['qobuz', 'Qobuz first']], 'Which “Hear on…” button is the big one.'),
     field('qobuzRegion', 'Qobuz store region', 'Used for Qobuz search links, e.g. us-en, gb-en, fr-fr.'),
     select('showApple', 'Show Apple Music links when known', [['yes', 'Yes'], ['no', 'No']]),
     select('theme', 'Appearance', [['auto', 'Match system'], ['light', 'Light'], ['dark', 'Dark']]),
     el('div', { class: 'eyebrow', style: { paddingTop: '8px' } }, 'Data sources'),
-    field('discogsToken', 'Discogs personal access token (optional)', el('span', {}, 'Adds Discogs genres/styles and extra cover art. Create one at ', el('a', { class: 'link', href: 'https://www.discogs.com/settings/developers', target: '_blank', rel: 'noopener' }, 'discogs.com/settings/developers'), '.'), 'password'),
+    field('discogsToken', 'Discogs personal access token', el('span', {}, 'Makes Discogs the catalog: fast artwork, genres and styles on everything, most-collected ordering, your collection. Create one at ', el('a', { class: 'link', href: 'https://www.discogs.com/settings/developers', target: '_blank', rel: 'noopener' }, 'discogs.com/settings/developers'), ', paste it, then tap Connect.'), 'password'),
+    el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap' } }, el('button', { type: 'button', class: 'btn sm primary', onclick: async (e) => { const b = e.currentTarget; const tok = f.discogsToken.value.trim(); if (!tok) { toast('Paste your Discogs token first'); return; } b.disabled = true; b.textContent = 'Connecting…'; saveSettings({ discogsToken: tok }); try { const me = await DG.identity(); saveSettings({ discogsUser: me.username || '', discogsOk: true }); toast(`Connected to Discogs as ${me.username}`); route(); } catch (err) { saveSettings({ discogsOk: false }); b.disabled = false; b.textContent = 'Connect'; toast(/TypeError|Failed to fetch/i.test(String(err)) ? "Discogs refused the request from this browser. The app will keep using MusicBrainz." : 'Discogs said: ' + err.message, 6000); } } }, 'Connect'), el('div', { class: 'help', style: { flex: 1, minWidth: '160px' } }, 'Tests the token and switches the catalog to Discogs.')),
+    select('source', 'Catalog', [['auto', 'Discogs when connected (recommended)'], ['musicbrainz', 'MusicBrainz']], 'Where artists, albums and labels come from. Links, ratings and reviews work either way.'),
     field('anthropicKey', 'Claude API key (optional)', el('span', {}, 'Powers “Describe it” recommendations and mood tags. Keys stay in this browser only. Get one at ', el('a', { class: 'link', href: 'https://console.anthropic.com/', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), '.'), 'password'),
     field('model', 'Claude model', 'Model name for recommendations.'),
     el('div', { class: 'btnrow' }, el('button', { class: 'btn primary', type: 'submit' }, 'Save settings')));
