@@ -123,7 +123,9 @@ Wikipedia content is used under CC BY-SA and always linked. Albums without a Wik
 
 ## Updating the app
 
-`sw.js` caches the app shell on phones. When `index.html` changes, bump `VERSION` in `sw.js` so installed phones pick up the new build on their next open.
+`sw.js` caches the app shell so the home-screen icon works offline, but the page itself is fetched network-first: an online phone always runs the current build on its next open, and a new build's service worker reloads the page once when it takes over. When `index.html` changes, bump `VERSION` in `sw.js` and `BUILD` in `index.html` together; Settings shows the build number so you can check what a device is running.
+
+If Claude features misbehave, Settings → **Test key** sends one tiny request and reports exactly what came back (works and how fast, or the error in plain words). Claude requests time out after two minutes and retry once on connection trouble or when the API is overloaded.
 
 ## Files
 

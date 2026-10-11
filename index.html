@@ -366,6 +366,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { } }
 };
+const BUILD = 'v14'; // keep in step with VERSION in sw.js
 const DEFAULTS = { discogsToken: '', discogsUser: '', discogsOk: null, source: 'auto', anthropicKey: '', model: 'claude-sonnet-5-5', autoRate: false, qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
 let settings = Object.assign({}, DEFAULTS, store.get('hear.settings', {}));
 function saveSettings(patch) { settings = Object.assign({}, settings, patch); store.set('hear.settings', settings); applyTheme(); }
@@ -515,16 +516,34 @@ const DG = {
 const Discogs = { get: (path, params) => DG.get(path, params) };
 
 // ---------- Claude (optional) ----------
-async function askClaude(input, maxTokens = 1500) {
-  if (!settings.anthropicKey) throw new Error('No Claude API key set');
-  const messages = Array.isArray(input) ? input : [{ role: 'user', content: input }];
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': settings.anthropicKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: settings.model || DEFAULTS.model, max_tokens: maxTokens, messages })
-  });
+// One door to the Claude API. A 2-minute timeout; one retry when the connection fails or the reply is cut off in transit;
+// short back-off retries when the API is overloaded. Errors come back in plain words.
+async function claudeFetch(body, attempt = 0) {
+  if (!settings.anthropicKey) throw new Error('No Claude API key set. Add one in Settings.');
+  const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 120000);
+  let res;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', signal: ctl.signal,
+      headers: { 'content-type': 'application/json', 'x-api-key': settings.anthropicKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify(Object.assign({ model: settings.model || DEFAULTS.model }, body))
+    });
+  } catch (e) {
+    clearTimeout(timer);
+    if (attempt < 1 && e.name !== 'AbortError') { await sleep(1200); return claudeFetch(body, attempt + 1); }
+    throw new Error(e.name === 'AbortError' ? 'Claude took more than two minutes to answer. Try again.' : "Couldn't reach Claude: no connection, or the request was blocked. Try again.");
+  }
+  clearTimeout(timer);
+  if ((res.status === 529 || res.status === 503 || res.status === 500) && attempt < 2) { await sleep(2000 * (attempt + 1)); return claudeFetch(body, attempt + 1); }
   if (!res.ok) throw await claudeError(res);
-  const data = await res.json();
+  let data;
+  try { data = await res.json(); }
+  catch (e) { if (attempt < 1) { await sleep(800); return claudeFetch(body, attempt + 1); } throw new Error('The reply from Claude was cut off before it finished arriving. Try again.'); }
+  return data;
+}
+async function askClaude(input, maxTokens = 1500) {
+  const messages = Array.isArray(input) ? input : [{ role: 'user', content: input }];
+  const data = await claudeFetch({ max_tokens: maxTokens, messages });
   return (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
 }
 // Errors from the Claude API, with the two common setup mistakes explained in plain words.
@@ -532,6 +551,9 @@ async function claudeError(res) {
   let msg = ''; try { msg = (await res.json()).error.message; } catch (e) { }
   if (res.status === 401) return new Error('Claude rejected the API key (401). Keys can be deleted or reach their expiry date: create a new one at console.anthropic.com (Get API key) and paste it into Settings.');
   if (res.status === 400 && /credit|billing/i.test(msg)) return new Error('The Claude account has no credit: add a small prepaid balance at console.anthropic.com → Billing.');
+  if (res.status === 404 && /model/i.test(msg)) return new Error(`Claude doesn't know the model "${settings.model}". In Settings, set the model back to ${DEFAULTS.model}.`);
+  if (res.status === 429) return new Error('Claude is rate-limiting this key right now. Wait a minute and try again.');
+  if (res.status === 529 || res.status === 503) return new Error('Claude is overloaded at the moment. Try again in a minute.');
   return new Error('Claude API ' + res.status + (msg ? ': ' + msg : ''));
 }
 // Structured replies: Claude fills in a tool's input schema, so the result is always well-formed (no JSON written as prose, nothing to parse).
@@ -542,15 +564,8 @@ const SCHEMA = {
   moods: { type: 'object', properties: { moods: { type: 'array', items: { type: 'string' } }, blurb: { type: 'string' } }, required: ['moods', 'blurb'] }
 };
 async function askJSON(input, schema, maxTokens = 2500) {
-  if (!settings.anthropicKey) throw new Error('No Claude API key set');
   const messages = Array.isArray(input) ? input : [{ role: 'user', content: input }];
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': settings.anthropicKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: settings.model || DEFAULTS.model, max_tokens: maxTokens, messages, tools: [{ name: 'reply', description: 'Deliver the answer in the required structure.', input_schema: schema }], tool_choice: { type: 'tool', name: 'reply' } })
-  });
-  if (!res.ok) throw await claudeError(res);
-  const data = await res.json();
+  const data = await claudeFetch({ max_tokens: maxTokens, messages, tools: [{ name: 'reply', description: 'Deliver the answer in the required structure.', input_schema: schema }], tool_choice: { type: 'tool', name: 'reply' } });
   if (data.stop_reason === 'max_tokens') throw new Error('Claude ran out of room before finishing. Try again.');
   const tu = (data.content || []).find(c => c.type === 'tool_use');
   if (!tu || !tu.input || typeof tu.input !== 'object') throw new Error("Claude replied in a form the app couldn't read. Try again.");
@@ -734,13 +749,7 @@ function decodeEntities(s) { const t = document.createElement('textarea'); t.inn
 async function digDeeper(artist, title, yr) {
   if (!settings.anthropicKey) throw new Error('No Claude API key set');
   const prompt = `Find press coverage of the album "${title}" by ${artist}${yr ? ' (' + yr + ')' : ''}: reviews (with their scores), interviews with the artist about this album, and feature articles, especially from around the time of release. Use several searches. Then reply with ONLY a JSON object, no prose: {"items":[{"title":"...","url":"https://...","source":"publication name","date":"YYYY or YYYY-MM","kind":"review|interview|article","score":"the review's original score, else empty"}]} with up to 12 items. Only include URLs that appeared in your search results.`;
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': settings.anthropicKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: settings.model || DEFAULTS.model, max_tokens: 3000, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }], messages: [{ role: 'user', content: prompt }] })
-  });
-  if (!res.ok) throw await claudeError(res);
-  const data = await res.json();
+  const data = await claudeFetch({ max_tokens: 3000, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }], messages: [{ role: 'user', content: prompt }] });
   const texts = (data.content || []).filter(c => c.type === 'text').map(c => c.text);
   const last = [...texts].reverse().find(t => t.includes('"items"')) || texts.join('\n');
   const items = (parseJSON(last).items || []).filter(i => i && /^https?:/i.test(i.url || ''));
@@ -2540,7 +2549,7 @@ async function AIView(text, rid) {
   if (!res || !Array.isArray(res.albums)) {
     out.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Asking Claude…'));
     try { res = await askPicks(q, { rich: true }); res.t = Date.now(); store.set(key, res); pruneKeys('hear.aiq.', 30); }
-    catch (err) { if (rid !== routeSeq) return; out.innerHTML = ''; out.append(el('div', { class: 'notice warn' }, err.message)); return; }
+    catch (err) { if (rid !== routeSeq) return; out.innerHTML = ''; out.append(el('div', { class: 'notice warn' }, err.message), el('div', { class: 'row', style: { gap: '8px' } }, el('button', { class: 'btn sm primary', onclick: () => route() }, 'Try again'), el('a', { class: 'btn sm quiet', href: '#/settings' }, 'Check Settings'))); return; }
     if (rid !== routeSeq) return;
   }
   rememberAsk(q);
@@ -2643,7 +2652,8 @@ function SettingsView() {
   const statusRow = el('div', { class: 'stack', style: { gap: '6px' } },
     el('div', { class: 'status' }, el('span', { class: 'dot ok' }), 'MusicBrainz & Cover Art Archive — always on, no key'),
     el('div', { class: 'status' }, el('span', { class: 'dot' + (DG.on() ? ' ok' : '') }), DG.on() ? `Discogs — connected as ${settings.discogsUser || '?'} · main catalog` : settings.discogsToken ? (settings.discogsOk === false ? 'Discogs — token set but the connection test failed' : 'Discogs — token set, not connected yet') : 'Discogs — not connected (MusicBrainz is the catalog)'),
-    el('div', { class: 'status' }, el('span', { class: 'dot' + (settings.anthropicKey ? ' ok' : '') }), settings.anthropicKey ? 'Claude — key set' : 'Claude — optional, not set'));
+    el('div', { class: 'status' }, el('span', { class: 'dot' + (settings.anthropicKey ? ' ok' : '') }), settings.anthropicKey ? 'Claude — key set' : 'Claude — optional, not set'),
+    el('div', { class: 'status' }, el('span', { class: 'dot ok' }), `Hear build ${BUILD}`));
   const form = el('form', { class: 'stack', style: { gap: '18px', paddingTop: '18px' }, onsubmit: (e) => { e.preventDefault(); const tok = f.discogsToken.value.trim(); saveSettings({ discogsToken: tok, discogsOk: tok ? settings.discogsOk : null, discogsUser: tok ? settings.discogsUser : '', source: f.source.value, anthropicKey: f.anthropicKey.value.trim(), model: f.model.value.trim() || DEFAULTS.model, autoRate: f.autoRate.value === 'yes', qobuzRegion: f.qobuzRegion.value.trim() || 'us-en', primary: f.primary.value, theme: f.theme.value, showApple: f.showApple.value === 'yes' }); toast('Settings saved'); route(); } },
     el('div', { class: 'eyebrow' }, 'Listening'),
     select('primary', 'Main service', [['spotify', 'Spotify first'], ['qobuz', 'Qobuz first']], 'Which “Hear on…” button is the big one.'),
@@ -2655,6 +2665,7 @@ function SettingsView() {
     el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap' } }, el('button', { type: 'button', class: 'btn sm primary', onclick: async (e) => { const b = e.currentTarget; const tok = f.discogsToken.value.trim(); if (!tok) { toast('Paste your Discogs token first'); return; } b.disabled = true; b.textContent = 'Connecting…'; saveSettings({ discogsToken: tok }); try { const me = await DG.identity(); saveSettings({ discogsUser: me.username || '', discogsOk: true }); toast(`Connected to Discogs as ${me.username}`); route(); } catch (err) { saveSettings({ discogsOk: false }); b.disabled = false; b.textContent = 'Connect'; toast(/TypeError|Failed to fetch/i.test(String(err)) ? "Discogs refused the request from this browser. The app will keep using MusicBrainz." : 'Discogs said: ' + err.message, 6000); } } }, 'Connect'), el('div', { class: 'help', style: { flex: 1, minWidth: '160px' } }, 'Tests the token and switches the catalog to Discogs.')),
     select('source', 'Catalog', [['auto', 'Discogs when connected (recommended)'], ['musicbrainz', 'MusicBrainz']], 'Where artists, albums and labels come from. Links, ratings and reviews work either way.'),
     field('anthropicKey', 'Claude API key (optional)', el('span', {}, 'Powers Ask Claude, Moods, “more like this”, estimated ratings and web checks. Keys stay in this browser only (each address keeps its own settings). Create one at ', el('a', { class: 'link', href: 'https://console.anthropic.com/', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), ' (Get API key). Keys can carry an expiry date; if Claude features stop with a 401, create a new key and paste it here.'), 'password'),
+    el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap' } }, el('button', { type: 'button', class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; const k = f.anthropicKey.value.trim(); if (!k) { toast('Paste a Claude API key first'); return; } b.disabled = true; b.textContent = 'Testing…'; saveSettings({ anthropicKey: k, model: f.model.value.trim() || DEFAULTS.model }); const t0 = Date.now(); try { const r = await askJSON('Reply with ok set to "yes".', { type: 'object', properties: { ok: { type: 'string' } }, required: ['ok'] }, 50); b.textContent = `Works · ${settings.model} answered in ${((Date.now() - t0) / 1000).toFixed(1)} s`; } catch (err) { b.textContent = 'Test key'; b.disabled = false; toast(err.message, 8000); } } }, 'Test key'), el('div', { class: 'help', style: { flex: 1, minWidth: '160px' } }, 'Sends one tiny request and reports what came back.')),
     field('model', 'Claude model', 'Model name for recommendations.'),
     select('autoRate', 'Rate unrated albums automatically', [['no', 'No — use the “Rate the rest” button'], ['yes', 'Yes — on every artist, label, genre and shelf page']], 'Albums without critic scores get Claude\'s estimated star rating (shown muted, marked “est.”). Automatic rating costs about a cent per page of unrated albums; album pages always estimate their one album.'),
     el('div', { class: 'btnrow' }, el('button', { class: 'btn primary', type: 'submit' }, 'Save settings')));
@@ -2672,7 +2683,11 @@ function SettingsView() {
 try { if (!localStorage.getItem('hear.settings') && localStorage.getItem('here.settings')) { for (const k of Object.keys(localStorage)) if (k.startsWith('here.')) localStorage.setItem('hear.' + k.slice(5), localStorage.getItem(k)); settings = Object.assign({}, DEFAULTS, store.get('hear.settings', {})); applyTheme(); } } catch (e) { }
 updateTabs();
 route();
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  const hadController = !!navigator.serviceWorker.controller; let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (refreshing || !hadController) return; refreshing = true; location.reload(); });
+  navigator.serviceWorker.register('sw.js').then((reg) => { try { reg.update(); } catch (e) { } }).catch(() => { });
+}
 </script>
 </body>
 </html>
