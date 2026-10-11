@@ -534,7 +534,36 @@ async function claudeError(res) {
   if (res.status === 400 && /credit|billing/i.test(msg)) return new Error('The Claude account has no credit: add a small prepaid balance at console.anthropic.com → Billing.');
   return new Error('Claude API ' + res.status + (msg ? ': ' + msg : ''));
 }
-function parseJSON(text) { const m = text.match(/\{[\s\S]*\}/); return JSON.parse(m ? m[0] : text); }
+// Structured replies: Claude fills in a tool's input schema, so the result is always well-formed (no JSON written as prose, nothing to parse).
+const SCHEMA = {
+  albums: { type: 'object', properties: { albums: { type: 'array', items: { type: 'object', properties: { artist: { type: 'string' }, title: { type: 'string' }, year: { type: 'integer' }, label: { type: 'string' }, why: { type: 'string' } }, required: ['artist', 'title', 'why'] } } }, required: ['albums'] },
+  ratings: { type: 'object', properties: { ratings: { type: 'array', items: { type: 'object', properties: { i: { type: 'integer' }, score: { type: 'number' }, confidence: { type: 'string', enum: ['high', 'medium', 'low'] }, why: { type: 'string' } }, required: ['i', 'confidence'] } } }, required: ['ratings'] },
+  artists: { type: 'object', properties: { artists: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, why: { type: 'string' } }, required: ['name'] } } }, required: ['artists'] },
+  moods: { type: 'object', properties: { moods: { type: 'array', items: { type: 'string' } }, blurb: { type: 'string' } }, required: ['moods', 'blurb'] }
+};
+async function askJSON(input, schema, maxTokens = 2500) {
+  if (!settings.anthropicKey) throw new Error('No Claude API key set');
+  const messages = Array.isArray(input) ? input : [{ role: 'user', content: input }];
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': settings.anthropicKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: settings.model || DEFAULTS.model, max_tokens: maxTokens, messages, tools: [{ name: 'reply', description: 'Deliver the answer in the required structure.', input_schema: schema }], tool_choice: { type: 'tool', name: 'reply' } })
+  });
+  if (!res.ok) throw await claudeError(res);
+  const data = await res.json();
+  if (data.stop_reason === 'max_tokens') throw new Error('Claude ran out of room before finishing. Try again.');
+  const tu = (data.content || []).find(c => c.type === 'tool_use');
+  if (!tu || !tu.input || typeof tu.input !== 'object') throw new Error("Claude replied in a form the app couldn't read. Try again.");
+  return tu.input;
+}
+// Text replies that should contain JSON (the web-search call): tolerate fences, stray text and a cut-off tail.
+function parseJSON(text) {
+  const m = (text || '').replace(/```(?:json)?/g, '').match(/\{[\s\S]*\}/); const raw = m ? m[0] : (text || '');
+  try { return JSON.parse(raw); } catch (e) { }
+  let cut = raw.lastIndexOf('}');
+  while (cut > 0) { try { return JSON.parse(raw.slice(0, cut + 1) + ']}'); } catch (e) { } try { return JSON.parse(raw.slice(0, cut + 1) + '}'); } catch (e) { } cut = raw.lastIndexOf('}', cut - 1); }
+  throw new Error("Claude replied in a form the app couldn't read. Try again.");
+}
 
 // ---------- links ----------
 function classifyUrl(u) {
@@ -722,8 +751,8 @@ async function estimateRatings(items, opts = {}) {
   const todo = items.filter(it => it.id && it.title).slice(0, 20);
   if (!todo.length || !settings.anthropicKey) return [];
   const list = todo.map((it, i) => `${i}. ${it.artist || 'Unknown artist'} — ${it.title}${it.year ? ' (' + it.year + ')' : ''}`).join('\n');
-  const prompt = `You are an experienced music critic estimating consensus ratings. For each album below, estimate the rating AllMusic's editors would give on their 1-5 scale (5 = essential, 4 = excellent, 3 = good or solid, 2 = flawed, 1 = poor), judging the record within its genre and the artist's catalog and weighing the critical reception you actually know of (AllMusic, Pitchfork, RYM, Metacritic, Christgau, major press). You cannot hear the music; rate only from what you know, and never invent reception. Use half-stars (x.0 or x.5). If you do not recognize an album or know too little about its reception, set confidence "low" and omit the score.\nReply with ONLY JSON: {"ratings":[{"i":0,"score":4.0,"confidence":"high|medium|low","why":"one sentence naming the basis, e.g. 'widely regarded as their peak; Pitchfork 8.7, AllMusic 4.5'"}]}\nAlbums:\n${list}`;
-  const parsed = parseJSON(await askClaude(prompt, 1800));
+  const prompt = `You are an experienced music critic estimating consensus ratings. For each album below, estimate the rating AllMusic's editors would give on their 1-5 scale (5 = essential, 4 = excellent, 3 = good or solid, 2 = flawed, 1 = poor), judging the record within its genre and the artist's catalog and weighing the critical reception you actually know of (AllMusic, Pitchfork, RYM, Metacritic, Christgau, major press). You cannot hear the music; rate only from what you know, and never invent reception. Use half-stars (x.0 or x.5). If you do not recognize an album or know too little about its reception, set confidence "low" and omit the score. "i" is the album's number below; "why" is one sentence naming the basis, e.g. 'widely regarded as their peak; Pitchfork 8.7, AllMusic 4.5'.\nAlbums:\n${list}`;
+  const parsed = await askJSON(prompt, SCHEMA.ratings, 2500);
   const out = [];
   for (const r of parsed.ratings || []) {
     const it = todo[r.i]; if (!it) continue;
@@ -770,9 +799,9 @@ const MOODS = [
 ];
 function describePrompt(text, rich) {
   const why = rich
-    ? '"why" is two or three sentences spoken to the customer across the counter: what the record sounds like, which parts of their request it nails, and anything it only half-fits. Plain and specific; never repeat the artist and title, never gush.'
-    : '"why" is one sentence naming which parts of the description it satisfies.';
-  return `You are a deeply knowledgeable record-store clerk with wide-ranging, specific taste. A customer describes what they want to hear:\n\n"""${text}"""\n\nTreat every attribute in that description as a requirement, not a loose mood: the instrumentation, the voice, the tone, the era, the genre hints. Recommend 10 real, released albums (studio albums or EPs; no singles, no compilations unless essential) that satisfy ALL of it as exactly as possible. Prefer the best fit over the most famous. Mix well-known and lesser-known picks, and no more than one album per artist. Reply with ONLY a JSON object: {"albums":[{"artist":"...","title":"...","year":1979,"label":"the label that first released it","why":"..."}]} where ${why}`;
+    ? 'two or three sentences spoken to the customer across the counter: what the record sounds like, which parts of their request it nails, and anything it only half-fits. Plain and specific; never repeat the artist and title, never gush.'
+    : 'one sentence naming which parts of the description it satisfies.';
+  return `You are a deeply knowledgeable record-store clerk with wide-ranging, specific taste. A customer describes what they want to hear:\n\n"""${text}"""\n\nTreat every attribute in that description as a requirement, not a loose mood: the instrumentation, the voice, the tone, the era, the genre hints. Recommend 10 real, released albums (studio albums or EPs; no singles, no compilations unless essential) that satisfy ALL of it as exactly as possible. Prefer the best fit over the most famous. Mix well-known and lesser-known picks, and no more than one album per artist. For each album give the artist, the title, the year, the label that first released it, and "why": ${why}`;
 }
 function handoffPrompt(text) {
   return `I'm looking for albums that fit this description: "${text}". Treat every attribute as a requirement, not a loose mood. Recommend 10 real albums (no singles or compilations) that fit it as exactly as possible, mixing well-known and lesser-known picks, no more than one per artist. Reply ONLY with a numbered list, one album per line, in exactly this format:\nArtist — Album Title (Year) — one short sentence on why it fits`;
@@ -801,17 +830,16 @@ async function resolveAlbum(artist, title) {
     return g && g.score >= 50 ? { id: g.id, img: null, label: '', year: year(g['first-release-date']) } : null;
   } catch (e) { return null; }
 }
+const cleanAlbums = (list) => (list || []).filter(a => a && a.artist && a.title).map(a => ({ artist: String(a.artist), title: String(a.title), year: a.year ? +a.year || '' : '', label: a.label ? String(a.label) : '', why: a.why ? String(a.why) : '' })).slice(0, 12);
 async function askPicks(text, opts = {}) {
   const msgs = [{ role: 'user', content: describePrompt(text, opts.rich) }];
-  const reply = await askClaude(msgs, opts.rich ? 3000 : 1800);
-  const albums = (parseJSON(reply).albums || []).slice(0, 12);
-  return { text, albums, convo: msgs.concat([{ role: 'assistant', content: reply }]), source: settings.model || DEFAULTS.model };
+  const albums = cleanAlbums((await askJSON(msgs, SCHEMA.albums, 4000)).albums);
+  return { text, albums, convo: msgs.concat([{ role: 'assistant', content: JSON.stringify({ albums }) }]), source: settings.model || DEFAULTS.model };
 }
 async function refinePicks(prev, text) {
-  const msgs = (prev.convo || [{ role: 'user', content: describePrompt(prev.text) }, { role: 'assistant', content: JSON.stringify({ albums: prev.albums }) }]).concat([{ role: 'user', content: `Refinement from the customer: "${text}". Apply it on top of the original description and reply again with ONLY the same JSON shape: a fresh list of 10, keeping earlier picks only if they still fit.` }]);
-  const reply = await askClaude(msgs, 3000);
-  const albums = (parseJSON(reply).albums || []).slice(0, 12);
-  return { text: prev.text, refined: (prev.refined ? prev.refined + ' · ' : '') + text, albums, convo: msgs.concat([{ role: 'assistant', content: reply }]), source: prev.source };
+  const msgs = (prev.convo || [{ role: 'user', content: describePrompt(prev.text) }, { role: 'assistant', content: JSON.stringify({ albums: prev.albums }) }]).concat([{ role: 'user', content: `Refinement from the customer: "${text}". Apply it on top of the original description and give a fresh list of 10 in the same form, keeping earlier picks only if they still fit.` }]);
+  const albums = cleanAlbums((await askJSON(msgs, SCHEMA.albums, 4000)).albums);
+  return { text: prev.text, refined: (prev.refined ? prev.refined + ' · ' : '') + text, albums, convo: msgs.concat([{ role: 'assistant', content: JSON.stringify({ albums }) }]), source: prev.source };
 }
 const Crates = {
   key: 'hear.crates',
@@ -1221,8 +1249,9 @@ async function artistStrip(a) {
     let raw = a.raw || '';
     if (!id) { const hit = await resolveArtist(name); if (!hit) return null; id = hit.id; name = hit.name; raw = hit.raw || hit.name; }
     if (!raw) { const art = await DG.get(`artists/${id.slice(2)}`); raw = art.name; name = DG.clean(art.name); }
-    const items = (await DG.discography(id.slice(2), raw)).filter(it => it.kind === 'album' || it.kind === 'live').sort((x, y) => (x.year || '9999').localeCompare(y.year || '9999'));
-    return { id, name, items };
+    const d = await discographyFor({ id, name, raw });
+    const row = d.rows.find(r => r.label === 'Albums');
+    return { id, name, items: row ? row.items : [] };
   }
   if (!id) {
     const key = 'hear.home.artist.' + slug(name); const c = store.get(key, null);
@@ -1245,8 +1274,8 @@ async function genreStrip(genre) {
     data = { t: Date.now(), source: 'discogs', items }; store.set(key, data); return { key, data };
   }
   if (settings.anthropicKey) {
-    const reply = await askClaude(`List 12 essential ${genre} albums: a mix of foundational classics and lesser-known gems that a serious fan would call definitive. No more than one album per artist, real releases only. Reply with ONLY JSON: {"albums":[{"artist":"...","title":"...","year":1972,"why":"one short sentence"}]}`, 1400);
-    data = { t: Date.now(), source: settings.model || DEFAULTS.model, items: (parseJSON(reply).albums || []).slice(0, 12).map(a => ({ title: a.title, artist: a.artist, year: a.year ? String(a.year) : '', why: a.why })) };
+    const reply = await askJSON(`List 12 essential ${genre} albums: a mix of foundational classics and lesser-known gems that a serious fan would call definitive. No more than one album per artist, real releases only. "why" is one short sentence.`, SCHEMA.albums, 2000);
+    data = { t: Date.now(), source: settings.model || DEFAULTS.model, items: cleanAlbums(reply.albums).map(a => ({ title: a.title, artist: a.artist, year: a.year ? String(a.year) : '', why: a.why })) };
   } else {
     const d = await MB.get('release-group', { query: `tag:"${luceneEscape(genre.toLowerCase())}" AND primarytype:album`, limit: 14 });
     data = { t: Date.now(), source: 'tags', items: (d['release-groups'] || []).map(g => ({ id: g.id, title: g.title, artist: credit(g['artist-credit']), year: year(g['first-release-date']), type: rgType(g) })) };
@@ -1585,7 +1614,7 @@ function artistGenres(artist) {
 const BUCKET_LABELS = { album: 'Albums', ep: 'EPs', single: 'Singles', comp: 'Compilations', live: 'Live', other: 'Other releases' };
 const KIND_LABEL = { album: 'Album', ep: 'EP', single: 'Single', comp: 'Compilation', live: 'Live', other: '' };
 // AllMusic-style discography rows, oldest first. items carry .kind (album/ep/single/comp/live/other).
-const DISCO_GROUPS = [['Albums', ['album', 'live']], ['Singles & EPs', ['single', 'ep']], ['Compilations', ['comp']], ['Other', ['other']]];
+const DISCO_GROUPS = [['Albums', ['album']], ['Live', ['live']], ['Singles & EPs', ['single', 'ep']], ['Compilations', ['comp']], ['Other', ['other']]];
 function groupDisco(items) {
   const out = [];
   for (const [label, kinds] of DISCO_GROUPS) { const list = items.filter(it => kinds.includes(it.kind)); if (list.length) out.push({ label, items: list.slice().sort((x, y) => (x.year || '9999').localeCompare(y.year || '9999')) }); }
@@ -1594,10 +1623,70 @@ function groupDisco(items) {
 function skeletonStrip(n = 4) { const s = el('div', { class: 'strip', 'aria-hidden': 'true' }); for (let i = 0; i < n; i++) s.append(el('div', { class: 'tile skel' }, el('div', { class: 'cover' }), el('div', { class: 'a' }), el('div', { class: 'b' }))); return s; }
 function dgLinkLabel(u) { const h = hostOf(u); if (/bandcamp\.com/.test(h)) return 'Bandcamp'; if (/wikipedia\.org/.test(h)) return 'Wikipedia'; if (/allmusic\.com/.test(h)) return 'AllMusic'; if (/facebook|instagram|twitter|x\.com|youtube|soundcloud|myspace|last\.fm|tiktok|spotify|apple\.com|discogs\.com|imdb|rateyourmusic|setlist|songkick/.test(h)) return null; return 'Website'; }
 function stripSection(label, items, opts = {}) {
-  const sec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead', style: { alignItems: 'center' } }, el('div', { class: 'eyebrow' }, label), el('div', { class: 'row', style: { gap: '10px' } }, opts.tools || null, el('div', { class: 'mono', text: String(items.length) }))));
+  const sec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead', style: { alignItems: 'center' } }, el('div', { class: 'eyebrow' }, label), el('div', { class: 'row', style: { gap: '10px' } }, opts.tools || null, el('div', { class: 'mono', text: (opts.note ? opts.note + ' · ' : '') + items.length }))));
   const strip = el('div', { class: 'strip' });
   for (const it of items) strip.append(albumTile(it, opts));
   sec.append(strip); return sec;
+}
+// ---- Discography for a Discogs artist ----
+// What counts as a studio album, a live album or a compilation comes from MusicBrainz, whose release groups are typed
+// (an "Album" with no secondary type is a studio album). Discogs supplies covers and ids by title, plus its most-collected
+// singles & EPs and compilations. Anything Discogs calls an album that isn't a studio or live album lands in "Other albums".
+async function mbArtistForDiscogs(num, name) {
+  try { const u = await MB.get('url', { resource: `https://www.discogs.com/artist/${num}`, inc: 'artist-rels' }); const rel = (u.relations || []).find(r => r.artist); if (rel) return rel.artist.id; } catch (e) { }
+  try { const d = await MB.get('artist', { query: `artist:"${luceneEscape(name)}"`, limit: 5 }); const hit = (d.artists || []).find(x => WP.norm(x.name) === WP.norm(name) && x.score >= 90); return hit ? hit.id : null; } catch (e) { return null; }
+}
+async function mbAlbumGroups(mbid) {
+  const out = []; let offset = 0;
+  for (let p = 0; p < 5; p++) {
+    const d = await MB.get('release-group', { artist: mbid, type: 'album', limit: 100, offset });
+    out.push(...(d['release-groups'] || [])); offset += 100;
+    if (offset >= (d['release-group-count'] || 0)) break;
+  }
+  return out;
+}
+function mbKind(g) { const sec = (g['secondary-types'] || []).map(x => x.toLowerCase()); return sec.includes('compilation') ? 'comp' : sec.includes('live') ? 'live' : sec.length ? 'other' : 'album'; }
+const chrono = (a) => a.slice().sort((x, y) => (x.year || '9999').localeCompare(y.year || '9999'));
+function buildDiscoRows(ref, dg, groups) {
+  const byNorm = new Map(); for (const it of dg) { const k = WP.norm(it.title); if (!byNorm.has(k)) byNorm.set(k, []); byNorm.get(k).push(it); }
+  const used = new Set();
+  const take = (title, kind) => { const list = byNorm.get(WP.norm(title)) || []; const hit = list.find(x => !used.has(x.id) && x.kind === kind) || list.find(x => !used.has(x.id)); if (hit) used.add(hit.id); return hit || null; };
+  let studio = [], live = [], mbComps = [];
+  if (groups) {
+    const toItem = (g, kind) => { const hit = take(g.title, kind === 'live' ? 'album' : kind); return { id: hit ? hit.id : g.id, mbid: g.id, title: g.title, artist: ref.name, artistId: ref.id, year: year(g['first-release-date']) || (hit && hit.year) || '', img: hit ? hit.img : '', kind, type: KIND_LABEL[kind] || '' }; };
+    const sorted = groups.slice().sort((a, b) => (a['first-release-date'] || '9999').localeCompare(b['first-release-date'] || '9999'));
+    studio = sorted.filter(g => mbKind(g) === 'album').map(g => toItem(g, 'album'));
+    live = sorted.filter(g => mbKind(g) === 'live').map(g => toItem(g, 'live'));
+    mbComps = sorted.filter(g => mbKind(g) === 'comp').map(g => toItem(g, 'comp'));
+  }
+  const left = dg.filter(it => !used.has(it.id));
+  const dgAlbums = chrono(left.filter(it => it.kind === 'album'));
+  const singles = chrono(left.filter(it => it.kind === 'single' || it.kind === 'ep'));
+  const comps = chrono(left.filter(it => it.kind === 'comp'));
+  const other = chrono(left.filter(it => it.kind === 'other'));
+  const rows = [];
+  if (studio.length) rows.push({ label: 'Albums', items: studio, verified: true }); else if (dgAlbums.length) rows.push({ label: 'Albums', items: dgAlbums });
+  if (live.length) rows.push({ label: 'Live', items: live });
+  if (singles.length) rows.push({ label: 'Singles & EPs', items: singles });
+  if (comps.length) rows.push({ label: 'Compilations', items: comps }); else if (mbComps.length) rows.push({ label: 'Compilations', items: mbComps });
+  if (studio.length && dgAlbums.length) rows.push({ label: 'Other albums', items: dgAlbums, note: 'editions, box sets, remixes' });
+  if (other.length) rows.push({ label: 'Other', items: other });
+  const counts = {}; for (const it of dg) for (const st of [...(it.styles || []), ...(it.genres || [])]) counts[st] = (counts[st] || 0) + 1;
+  const styles = Object.entries(counts).sort((x, y) => y[1] - x[1]).slice(0, 7).map(x => x[0]);
+  return { rows: rows.map(r => Object.assign({}, r, { items: r.items.slice(0, r.label === 'Albums' ? 200 : 60) })), styles, verified: studio.length > 0 };
+}
+// ref: { id: 'da…', name, raw }. onPartial gets the Discogs-only rows as soon as they're in, before MusicBrainz answers.
+async function discographyFor(ref, onPartial) {
+  const key = 'hear.disco.' + ref.id; const c = store.get(key, null);
+  if (c && Date.now() - c.t < 7 * 864e5) return c;
+  const num = ref.id.slice(2);
+  let dg = null;
+  const dgP = DG.discography(num, ref.raw || ref.name).catch(() => []).then(list => { dg = list; if (onPartial) onPartial(buildDiscoRows(ref, dg, null)); return list; });
+  const mbP = (async () => { const mbid = await mbArtistForDiscogs(num, ref.name); if (!mbid) return null; try { return await mbAlbumGroups(mbid); } catch (e) { return null; } })();
+  const [list, groups] = await Promise.all([dgP, mbP]);
+  const out = Object.assign({ t: Date.now() }, buildDiscoRows(ref, list, groups));
+  if (out.rows.length) { store.set(key, out); pruneKeys('hear.disco.', 24); }
+  return out;
 }
 async function ArtistViewDG(rawId, rid) {
   const num = rawId.slice(2);
@@ -1632,27 +1721,18 @@ async function ArtistViewDG(rawId, rid) {
   const disco = el('div');
   view.append(disco);
   disco.append(el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'eyebrow' }, 'Albums'), skeletonStrip(4)));
-  // The discography: the artist's most-collected masters (so the main albums always make it), grouped like AllMusic.
-  let items = [];
-  try { items = await DG.discography(num, a.name); } catch (e) { console.warn('Discogs discography', e); }
-  if (rid !== routeSeq) return;
-  if (!items.length) {
-    // Fallback (name mismatch or an obscure artist): the id-exact release list, oldest first; main credits only
-    try {
-      const d = await DG.get(`artists/${num}/releases`, { sort: 'year', sort_order: 'asc', per_page: 100, page: 1 });
-      if (rid !== routeSeq) return;
-      const seen = new Set();
-      for (const r of d.releases || []) { if (r.role !== 'Main') continue; const id = r.type === 'master' ? 'dm' + r.id : 'dr' + r.id; if (seen.has(id)) continue; seen.add(id); const kind = DG.bucket(r.format); items.push({ id, title: r.title, artist: DG.clean(r.artist) || name, artistId: rawId, year: r.year ? String(r.year) : '', kind, type: KIND_LABEL[kind] || '', img: DG.img(r.thumb), styles: [], genres: [] }); }
-    } catch (e) { }
-  }
-  // Styles: the ones that recur across the discography
-  const counts = {}; for (const it of items) for (const st of [...(it.styles || []), ...(it.genres || [])]) counts[st] = (counts[st] || 0) + 1;
-  for (const st of Object.entries(counts).sort((x, y) => y[1] - x[1]).slice(0, 7).map(x => x[0])) styleHost.append(el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(st)}` }, st));
-  disco.innerHTML = '';
-  const groups = groupDisco(items);
-  groups.forEach((g, i) => disco.append(stripSection(g.label, g.items, { primary: 'title', twoLine: true, tools: i === 0 ? rateRestButton(() => items) : null })));
-  if (!groups.length) disco.append(el('div', { class: 'empty' }, 'Discogs lists no releases for this artist yet.'));
-  autoRate(items);
+  let drawnStyles = false;
+  const drawRows = (d, partial) => {
+    if (rid !== routeSeq) return;
+    if (!drawnStyles && d.styles && d.styles.length) { drawnStyles = true; for (const st of d.styles) styleHost.append(el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(st)}` }, st)); }
+    const all = d.rows.flatMap(r => r.items);
+    disco.innerHTML = '';
+    if (partial) disco.append(el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Albums'), el('div', { class: 'mono' }, 'checking which are studio albums…')), skeletonStrip(4)));
+    d.rows.forEach((r, i) => { if (partial && r.label === 'Albums') return; disco.append(stripSection(r.label, r.items, { primary: 'title', twoLine: true, note: r.note, tools: !partial && i === 0 ? rateRestButton(() => all) : null })); });
+    if (!partial) { if (!d.rows.length) disco.append(el('div', { class: 'empty' }, 'No releases found for this artist.')); autoRate(all); }
+  };
+  try { const d = await discographyFor({ id: rawId, name, raw: a.name }, (part) => drawRows(part, true)); drawRows(d, false); }
+  catch (e) { if (rid === routeSeq) { disco.innerHTML = ''; disco.append(el('div', { class: 'notice warn' }, "Couldn't load the discography: " + e.message)); } }
 }
 async function LabelViewDG(rawId, rid) {
   const num = rawId.slice(2);
@@ -1769,8 +1849,8 @@ async function GenreView(name, rid) {
     try {
       let data = store.get(key, null);
       if (!data || Date.now() - data.t > 30 * 864e5) {
-        const reply = await askClaude(`List 14 essential ${genre} artists: the originators and defining names first, then a few lesser-known ones a serious fan would insist on. Real artists only. Reply with ONLY JSON: {"artists":[{"name":"...","why":"one short phrase, e.g. 'the sound's architect' or 'the 90s revival'"}]}`, 900);
-        data = { t: Date.now(), items: (parseJSON(reply).artists || []).slice(0, 14) }; store.set(key, data);
+        const reply = await askJSON(`List 14 essential ${genre} artists: the originators and defining names first, then a few lesser-known ones a serious fan would insist on. Real artists only. "why" is one short phrase, e.g. 'the sound's architect' or 'the 90s revival'.`, SCHEMA.artists, 1200);
+        data = { t: Date.now(), items: (reply.artists || []).filter(a => a && a.name).map(a => ({ name: String(a.name), why: a.why ? String(a.why) : '' })).slice(0, 14) }; store.set(key, data);
       }
       if (rid !== routeSeq) return;
       artistsSec.querySelector('.loading').remove();
@@ -2146,7 +2226,7 @@ async function AlbumView(id, rid) {
       moodBody.append(el('div', { class: 'mono' }, `Written by ${settings.model || DEFAULTS.model} — may be wrong.`));
     };
     if (cachedMood) drawMoods(cachedMood);
-    else if (settings.anthropicKey) moodBody.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const m = parseJSON(await askClaude(`Album: "${title}" by ${artistName}${album.year ? ' (' + album.year + ')' : ''}.\nGive AllMusic-style mood descriptors for this specific album. Reply with ONLY JSON: {"moods":["six to eight single words or two-word phrases"],"blurb":"two plain sentences describing how it sounds and when to play it; no superlatives; if you are not confident you know this album, say so in the blurb"}`, 600)); store.set('hear.ai.' + album.id, m); drawMoods(m); } catch (err) { b.disabled = false; b.textContent = 'Generate moods'; toast(err.message, 3500); } } }, icon('spark'), 'Generate moods'));
+    else if (settings.anthropicKey) moodBody.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const m = await askJSON(`Album: "${title}" by ${artistName}${album.year ? ' (' + album.year + ')' : ''}.\nGive AllMusic-style mood descriptors for this specific album: six to eight single words or two-word phrases, and a blurb of two plain sentences describing how it sounds and when to play it; no superlatives; if you are not confident you know this album, say so in the blurb.`, SCHEMA.moods, 600); store.set('hear.ai.' + album.id, m); drawMoods(m); } catch (err) { b.disabled = false; b.textContent = 'Generate moods'; toast(err.message, 3500); } } }, icon('spark'), 'Generate moods'));
     else moodBody.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to generate mood tags.'));
     // Release details
     const detail = [album.releasesCount ? `${album.releasesCount} release${album.releasesCount === 1 ? '' : 's'}` : '', album.formats.length ? album.formats.slice(0, 3).join(' · ') : '', album.country, album.released].filter(Boolean).join(' · ');
@@ -2170,7 +2250,7 @@ async function AlbumView(id, rid) {
       body.append(el('div', { class: 'mono' }, 'Picked by Claude'));
     };
     if (liked) render(liked.items);
-    else if (settings.anthropicKey) body.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const reply = await askClaude(`A listener loves the album "${title}" by ${artistName}${ry ? ' (' + ry + ')' : ''}. Recommend 6 albums to hear next: three close to it in sound and era, three that share its spirit but come from a different scene or decade. No other albums by ${artistName}; real releases only. Reply with ONLY JSON: {"albums":[{"artist":"...","title":"...","year":1999,"why":"one short sentence on the connection"}]}`, 900); const items = (parseJSON(reply).albums || []).slice(0, 8); store.set(likeKey, { t: Date.now(), items }); render(items); } catch (err) { b.disabled = false; b.textContent = 'Find similar albums'; toast(err.message, 4000); } } }, icon('spark'), 'Find similar albums'));
+    else if (settings.anthropicKey) body.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const reply = await askJSON(`A listener loves the album "${title}" by ${artistName}${ry ? ' (' + ry + ')' : ''}. Recommend 6 albums to hear next: three close to it in sound and era, three that share its spirit but come from a different scene or decade. No other albums by ${artistName}; real releases only. "why" is one short sentence on the connection.`, SCHEMA.albums, 1500); const items = cleanAlbums(reply.albums).slice(0, 8); store.set(likeKey, { t: Date.now(), items }); render(items); } catch (err) { b.disabled = false; b.textContent = 'Find similar albums'; toast(err.message, 4000); } } }, icon('spark'), 'Find similar albums'));
     else body.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to get recommendations.'));
   }
   if (store.get(likeKey, null)) fLike.setMeta('ready');

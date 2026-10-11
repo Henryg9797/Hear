@@ -66,7 +66,9 @@ The Search tab's "Describe it" sends you to the same page when a key is set. Gen
 
 An artist page opens with their photo and a short bio (from Wikipedia, with Discogs as a photo fallback when a token is set), their genres as tappable chips, and their releases as horizontal rows, AllMusic-style: **Albums** (studio and live), **Singles & EPs**, **Compilations**, oldest first, each cover with its star rating underneath.
 
-With Discogs as the catalog, the discography is the artist's *most-collected* masters (up to 300), which is what makes the main albums reliable: Discogs lists thousands of entries for a big artist, most of them bootlegs, regional pressings and "appears on" compilations, so asking for "the newest 300" used to miss the classics. Collection counts put the real albums first, and the masters come with full-size covers rather than the 150-pixel thumbnails the release list carries.
+**What counts as a studio album** comes from MusicBrainz, whose release groups are typed: an "Album" with no secondary type is a studio album, and Live, Compilation, Remix and Soundtrack are marked as such. Discogs can't make that distinction (a live album, a remix album, a box set and a reissue with extras are all just "Album" there), so with Discogs as the catalog the app looks the artist up in MusicBrainz (by the Discogs link MusicBrainz keeps for most artists, otherwise by name), takes the typed album list from there, and matches each title to Discogs' most-collected masters for the cover and the album page. Radiohead's Albums row is therefore exactly Pablo Honey → A Moon Shaped Pool, nine covers in order. Rows: **Albums**, **Live**, **Singles & EPs** (Discogs, most collected), **Compilations**, **Other albums** (editions, box sets, remixes), **Other**. If MusicBrainz doesn't know the artist, the Albums row falls back to Discogs' album-format masters.
+
+Why not just the newest releases: Discogs lists thousands of entries for a big artist, most of them bootlegs, regional pressings and "appears on" compilations, so "the newest 300" used to miss the classics entirely. Collection counts put the real records first, and masters come with full-size covers rather than the 150-pixel thumbnails of the plain release list.
 
 A genre page (tap any genre chip) shows Claude's essential artists for that genre, essential albums, and every artist MusicBrainz has tagged with it.
 
@@ -116,7 +118,7 @@ Wikipedia content is used under CC BY-SA and always linked. Albums without a Wik
 - **MusicBrainz** (musicbrainz.org): catalog, discographies, labels, tags and cross-links. Free, no key, limited to one request per second per user; the app queues and caches requests, so a page can take a few seconds the first time.
 - **Cover Art Archive** (coverartarchive.org): covers. Coverage is good for well-known albums and patchy for obscure ones; missing covers show a colored placeholder (or Discogs art when a token is set).
 - **Discogs** (optional): genres, styles, cover fallback.
-- **Claude** (optional): recommendations, estimated ratings and web checks. AI-written text and estimated scores are labeled as such.
+- **Claude** (optional): recommendations, estimated ratings and web checks. AI-written text and estimated scores are labeled as such. Lists come back as structured tool replies (never JSON written as prose), so a stray character can't break a search.
 - AllMusic reviews are not reproduced; the app links to AllMusic's page for the album.
 
 ## Updating the app
