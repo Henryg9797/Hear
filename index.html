@@ -366,7 +366,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { } }
 };
-const BUILD = 'v14'; // keep in step with VERSION in sw.js
+const BUILD = 'v15'; // keep in step with VERSION in sw.js
 const DEFAULTS = { discogsToken: '', discogsUser: '', discogsOk: null, source: 'auto', anthropicKey: '', model: 'claude-sonnet-5-5', autoRate: false, qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
 let settings = Object.assign({}, DEFAULTS, store.get('hear.settings', {}));
 function saveSettings(patch) { settings = Object.assign({}, settings, patch); store.set('hear.settings', settings); applyTheme(); }
@@ -556,20 +556,43 @@ async function claudeError(res) {
   if (res.status === 529 || res.status === 503) return new Error('Claude is overloaded at the moment. Try again in a minute.');
   return new Error('Claude API ' + res.status + (msg ? ': ' + msg : ''));
 }
-// Structured replies: Claude fills in a tool's input schema, so the result is always well-formed (no JSON written as prose, nothing to parse).
+// Structured replies: the API's structured outputs (output_config.format with a JSON schema) guarantee a schema-valid JSON
+// reply on current models (Sonnet/Opus/Haiku 5.5, Fable 5.1). Forced tool choice is rejected by those models, so it isn't used.
+// Older model names fall back to plain text plus a tolerant parser.
+const obj = (props, required) => ({ type: 'object', properties: props, required, additionalProperties: false });
 const SCHEMA = {
-  albums: { type: 'object', properties: { albums: { type: 'array', items: { type: 'object', properties: { artist: { type: 'string' }, title: { type: 'string' }, year: { type: 'integer' }, label: { type: 'string' }, why: { type: 'string' } }, required: ['artist', 'title', 'why'] } } }, required: ['albums'] },
-  ratings: { type: 'object', properties: { ratings: { type: 'array', items: { type: 'object', properties: { i: { type: 'integer' }, score: { type: 'number' }, confidence: { type: 'string', enum: ['high', 'medium', 'low'] }, why: { type: 'string' } }, required: ['i', 'confidence'] } } }, required: ['ratings'] },
-  artists: { type: 'object', properties: { artists: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, why: { type: 'string' } }, required: ['name'] } } }, required: ['artists'] },
-  moods: { type: 'object', properties: { moods: { type: 'array', items: { type: 'string' } }, blurb: { type: 'string' } }, required: ['moods', 'blurb'] }
+  albums: obj({ albums: { type: 'array', items: obj({ artist: { type: 'string' }, title: { type: 'string' }, why: { type: 'string' }, year: { type: 'integer' }, label: { type: 'string' } }, ['artist', 'title', 'why']) } }, ['albums']),
+  ratings: obj({ ratings: { type: 'array', items: obj({ i: { type: 'integer' }, confidence: { type: 'string', enum: ['high', 'medium', 'low'] }, score: { type: 'number' }, why: { type: 'string' } }, ['i', 'confidence']) } }, ['ratings']),
+  artists: obj({ artists: { type: 'array', items: obj({ name: { type: 'string' }, why: { type: 'string' } }, ['name']) } }, ['artists']),
+  moods: obj({ moods: { type: 'array', items: { type: 'string' } }, blurb: { type: 'string' } }, ['moods', 'blurb']),
+  ok: obj({ ok: { type: 'string' } }, ['ok'])
 };
+let structuredOK = true; // flipped off for the session if the chosen model rejects output_config
 async function askJSON(input, schema, maxTokens = 2500) {
   const messages = Array.isArray(input) ? input : [{ role: 'user', content: input }];
-  const data = await claudeFetch({ max_tokens: maxTokens, messages, tools: [{ name: 'reply', description: 'Deliver the answer in the required structure.', input_schema: schema }], tool_choice: { type: 'tool', name: 'reply' } });
+  let data;
+  if (structuredOK) {
+    try { data = await claudeFetch({ max_tokens: maxTokens, messages, output_config: { format: { type: 'json_schema', schema } } }); }
+    catch (e) { if (!/output_config|output_format|structured|json_schema|format/i.test(e.message) || !/400/.test(e.message)) throw e; structuredOK = false; }
+  }
+  if (!data) {
+    // Plain-text route: describe the shape and parse leniently
+    const last = messages[messages.length - 1];
+    const shaped = messages.slice(0, -1).concat([{ role: 'user', content: (typeof last.content === 'string' ? last.content : '') + `\n\nReply with ONLY a JSON object of this shape (no prose, no code fences): ${JSON.stringify(schemaExample(schema))}` }]);
+    data = await claudeFetch({ max_tokens: maxTokens, messages: shaped });
+  }
   if (data.stop_reason === 'max_tokens') throw new Error('Claude ran out of room before finishing. Try again.');
-  const tu = (data.content || []).find(c => c.type === 'tool_use');
-  if (!tu || !tu.input || typeof tu.input !== 'object') throw new Error("Claude replied in a form the app couldn't read. Try again.");
-  return tu.input;
+  if (data.stop_reason === 'refusal') throw new Error('Claude declined to answer that one. Try rephrasing.');
+  const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+  return parseJSON(text);
+}
+// A one-line example built from a schema, for the plain-text route
+function schemaExample(sc) {
+  if (!sc) return null;
+  if (sc.type === 'object') { const o = {}; for (const [k, v] of Object.entries(sc.properties || {})) o[k] = schemaExample(v); return o; }
+  if (sc.type === 'array') return [schemaExample(sc.items)];
+  if (sc.enum) return sc.enum.join('|');
+  return sc.type === 'integer' || sc.type === 'number' ? 0 : '...';
 }
 // Text replies that should contain JSON (the web-search call): tolerate fences, stray text and a cut-off tail.
 function parseJSON(text) {
@@ -2665,7 +2688,7 @@ function SettingsView() {
     el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap' } }, el('button', { type: 'button', class: 'btn sm primary', onclick: async (e) => { const b = e.currentTarget; const tok = f.discogsToken.value.trim(); if (!tok) { toast('Paste your Discogs token first'); return; } b.disabled = true; b.textContent = 'Connecting…'; saveSettings({ discogsToken: tok }); try { const me = await DG.identity(); saveSettings({ discogsUser: me.username || '', discogsOk: true }); toast(`Connected to Discogs as ${me.username}`); route(); } catch (err) { saveSettings({ discogsOk: false }); b.disabled = false; b.textContent = 'Connect'; toast(/TypeError|Failed to fetch/i.test(String(err)) ? "Discogs refused the request from this browser. The app will keep using MusicBrainz." : 'Discogs said: ' + err.message, 6000); } } }, 'Connect'), el('div', { class: 'help', style: { flex: 1, minWidth: '160px' } }, 'Tests the token and switches the catalog to Discogs.')),
     select('source', 'Catalog', [['auto', 'Discogs when connected (recommended)'], ['musicbrainz', 'MusicBrainz']], 'Where artists, albums and labels come from. Links, ratings and reviews work either way.'),
     field('anthropicKey', 'Claude API key (optional)', el('span', {}, 'Powers Ask Claude, Moods, “more like this”, estimated ratings and web checks. Keys stay in this browser only (each address keeps its own settings). Create one at ', el('a', { class: 'link', href: 'https://console.anthropic.com/', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), ' (Get API key). Keys can carry an expiry date; if Claude features stop with a 401, create a new key and paste it here.'), 'password'),
-    el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap' } }, el('button', { type: 'button', class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; const k = f.anthropicKey.value.trim(); if (!k) { toast('Paste a Claude API key first'); return; } b.disabled = true; b.textContent = 'Testing…'; saveSettings({ anthropicKey: k, model: f.model.value.trim() || DEFAULTS.model }); const t0 = Date.now(); try { const r = await askJSON('Reply with ok set to "yes".', { type: 'object', properties: { ok: { type: 'string' } }, required: ['ok'] }, 50); b.textContent = `Works · ${settings.model} answered in ${((Date.now() - t0) / 1000).toFixed(1)} s`; } catch (err) { b.textContent = 'Test key'; b.disabled = false; toast(err.message, 8000); } } }, 'Test key'), el('div', { class: 'help', style: { flex: 1, minWidth: '160px' } }, 'Sends one tiny request and reports what came back.')),
+    el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap' } }, el('button', { type: 'button', class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; const k = f.anthropicKey.value.trim(); if (!k) { toast('Paste a Claude API key first'); return; } b.disabled = true; b.textContent = 'Testing…'; saveSettings({ anthropicKey: k, model: f.model.value.trim() || DEFAULTS.model }); const t0 = Date.now(); try { const r = await askJSON('Reply with ok set to "yes".', SCHEMA.ok, 50); b.textContent = `Works · ${settings.model} answered in ${((Date.now() - t0) / 1000).toFixed(1)} s`; } catch (err) { b.textContent = 'Test key'; b.disabled = false; toast(err.message, 8000); } } }, 'Test key'), el('div', { class: 'help', style: { flex: 1, minWidth: '160px' } }, 'Sends one tiny request and reports what came back.')),
     field('model', 'Claude model', 'Model name for recommendations.'),
     select('autoRate', 'Rate unrated albums automatically', [['no', 'No — use the “Rate the rest” button'], ['yes', 'Yes — on every artist, label, genre and shelf page']], 'Albums without critic scores get Claude\'s estimated star rating (shown muted, marked “est.”). Automatic rating costs about a cent per page of unrated albums; album pages always estimate their one album.'),
     el('div', { class: 'btnrow' }, el('button', { class: 'btn primary', type: 'submit' }, 'Save settings')));

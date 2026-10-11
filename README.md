@@ -118,7 +118,7 @@ Wikipedia content is used under CC BY-SA and always linked. Albums without a Wik
 - **MusicBrainz** (musicbrainz.org): catalog, discographies, labels, tags and cross-links. Free, no key, limited to one request per second per user; the app queues and caches requests, so a page can take a few seconds the first time.
 - **Cover Art Archive** (coverartarchive.org): covers. Coverage is good for well-known albums and patchy for obscure ones; missing covers show a colored placeholder (or Discogs art when a token is set).
 - **Discogs** (optional): genres, styles, cover fallback.
-- **Claude** (optional): recommendations, estimated ratings and web checks. AI-written text and estimated scores are labeled as such. Lists come back as structured tool replies (never JSON written as prose), so a stray character can't break a search.
+- **Claude** (optional): recommendations, estimated ratings and web checks. AI-written text and estimated scores are labeled as such. Lists come back through the API's structured outputs (a JSON schema the reply must match), so a stray character can't break a search; older model names fall back to plain text with a tolerant parser.
 - AllMusic reviews are not reproduced; the app links to AllMusic's page for the album.
 
 ## Updating the app
