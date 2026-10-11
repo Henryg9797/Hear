@@ -93,3 +93,7 @@ Wikipedia content is used under CC BY-SA and always linked. Albums without a Wik
 - `manifest.webmanifest` – home-screen install metadata
 - `sw.js` – service worker (offline app shell)
 - `icons/` – app icons
+
+## Where it lives
+
+The app is published automatically from this repository to https://henryg9797.github.io/Hear/ on every push to `main`.
