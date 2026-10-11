@@ -1,0 +1,1923 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hear</title>
+<meta name="description" content="Your records, all in one place. A record-collection front end for Spotify and Qobuz.">
+<meta name="theme-color" content="#EEEDE8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121317" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Hear">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: one phone-width column (max 720px) with a fixed bottom tab bar; the artist page's cover flow is the centerpiece. */
+:root {
+  --bg: #EEEDE8;
+  --surface: #FFFFFF;
+  --ink: #17181C;
+  --muted: #5B5E66;
+  --line: #D6D4CC;
+  --chip: #E3E1DA;
+  --accent: #A8361A;
+  --accent-ink: #FFFFFF;
+  --shadow: 0 18px 30px rgba(23, 24, 28, 0.22);
+  --font: Archivo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121317; --surface: #1C1D23; --ink: #EDECE7; --muted: #A4A7AE; --line: #2E3038; --chip: #262830;
+    --accent: #E0744F; --accent-ink: #17181C; --shadow: 0 18px 30px rgba(0, 0, 0, 0.55);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121317; --surface: #1C1D23; --ink: #EDECE7; --muted: #A4A7AE; --line: #2E3038; --chip: #262830;
+  --accent: #E0744F; --accent-ink: #17181C; --shadow: 0 18px 30px rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.4; -webkit-text-size-adjust: 100%; }
+a { color: inherit; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+
+#app { max-width: 720px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px); }
+.topbar { display: flex; align-items: center; gap: 6px; height: 56px; padding: 0 10px; }
+.topbar .brand { font-weight: 800; font-size: 24px; letter-spacing: -0.03em; padding: 0 6px; }
+.topbar .ttl { font-weight: 700; font-size: 16px; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.topbar .spacer { flex: 1; }
+.iconbtn { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 22px; border: 0; background: transparent; color: var(--ink); }
+.iconbtn.ring { background: var(--surface); border: 1px solid var(--line); }
+.iconbtn svg { width: 22px; height: 22px; }
+main { flex: 1; padding: 0 16px calc(96px + env(safe-area-inset-bottom, 0px)); }
+
+/* Bottom tabs */
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 50; }
+.tabs .row { max-width: 720px; margin: 0 auto; display: flex; height: 62px; }
+.tabs a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: var(--muted); font-size: 11px; font-weight: 500; }
+.tabs a svg { width: 22px; height: 22px; }
+.tabs a.active { color: var(--ink); font-weight: 600; }
+
+/* Type */
+h1 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.02; text-wrap: balance; }
+h2 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; text-wrap: balance; }
+.eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; align-items: center; gap: 10px; }
+.wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.section { display: flex; flex-direction: column; gap: 8px; padding-top: 18px; }
+.sechead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+
+/* Controls */
+.field { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.field svg { width: 20px; height: 20px; flex-shrink: 0; }
+.field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 17px; }
+.field input::-webkit-search-cancel-button { -webkit-appearance: none; }
+textarea.area { width: 100%; resize: vertical; min-height: 84px; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--surface); font-size: 15px; line-height: 1.4; }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex-shrink: 0; height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; white-space: nowrap; }
+.chip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip.accent { border-color: var(--accent); color: var(--accent); }
+.tag { height: 30px; padding: 0 11px; display: inline-flex; align-items: center; border-radius: 15px; background: var(--surface); border: 1px solid var(--line); font-size: 12px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+.tag.soft { background: var(--chip); border-color: transparent; }
+.btn { height: 46px; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 23px; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); font-size: 14px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+.btn.primary { background: var(--ink); color: var(--bg); }
+.btn.accent { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.quiet { border-color: var(--line); font-weight: 600; }
+.btn.sm { height: 38px; padding: 0 13px; font-size: 13px; }
+.btn[disabled] { opacity: 0.5; cursor: default; }
+.btnrow { display: flex; gap: 10px; }
+.btnrow .btn { flex: 1; min-width: 0; }
+.link { color: var(--accent); font-weight: 600; text-decoration: none; }
+.notice { padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; font-size: 14px; line-height: 1.45; }
+.notice.warn { border-color: var(--accent); }
+.card { padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column; gap: 10px; }
+.card.dark { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.card.dark .eyebrow { color: var(--line); }
+.card.dark textarea.area { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.18); color: inherit; }
+.card.dark textarea.area::placeholder { color: rgba(255, 255, 255, 0.55); }
+
+/* Lists */
+.list { display: flex; flex-direction: column; }
+.item { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--line); text-decoration: none; color: inherit; text-align: left; background: transparent; border-left: 0; border-right: 0; border-top: 0; width: 100%; }
+.item:last-child { border-bottom: 0; }
+.item .main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.item .t { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item .s { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item .cover { width: 52px; height: 52px; flex-shrink: 0; }
+.item .arrow { color: var(--muted); flex-shrink: 0; }
+.item .arrow svg { width: 18px; height: 18px; }
+
+/* Covers */
+.cover { position: relative; aspect-ratio: 1; width: 100%; background: var(--chip); border-radius: 4px; overflow: hidden; }
+.cover .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; letter-spacing: -0.04em; color: rgba(255, 255, 255, 0.9); font-size: 28%; }
+.cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.25s; }
+.cover.has-img img { opacity: 1; }
+.cover.has-img .ph { display: none; }
+.cover.big { box-shadow: var(--shadow); border-radius: 6px; }
+
+/* Grid of tiles */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 14px 12px; }
+.tile { display: flex; flex-direction: column; gap: 5px; text-decoration: none; color: inherit; min-width: 0; background: transparent; border: 0; padding: 0; text-align: left; }
+.tile .cover { box-shadow: 0 6px 12px rgba(23, 24, 28, 0.18); }
+.tile .a { font-size: 12px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .b { font-size: 12px; line-height: 1.2; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grouphead { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 4px; margin-top: 8px; }
+.grouphead a { font-weight: 700; text-decoration: none; }
+
+/* Cover flow */
+.flow { position: relative; height: 300px; margin: 4px -16px 0; overflow-x: auto; overflow-y: hidden; display: flex; align-items: center; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding: 0 calc(50% - 60px); }
+.flow::-webkit-scrollbar { display: none; }
+.flow .slot { flex: 0 0 120px; height: 240px; scroll-snap-align: center; position: relative; }
+.flow .fc { position: absolute; left: 50%; top: 0; width: 240px; height: 240px; margin-left: -120px; padding: 0; border: 0; background: transparent; transition: transform 0.18s ease-out; will-change: transform; }
+.flow .fc .cover { width: 240px; height: 240px; box-shadow: var(--shadow); border-radius: 4px; }
+.flow .fc .cover .ph { font-size: 64px; }
+.years { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; padding: 4px 0; }
+.years::-webkit-scrollbar { display: none; }
+.years button { flex-shrink: 0; height: 28px; padding: 0 2px; border: 0; background: transparent; font-family: var(--mono); font-size: 11px; color: var(--muted); border-bottom: 2px solid transparent; }
+.years button.on { color: var(--ink); font-weight: 700; border-bottom-color: var(--accent); }
+.nowplaying { min-height: 64px; display: flex; flex-direction: column; gap: 4px; padding-top: 10px; }
+
+/* Tracks */
+.track { display: flex; gap: 12px; align-items: baseline; min-height: 40px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.track .n { font-family: var(--mono); font-size: 12px; color: var(--muted); width: 22px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.track .tt { flex: 1; min-width: 0; }
+.track .len { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Ratings & coverage */
+.stars { position: relative; display: inline-block; font-size: 22px; line-height: 1; letter-spacing: 2px; color: var(--line); white-space: nowrap; }
+.stars .fill { position: absolute; left: 0; top: 0; overflow: hidden; white-space: nowrap; color: var(--accent); }
+.stars.sm { font-size: 14px; letter-spacing: 1px; }
+.rb { display: inline-flex; align-items: center; gap: 6px; min-height: 16px; }
+.rb .stars.sm { font-size: 12px; letter-spacing: 0.5px; }
+.rb .rbn { font-family: var(--mono); font-size: 11px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.rb .rbc { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.rb.lg .stars.sm { font-size: 16px; letter-spacing: 1px; }
+.rb.lg .rbn { font-size: 13px; font-weight: 600; }
+.rb.lg .rbc { font-size: 12px; }
+.score { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.srow { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; text-decoration: none; color: inherit; }
+.srow:first-of-type { border-top: 0; }
+.srow .src { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.srow .raw { font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.crow { display: flex; flex-direction: column; gap: 2px; padding: 9px 0; border-top: 1px solid var(--line); text-decoration: none; color: inherit; }
+.crow:first-child { border-top: 0; }
+.crow .t { font-size: 14px; font-weight: 600; line-height: 1.3; }
+.crow .m { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.crow .snip { font-size: 13px; color: var(--muted); line-height: 1.35; }
+.kind { display: inline-block; font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: var(--chip); color: var(--ink); margin-right: 6px; vertical-align: 1px; }
+.subhead { font-family: var(--mono); font-size: 11px; color: var(--muted); padding: 12px 0 4px; }
+.about { font-size: 14px; line-height: 1.5; }
+
+/* Review box */
+.quote { padding: 12px 14px; background: var(--surface); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; font-size: 14px; line-height: 1.45; }
+
+/* Settings */
+.setting { display: flex; flex-direction: column; gap: 6px; }
+.setting label { font-weight: 600; font-size: 14px; }
+.setting .help { font-size: 13px; color: var(--muted); line-height: 1.4; }
+.setting input[type="text"], .setting input[type="password"], .setting select { height: 46px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-size: 15px; width: 100%; }
+.status { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 12px; }
+.dot { width: 8px; height: 8px; border-radius: 4px; background: var(--muted); }
+.dot.ok { background: #2E8B57; }
+
+/* Type-ahead suggestions */
+.field { position: relative; }
+.field:focus-within { z-index: 300; }
+.ta { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 40; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); max-height: 60vh; overflow: auto; padding: 6px; }
+.ta-h { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 8px 10px 4px; }
+.ta-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 6px 10px; border: 0; background: transparent; border-radius: 8px; text-align: left; color: inherit; font: inherit; }
+.ta-row.on, .ta-row:hover { background: var(--chip); }
+.ta-row .cover { width: 36px; height: 36px; flex-shrink: 0; }
+.ta-ic { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 18px; background: var(--chip); color: var(--muted); flex-shrink: 0; }
+.ta-ic svg { width: 18px; height: 18px; }
+.ta-main { display: flex; flex-direction: column; min-width: 0; }
+.ta-t { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ta-s { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ta-foot { font-size: 13px; color: var(--muted); padding: 8px 10px; }
+
+/* Horizontal strips of album tiles, artist header, review sheet */
+.strip { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding: 0 16px; padding: 4px 16px 12px; margin: 0 -16px; scrollbar-width: none; }
+.strip::-webkit-scrollbar { display: none; }
+.strip .tile { flex: 0 0 148px; scroll-snap-align: start; }
+.tile .tl { display: flex; flex-direction: column; gap: 5px; text-decoration: none; color: inherit; min-width: 0; }
+.tile .a2 { font-size: 13px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 2px 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; border-radius: 6px; }
+.rbtn:hover .rbn { text-decoration: underline; }
+.ahead { display: flex; gap: 16px; align-items: flex-start; }
+.aimg { width: 104px; height: 104px; flex-shrink: 0; border-radius: 10px; object-fit: cover; background: var(--chip); box-shadow: 0 6px 14px rgba(23, 24, 28, 0.18); }
+.aimg.ph { display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 34px; color: rgba(255, 255, 255, 0.9); }
+.bio { font-size: 14px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.bio.open { display: block; -webkit-line-clamp: unset; }
+.sheet-back { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 80; display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 720px; max-height: 84vh; overflow: auto; background: var(--bg); color: var(--ink); border-radius: 18px 18px 0 0; padding: 10px 20px calc(24px + env(safe-area-inset-bottom, 0px)); box-shadow: var(--shadow); }
+@media (min-width: 720px) { .sheet-back { align-items: center; } .sheet { border-radius: 18px; max-height: 80vh; } }
+.sheet .handle { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 14px; }
+
+/* Segmented control */
+.seg { display: flex; background: var(--chip); border-radius: 12px; padding: 3px; }
+.seg button { flex: 1; height: 36px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; }
+.seg button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+
+/* Misc */
+.toast { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; z-index: 60; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
+.spinner { width: 18px; height: 18px; border: 2px solid var(--line); border-top-color: var(--ink); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; padding: 16px 0; }
+.empty { padding: 28px 0; color: var(--muted); font-size: 14px; line-height: 1.5; text-align: center; }
+.kbd { font-family: var(--mono); font-size: 12px; background: var(--chip); padding: 2px 6px; border-radius: 4px; }
+@media (min-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); } }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar" id="topbar"></header>
+  <main id="view"></main>
+  <nav class="tabs" aria-label="Main">
+    <div class="row">
+      <a href="#/" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2"></path></svg>Home</a>
+      <a href="#/search" data-tab="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5L20 20"></path></svg>Search</a>
+      <a href="#/moods" data-tab="moods"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"></path></svg>Moods</a>
+      <a href="#/shelf" data-tab="shelf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h3v16H4z"></path><path d="M10 4h3v16h-3z"></path><path d="M15.5 4.8l2.9-.8 4.1 15.4-2.9.8z"></path></svg>Shelf</a>
+      <a href="#/settings" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>Settings</a>
+    </div>
+  </nav>
+  <div id="toast" class="toast" role="status" hidden></div>
+</div>
+
+<script>
+/* ============================================================
+   Hear — a record-collection front end for Spotify and Qobuz.
+   Data: MusicBrainz (catalog, links), Cover Art Archive (covers),
+   optional Discogs (styles, covers) and Claude (describe-it search,
+   mood tags). Everything runs in the browser; no server.
+   ============================================================ */
+'use strict';
+
+// ---------- tiny DOM helpers ----------
+const $ = (sel, root = document) => root.querySelector(sel);
+function el(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  if (attrs) for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') n.className = v;
+    else if (k === 'text') n.textContent = v;
+    else if (k === 'html') n.innerHTML = v;
+    else if (k.startsWith('on') && typeof v === 'function') n.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k === 'style' && typeof v === 'object') Object.assign(n.style, v);
+    else n.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat(Infinity)) {
+    if (kid == null || kid === false) continue;
+    n.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return n;
+}
+const ICONS = {
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5L20 20"></path></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4 10-10"></path></svg>',
+  chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>',
+  ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 13v6H5V6h6"></path></svg>',
+  spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"></path></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>',
+  shuffle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"></path></svg>',
+  artist: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"></path></svg>',
+  label: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8z"></path><circle cx="7.5" cy="8.5" r="1.5"></circle></svg>'
+};
+const icon = (name) => { const s = el('span', { class: 'ic', html: ICONS[name] }); s.style.display = 'inline-flex'; return s.firstElementChild; };
+
+// ---------- storage ----------
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { } }
+};
+const DEFAULTS = { discogsToken: '', anthropicKey: '', model: 'claude-sonnet-5-5', qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
+let settings = Object.assign({}, DEFAULTS, store.get('hear.settings', {}));
+function saveSettings(patch) { settings = Object.assign({}, settings, patch); store.set('hear.settings', settings); applyTheme(); }
+function applyTheme() {
+  const r = document.documentElement;
+  if (settings.theme === 'light' || settings.theme === 'dark') r.setAttribute('data-theme', settings.theme); else r.removeAttribute('data-theme');
+}
+applyTheme();
+
+// ---------- utilities ----------
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+function toast(msg, ms = 1800) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, ms); }
+function year(d) { return d ? String(d).slice(0, 4) : ''; }
+function credit(ac) { return (ac || []).map(c => (c.name || (c.artist && c.artist.name) || '') + (c.joinphrase || '')).join('') || 'Unknown artist'; }
+function firstArtist(ac) { const c = (ac || [])[0]; return c && c.artist ? { id: c.artist.id, name: c.artist.name } : null; }
+function fmtLen(ms) { if (!ms) return ''; const s = Math.round(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+function hue(str) { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return h % 360; }
+function initials(title) { return (title || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join(''); }
+function luceneEscape(q) { return q.replace(/([+\-!(){}\[\]^"~*?:\\\/]|&&|\|\|)/g, '\\$1'); }
+function enc(s) { return encodeURIComponent(s); }
+function titleCase(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
+
+// ---------- MusicBrainz client (1 request/second, cached) ----------
+const MB = {
+  base: 'https://musicbrainz.org/ws/2/',
+  mem: new Map(),
+  last: 0,
+  hi: [], lo: [], running: false,
+  // Requests are queued at one per second. Page loads go first; background lookups
+  // (matching picks to the catalog) wait, and anything queued by a view you've left is dropped.
+  get(path, params = {}, opts = {}) {
+    const rest = Object.assign({ fmt: 'json' }, params); const inc = rest.inc; delete rest.inc;
+    const url = this.base + path + '?' + new URLSearchParams(rest).toString() + (inc ? '&inc=' + inc : '');
+    if (this.mem.has(url)) return Promise.resolve(this.mem.get(url));
+    const cached = diskCache.get(url);
+    if (cached) { this.mem.set(url, cached); return Promise.resolve(cached); }
+    return new Promise((resolve, reject) => { (opts.bg ? this.lo : this.hi).push({ url, resolve, reject, rid: routeSeq, keep: !!opts.keep, ta: !!opts.ta }); this.pump(); });
+  },
+  dropTypeahead() { const keep = []; for (const j of this.hi) { if (j.ta) j.reject(new Error('typeahead')); else keep.push(j); } this.hi = keep; },
+  dropStale(rid) {
+    for (const q of ['hi', 'lo']) { const keep = []; for (const j of this[q]) { if (j.keep || j.rid === rid) keep.push(j); else j.reject(new Error('stale')); } this[q] = keep; }
+  },
+  async pump() {
+    if (this.running) return; this.running = true;
+    while (this.hi.length || this.lo.length) {
+      const job = this.hi.length ? this.hi.shift() : this.lo.shift();
+      if (this.mem.has(job.url)) { job.resolve(this.mem.get(job.url)); continue; }
+      const wait = Math.max(0, this.last + 1100 - Date.now());
+      if (wait) await sleep(wait);
+      this.last = Date.now();
+      try {
+        let res = await fetch(job.url, { headers: { Accept: 'application/json' } });
+        if (res.status === 503 || res.status === 429) { await sleep(2000); this.last = Date.now(); res = await fetch(job.url, { headers: { Accept: 'application/json' } }); }
+        if (!res.ok) throw new Error('MusicBrainz ' + res.status);
+        const data = await res.json();
+        this.mem.set(job.url, data); diskCache.set(job.url, data);
+        job.resolve(data);
+      } catch (e) { job.reject(e); }
+    }
+    this.running = false;
+  }
+};
+// Small persistent cache so repeat visits don't re-hit the rate limit.
+const diskCache = {
+  key: 'hear.cache',
+  data: null,
+  load() { if (!this.data) this.data = store.get(this.key, {}); return this.data; },
+  get(url) { const d = this.load(); const e = d[url]; if (!e) return null; if (Date.now() - e.t > 7 * 864e5) { delete d[url]; return null; } return e.v; },
+  set(url, v) {
+    const s = JSON.stringify(v); if (s.length > 60000) return;
+    const d = this.load(); d[url] = { t: Date.now(), v };
+    clearTimeout(this._w); this._w = setTimeout(() => this.flush(), 400);
+  },
+  flush() {
+    const d = this.load();
+    let keys = Object.keys(d).sort((a, b) => d[a].t - d[b].t);
+    while (keys.length > 250) delete d[keys.shift()];
+    while (!store.set(this.key, d) && keys.length) { for (let i = 0; i < 20 && keys.length; i++) delete d[keys.shift()]; }
+  },
+  clear() { this.data = {}; store.del(this.key); MB.mem.clear(); }
+};
+
+const caa = (rgid, size) => `https://coverartarchive.org/release-group/${rgid}/front-${size || 250}`;
+
+// ---------- Discogs (optional) ----------
+const Discogs = {
+  async get(path, params = {}) {
+    if (!settings.discogsToken) return null;
+    const qs = new URLSearchParams(Object.assign({}, params, { token: settings.discogsToken }));
+    const res = await fetch('https://api.discogs.com/' + path + '?' + qs.toString(), { headers: { Accept: 'application/vnd.discogs.v2.discogs+json' } });
+    if (!res.ok) throw new Error('Discogs ' + res.status);
+    return res.json();
+  }
+};
+
+// ---------- Claude (optional) ----------
+async function askClaude(input, maxTokens = 1500) {
+  if (!settings.anthropicKey) throw new Error('No Claude API key set');
+  const messages = Array.isArray(input) ? input : [{ role: 'user', content: input }];
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': settings.anthropicKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: settings.model || DEFAULTS.model, max_tokens: maxTokens, messages })
+  });
+  if (!res.ok) { let msg = ''; try { msg = (await res.json()).error.message; } catch (e) { } throw new Error('Claude API ' + res.status + (msg ? ': ' + msg : '')); }
+  const data = await res.json();
+  return (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+}
+function parseJSON(text) { const m = text.match(/\{[\s\S]*\}/); return JSON.parse(m ? m[0] : text); }
+
+// ---------- links ----------
+function classifyUrl(u) {
+  const s = u.toLowerCase();
+  if (s.includes('open.spotify.com/album/')) return 'spotify';
+  if (s.includes('qobuz.com/') && s.includes('/album/')) return 'qobuz';
+  if (s.includes('bandcamp.com/album/')) return 'bandcamp';
+  if (s.includes('music.apple.com/') && s.includes('/album/')) return 'apple';
+  if (s.includes('deezer.com/') && s.includes('/album/')) return 'deezer';
+  if (s.includes('tidal.com/') && s.includes('/album/')) return 'tidal';
+  if (s.includes('discogs.com/master/')) return 'discogs';
+  if (s.includes('allmusic.com/album/')) return 'allmusic';
+  if (s.includes('pitchfork.com/')) return 'pitchfork';
+  if (s.includes('wikidata.org/')) return 'wikidata';
+  if (s.includes('wikipedia.org/')) return 'wikipedia';
+  if (s.includes('rateyourmusic.com/')) return 'rym';
+  return null;
+}
+function collectLinks(relations, into = {}) {
+  for (const r of relations || []) {
+    const url = r.url && r.url.resource; if (!url) continue;
+    const k = classifyUrl(url);
+    if (k && !into[k]) into[k] = url;
+    if (!k && r.type === 'review' && !into.review) into.review = url;
+  }
+  return into;
+}
+function qobuzApp(u) { return u.replace(/https?:\/\/play\.qobuz\.com\/album\//, 'https://open.qobuz.com/album/'); }
+function serviceLinks(artist, title, exact = {}) {
+  const q = enc(`${artist} ${title}`);
+  return {
+    spotify: exact.spotify || `https://open.spotify.com/search/${q}`,
+    spotifyExact: !!exact.spotify,
+    qobuz: exact.qobuz ? qobuzApp(exact.qobuz) : `https://www.qobuz.com/${settings.qobuzRegion || 'us-en'}/search?q=${q}`,
+    qobuzExact: !!exact.qobuz,
+    bandcamp: exact.bandcamp || `https://bandcamp.com/search?q=${q}&item_type=a`,
+    bandcampExact: !!exact.bandcamp,
+    apple: exact.apple, deezer: exact.deezer, tidal: exact.tidal,
+    discogs: exact.discogs || `https://www.discogs.com/search/?q=${q}&type=master`,
+    discogsExact: !!exact.discogs,
+    allmusic: exact.allmusic || `https://www.allmusic.com/search/albums/${enc(title)}`,
+    allmusicExact: !!exact.allmusic,
+    pitchfork: exact.pitchfork, wikipedia: exact.wikipedia, rym: exact.rym, review: exact.review
+  };
+}
+function hearButtons(links, opts = {}) {
+  const sp = el('a', { class: 'btn', href: links.spotify, target: '_blank', rel: 'noopener' }, icon('play'), 'Hear on Spotify');
+  const qb = el('a', { class: 'btn', href: links.qobuz, target: '_blank', rel: 'noopener' }, icon('play'), 'Hear on Qobuz');
+  const first = settings.primary === 'qobuz' ? qb : sp;
+  first.classList.add('primary');
+  return el('div', { class: 'btnrow' }, settings.primary === 'qobuz' ? [qb, sp] : [sp, qb]);
+}
+
+// ---------- Coverage: ratings, reviews, interviews, period press ----------
+const WP = {
+  api: 'https://en.wikipedia.org/w/api.php',
+  async call(params) {
+    const qs = new URLSearchParams(Object.assign({ format: 'json', origin: '*' }, params));
+    const r = await fetch(this.api + '?' + qs.toString()); if (!r.ok) throw new Error('Wikipedia ' + r.status); return r.json();
+  },
+  async titleFromWikidata(qid) {
+    try {
+      const r = await fetch(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qid}&props=sitelinks&sitefilter=enwiki&format=json&origin=*`);
+      if (!r.ok) return null; const d = await r.json(); const e = d.entities && d.entities[qid];
+      return e && e.sitelinks && e.sitelinks.enwiki ? e.sitelinks.enwiki.title : null;
+    } catch (e) { return null; }
+  },
+  norm(s) { return (s || '').toLowerCase().replace(/\s*\([^)]*\)\s*$/, '').replace(/[^a-z0-9]+/g, ' ').trim(); },
+  async findAlbumPage(title, artist, exact) {
+    if (exact.wikidata) { const m = exact.wikidata.match(/Q\d+/); if (m) { const t = await this.titleFromWikidata(m[0]); if (t) return t; } }
+    if (exact.wikipedia && /en\.wikipedia\.org\/wiki\//.test(exact.wikipedia)) return decodeURIComponent(exact.wikipedia.split('/wiki/')[1].split('#')[0]).replace(/_/g, ' ');
+    const d = await this.call({ action: 'query', list: 'search', srsearch: `intitle:"${title}" "${artist}"`, srlimit: 6 });
+    const hits = (d.query && d.query.search) || []; const want = this.norm(title);
+    const hit = hits.find(s => this.norm(s.title) === want) || hits.find(s => this.norm(s.title).includes(want) && /album|ep|soundtrack|mixtape/i.test(s.title + ' ' + s.snippet));
+    return hit ? hit.title : null;
+  },
+  async page(title) {
+    const d = await this.call({ action: 'parse', page: title, prop: 'text', redirects: 1, disabletoc: 1 });
+    if (!d.parse) throw new Error('No Wikipedia page');
+    return { title: d.parse.title, html: d.parse.text['*'], url: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(d.parse.title.replace(/ /g, '_')) };
+  },
+  async summary(title) {
+    try { const r = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/ /g, '_'))); if (!r.ok) return null; const d = await r.json(); return d.extract || null; } catch (e) { return null; }
+  }
+};
+const GRADES = { 'A+': 5, 'A': 4.75, 'A-': 4.5, 'B+': 4.1, 'B': 3.75, 'B-': 3.4, 'C+': 3, 'C': 2.6, 'C-': 2.2, 'D+': 1.9, 'D': 1.5, 'D-': 1.2, 'E': 0.8, 'F': 0.5 };
+function parseScore(text) {
+  const t = (text || '').replace(/\[\d+\]/g, ' ').replace(/[−–]/g, '-').replace(/\s+/g, ' ').trim();
+  let m = t.match(/(\d+(?:\.\d+)?)\s*(?:\/|out of)\s*(\d+(?:\.\d+)?)/);
+  if (m) { const v = +m[1], max = +m[2]; if (max > 0 && v <= max) return { raw: `${m[1]}/${m[2]}`, norm: v / max * 5 }; }
+  m = t.match(/(\d+(?:\.\d+)?)\s*%/); if (m) return { raw: m[1] + '%', norm: +m[1] / 20 };
+  m = t.match(/(?:^|\s)([A-F][+-]?)(?=\s|$)/); if (m && GRADES[m[1]] != null) return { raw: m[1].replace('-', '−'), norm: GRADES[m[1]] };
+  m = t.match(/(★+)(½)?/); if (m) { const v = m[1].length + (m[2] ? 0.5 : 0); if (v <= 5) return { raw: `${v}/5`, norm: v }; }
+  if (/very favou?rable|positive|favou?rable|excellent/i.test(t)) return { raw: 'favorable', norm: 4 };
+  if (/mixed|average/i.test(t)) return { raw: 'mixed', norm: 3 };
+  if (/unfavou?rable|negative|poor/i.test(t)) return { raw: 'unfavorable', norm: 2 };
+  return null;
+}
+function cellScoreText(td) {
+  const parts = [];
+  td.querySelectorAll('[aria-label], img[alt], [title]').forEach(e => parts.push(e.getAttribute('aria-label') || e.getAttribute('alt') || e.getAttribute('title')));
+  parts.push(td.textContent);
+  return parts.filter(Boolean).join(' ');
+}
+function parseWikipedia(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const refs = new Map();
+  doc.querySelectorAll('ol.references > li[id]').forEach(li => {
+    const links = [...li.querySelectorAll('a.external')].filter(a => /^https?:/i.test(a.getAttribute('href') || '') && !/wikipedia\.org|wikimedia\.org|webcitation\.org|archive\.(org|today|ph)\/|web\.archive/i.test(a.getAttribute('href')));
+    const a = links.find(x => !/^archived?$/i.test(x.textContent.trim())) || links[0];
+    if (!a) return;
+    const cite = li.querySelector('cite');
+    const text = (cite ? cite.textContent : li.textContent).replace(/\s+/g, ' ');
+    const before = text.split(/Retrieved|Archived/)[0];
+    const y = (before.match(/\b(19|20)\d{2}\b/) || [])[0];
+    const work = cite && cite.querySelector('i') ? cite.querySelector('i').textContent.trim() : '';
+    refs.set(li.id, { id: li.id, url: a.getAttribute('href'), title: a.textContent.trim().replace(/^["“]|["”]$/g, ''), work, year: y ? +y : null, kind: null });
+  });
+  const ratings = []; let metacritic = null;
+  const table = [...doc.querySelectorAll('table')].find(t => /professional ratings/i.test((t.querySelector('caption') || { textContent: '' }).textContent) || /album-ratings|ratings/.test(t.className));
+  if (table) {
+    let section = 'review';
+    table.querySelectorAll('tr').forEach(tr => {
+      const th = tr.querySelector('th'); const td = tr.querySelector('td');
+      if (th && !td) { const h = th.textContent.toLowerCase(); if (h.includes('aggregate')) section = 'aggregate'; else if (h.includes('review')) section = 'review'; return; }
+      if (!th || !td) return;
+      const source = th.textContent.replace(/\[\d+\]/g, '').replace(/\s+/g, ' ').trim();
+      const score = parseScore(cellScoreText(td));
+      const sup = tr.querySelector('sup.reference a[href^="#cite_note"]');
+      let ref = null;
+      if (sup) { const id = decodeURIComponent(sup.getAttribute('href').slice(1)); ref = refs.get(id) || null; if (ref) ref.kind = section === 'aggregate' ? 'aggregate' : 'review'; }
+      if (!score) return;
+      if (section === 'aggregate') { if (/metacritic/i.test(source)) metacritic = { raw: score.raw, norm: score.norm, url: ref && ref.url }; return; }
+      ratings.push({ source, raw: score.raw, norm: score.norm, url: ref && ref.url, year: ref && ref.year });
+    });
+  }
+  let blurb = '';
+  try {
+    const heads = [...doc.querySelectorAll('h2, h3')].filter(h => /reception|critical response|reviews/i.test(h.textContent));
+    if (heads.length) {
+      const h = heads[0]; let node = h.parentElement && /mw-heading/.test(h.parentElement.className) ? h.parentElement : h;
+      const paras = [];
+      for (let n = node.nextElementSibling; n && paras.length < 2; n = n.nextElementSibling) {
+        if (/^H[23]$/.test(n.tagName) || n.querySelector('h2, h3')) break;
+        if (n.tagName === 'P') { const t = n.textContent.replace(/\[\d+\]|\[[a-z]\]/g, '').replace(/\s+/g, ' ').trim(); if (t.length > 80) paras.push(t); }
+      }
+      blurb = paras.join('\n\n'); if (blurb.length > 1100) blurb = blurb.slice(0, 1100).replace(/\s+\S*$/, '') + '…';
+    }
+  } catch (e) { }
+  const entries = [...refs.values()];
+  for (const e of entries) {
+    if (e.kind) continue;
+    const t = (e.title + ' ' + e.work).toLowerCase();
+    e.kind = /\breview\b/.test(t) ? 'review' : /interview|talks? (to|with|about)|speaks|q&a|q & a|in conversation|chats? with/.test(t) ? 'interview' : 'article';
+  }
+  return { ratings, metacritic, entries, blurb };
+}
+async function googleBooks(artist, title) {
+  const qs = new URLSearchParams({ q: `"${title}" "${artist}"`, printType: 'magazines', maxResults: '15', orderBy: 'relevance' });
+  const r = await fetch('https://www.googleapis.com/books/v1/volumes?' + qs.toString()); if (!r.ok) throw new Error('Google Books ' + r.status);
+  const d = await r.json();
+  return (d.items || []).map(it => {
+    const v = it.volumeInfo || {}; const s = it.searchInfo || {};
+    return { work: v.title || 'Magazine', date: v.publishedDate || '', year: v.publishedDate ? +String(v.publishedDate).slice(0, 4) : null, snippet: s.textSnippet ? decodeEntities(s.textSnippet) : '', url: (v.previewLink || v.infoLink || v.canonicalVolumeLink || '').replace(/^http:/, 'https:'), kind: 'press' };
+  }).filter(x => x.url);
+}
+function decodeEntities(s) { const t = document.createElement('textarea'); t.innerHTML = s; return t.value.replace(/<[^>]+>/g, ''); }
+async function digDeeper(artist, title, yr) {
+  if (!settings.anthropicKey) throw new Error('No Claude API key set');
+  const prompt = `Find press coverage of the album "${title}" by ${artist}${yr ? ' (' + yr + ')' : ''}: reviews (with their scores), interviews with the artist about this album, and feature articles, especially from around the time of release. Use several searches. Then reply with ONLY a JSON object, no prose: {"items":[{"title":"...","url":"https://...","source":"publication name","date":"YYYY or YYYY-MM","kind":"review|interview|article","score":"the review's original score, else empty"}]} with up to 12 items. Only include URLs that appeared in your search results.`;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': settings.anthropicKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: settings.model || DEFAULTS.model, max_tokens: 3000, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }], messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!res.ok) { let msg = ''; try { msg = (await res.json()).error.message; } catch (e) { } throw new Error('Claude API ' + res.status + (msg ? ': ' + msg : '')); }
+  const data = await res.json();
+  const texts = (data.content || []).filter(c => c.type === 'text').map(c => c.text);
+  const last = [...texts].reverse().find(t => t.includes('"items"')) || texts.join('\n');
+  const items = (parseJSON(last).items || []).filter(i => i && /^https?:/i.test(i.url || ''));
+  return items.map(i => ({ title: i.title || i.url, url: i.url, work: i.source || '', year: i.date ? +String(i.date).slice(0, 4) || null : null, date: i.date || '', kind: ['review', 'interview', 'article'].includes(i.kind) ? i.kind : 'article', score: i.score || '' }));
+}
+function starsEl(v, small) {
+  const w = Math.max(0, Math.min(5, v)) / 5 * 100;
+  return el('span', { class: 'stars' + (small ? ' sm' : ''), role: 'img', 'aria-label': `${v.toFixed(1)} out of 5 stars` }, el('span', { class: 'base', text: '★★★★★', 'aria-hidden': 'true' }), el('span', { class: 'fill', style: { width: w + '%' }, text: '★★★★★', 'aria-hidden': 'true' }));
+}
+function hostOf(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } }
+
+// ---------- Picks: Claude-powered album lists (describe it, moods, crates) ----------
+const MOODS = [
+  ['Feel', ['Dark', 'Melancholy', 'Bittersweet', 'Wistful', 'Tender', 'Warm', 'Joyful', 'Playful', 'Romantic', 'Sensual', 'Defiant', 'Eerie']],
+  ['Energy', ['Energetic', 'Driving', 'Aggressive', 'Intense', 'Laid-back', 'Gentle', 'Hypnotic', 'Meditative', 'Uplifting']],
+  ['Texture', ['Lush', 'Orchestral', 'Sparse', 'Raw', 'Hazy', 'Dreamy', 'Atmospheric', 'Gritty', 'Polished', 'Lo-fi', 'Cinematic', 'Groovy']],
+  ['Voice', ['Intimate vocals', 'Soaring vocals', 'Harmonies', 'Instrumental', 'Spoken word']],
+  ['Mind', ['Cerebral', 'Nostalgic', 'Spiritual', 'Witty', 'Psychedelic', 'Experimental']],
+  ['Time & place', ['Late night', 'Rainy day', 'Sunday morning', 'Road trip', 'Summer', 'Winter', 'City at night', 'Deep woods', 'Dinner party', 'Headphones']]
+];
+function describePrompt(text) {
+  return `You are a deeply knowledgeable record-store clerk with wide-ranging, specific taste. A customer describes what they want to hear:\n\n"""${text}"""\n\nTreat every attribute in that description as a requirement, not a loose mood: the instrumentation, the voice, the tone, the era, the genre hints. Recommend 10 real, released albums (studio albums or EPs; no singles, no compilations unless essential) that satisfy ALL of it as exactly as possible. Prefer the best fit over the most famous. Mix well-known and lesser-known picks, and no more than one album per artist. Reply with ONLY a JSON object: {"albums":[{"artist":"...","title":"...","year":1979,"why":"one sentence naming which parts of the description it satisfies"}]}`;
+}
+function handoffPrompt(text) {
+  return `I'm looking for albums that fit this description: "${text}". Treat every attribute as a requirement, not a loose mood. Recommend 10 real albums (no singles or compilations) that fit it as exactly as possible, mixing well-known and lesser-known picks, no more than one per artist. Reply ONLY with a numbered list, one album per line, in exactly this format:\nArtist — Album Title (Year) — one short sentence on why it fits`;
+}
+function parseAlbumList(text) {
+  const out = [];
+  for (let line of text.split(/\r?\n/)) {
+    line = line.replace(/\*\*/g, '').trim().replace(/^\d+[.)]\s*/, '').replace(/^[-*•]\s*/, '').trim();
+    if (!line) continue;
+    let m = line.match(/^(.+?)\s+[—–-]+\s+(.+?)(?:\s+\((\d{4})\))?(?:\s+[—–-]+\s+(.+))?$/);
+    if (m) { out.push({ artist: m[1].trim(), title: m[2].trim(), year: m[3] ? +m[3] : '', why: (m[4] || '').trim() }); continue; }
+    m = line.match(/^(.+?)\s+by\s+(.+?)(?:\s+\((\d{4})\))?(?:\s+[—–-]+\s+(.+))?$/i);
+    if (m) out.push({ artist: m[2].trim(), title: m[1].trim(), year: m[3] ? +m[3] : '', why: (m[4] || '').trim() });
+  }
+  return out;
+}
+async function resolveAlbum(artist, title) {
+  try {
+    const d = await MB.get('release-group', { query: `releasegroup:"${luceneEscape(title)}" AND artist:"${luceneEscape(artist)}"`, limit: 3 }, { bg: true });
+    const g = (d['release-groups'] || [])[0];
+    return g && g.score >= 50 ? g.id : null;
+  } catch (e) { return null; }
+}
+async function askPicks(text) {
+  const msgs = [{ role: 'user', content: describePrompt(text) }];
+  const reply = await askClaude(msgs, 1800);
+  const albums = (parseJSON(reply).albums || []).slice(0, 12);
+  return { text, albums, convo: msgs.concat([{ role: 'assistant', content: reply }]), source: settings.model || DEFAULTS.model };
+}
+async function refinePicks(prev, text) {
+  const msgs = (prev.convo || [{ role: 'user', content: describePrompt(prev.text) }, { role: 'assistant', content: JSON.stringify({ albums: prev.albums }) }]).concat([{ role: 'user', content: `Refinement from the customer: "${text}". Apply it on top of the original description and reply again with ONLY the same JSON shape: a fresh list of 10, keeping earlier picks only if they still fit.` }]);
+  const reply = await askClaude(msgs, 1800);
+  const albums = (parseJSON(reply).albums || []).slice(0, 12);
+  return { text: prev.text, refined: (prev.refined ? prev.refined + ' · ' : '') + text, albums, convo: msgs.concat([{ role: 'assistant', content: reply }]), source: prev.source };
+}
+const Crates = {
+  key: 'hear.crates',
+  all() { return store.get(this.key, []); },
+  get(id) { return this.all().find(c => c.id === id) || null; },
+  add(c) { const a = this.all(); a.unshift(c); store.set(this.key, a); },
+  update(c) { store.set(this.key, this.all().map(x => x.id === c.id ? c : x)); },
+  remove(id) { store.set(this.key, this.all().filter(c => c.id !== id)); }
+};
+function renderPicks(out, res, opts = {}) {
+  out.innerHTML = '';
+  if (!res.albums || !res.albums.length) { out.append(el('div', { class: 'empty' }, 'Nothing came back. Try different words.')); return; }
+  const srcLabel = res.source === 'tags' ? 'rough tag matches · add a Claude key for real picks' : res.source === 'claude.ai' ? 'from claude.ai' : res.source ? `picked by ${res.source}` : '';
+  const head = el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, opts.title || `${res.albums.length} picks for “${res.text}”`));
+  const tools = el('div', { class: 'row', style: { gap: '12px', flexShrink: 0 } });
+  const linkBtn = (label, fn) => el('button', { class: 'link', style: { background: 'none', border: 0, fontSize: '13px', padding: 0 }, onclick: fn }, label);
+  if (opts.crate !== false) tools.append(linkBtn('Save as crate', () => {
+    tools.innerHTML = '';
+    const full = (opts.crateName || res.text || 'Crate').trim(); const cut = full.length > 44 ? full.slice(0, 44).replace(/\s+\S*$/, '').replace(/[,;:\s]+$/, '') : full;
+    const name = el('input', { type: 'text', value: cut, 'aria-label': 'Crate name', style: { width: '160px', height: '32px', padding: '0 8px', border: '1px solid var(--line)', borderRadius: '8px', background: 'var(--surface)', fontSize: '13px' } });
+    tools.append(name, linkBtn('Save', () => {
+      const n = name.value.trim() || 'Crate';
+      Crates.add({ id: Date.now().toString(36), name: n, text: res.text, refined: res.refined || '', albums: res.albums, source: res.source, createdAt: new Date().toISOString() });
+      tools.innerHTML = ''; tools.append(el('a', { class: 'link', href: '#/shelf', style: { fontSize: '13px' } }, 'Saved · view crates')); toast(`Saved “${n}” to your crates`);
+    }), linkBtn('Cancel', () => { tools.innerHTML = ''; }));
+    name.focus(); name.select();
+  }));
+  if (opts.onClear) tools.append(linkBtn('Clear', opts.onClear));
+  head.append(tools);
+  out.append(head);
+  if (srcLabel || res.refined) out.append(el('div', { class: 'mono', text: [srcLabel, res.refined ? 'refined: ' + res.refined : ''].filter(Boolean).join(' · ') }));
+  if (opts.onRefine) {
+    const ref = el('input', { id: 'refine', type: 'text', placeholder: 'Refine: less jazzy, more 70s, no strings…', enterkeyhint: 'send', style: { flex: 1, minWidth: 0, border: 0, outline: 0, background: 'transparent', fontSize: '15px' } });
+    const go = () => { const t = ref.value.trim(); if (t) opts.onRefine(t); };
+    ref.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+    out.append(el('div', { class: 'field', style: { height: '48px' } }, icon('spark'), ref, el('button', { class: 'btn sm primary', onclick: go }, 'Refine')));
+  }
+  const list = el('div', { class: 'list' });
+  for (const a of res.albums) {
+    const links = serviceLinks(a.artist, a.title);
+    const cov = coverEl(a.id || null, a.title, 250);
+    const row = el('div', { class: 'item', style: { alignItems: 'flex-start' } }, cov,
+      el('div', { class: 'main' }, el('div', { class: 't', text: a.title }), el('div', { class: 's', text: [a.artist, a.year].filter(Boolean).join(' · ') }), el('div', { class: 'rbslot' }, ratingBadge(a)), a.why ? el('div', { style: { fontSize: '13px', lineHeight: 1.35, whiteSpace: 'normal', paddingTop: '2px' } }, a.why) : null,
+        el('div', { class: 'row', style: { paddingTop: '6px', gap: '8px', flexWrap: 'wrap' } },
+          el('a', { class: 'btn sm primary', href: links.spotify, target: '_blank', rel: 'noopener' }, icon('play'), 'Spotify'),
+          el('a', { class: 'btn sm', href: links.qobuz, target: '_blank', rel: 'noopener' }, icon('play'), 'Qobuz'),
+          a.id ? el('a', { class: 'btn sm quiet', href: `#/album/${a.id}` }, 'Details') : el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Finding…'; const id = await resolveAlbum(a.artist, a.title); if (id) { a.id = id; if (opts.onChange) opts.onChange(); location.hash = `#/album/${id}`; } else { b.textContent = 'Not in catalog'; } } }, 'Details'))));
+    list.append(row);
+    if (!a.id) resolveAlbum(a.artist, a.title).then(id => { if (!id || !row.isConnected) return; a.id = id; if (opts.onChange) opts.onChange(); cov.replaceWith(coverEl(id, a.title, 250)); const slot = row.querySelector('.rbslot'); if (slot) { slot.innerHTML = ''; slot.append(ratingBadge(a)); } const b = row.querySelector('button.quiet'); if (b) b.replaceWith(el('a', { class: 'btn sm quiet', href: `#/album/${id}` }, 'Details')); });
+  }
+  out.append(list);
+}
+
+// ---------- Ratings: the aggregate star score for any album, from Wikipedia's ratings box ----------
+WP.wikitext = async function (title) {
+  const d = await this.call({ action: 'parse', page: title, prop: 'wikitext', redirects: 1 });
+  if (!d.parse) throw new Error('No Wikipedia page');
+  return { title: d.parse.title, text: (d.parse.wikitext || {})['*'] || '' };
+};
+function templateBlock(text, name) {
+  const re = new RegExp('\\{\\{\\s*' + name, 'i'); const m = text.match(re); if (!m) return null;
+  let i = m.index, depth = 0;
+  for (let j = i; j < text.length - 1; j++) {
+    if (text[j] === '{' && text[j + 1] === '{') { depth++; j++; }
+    else if (text[j] === '}' && text[j + 1] === '}') { depth--; j++; if (depth === 0) return text.slice(i, j + 1); }
+  }
+  return null;
+}
+function wikiScoreText(s) {
+  return (s || '').replace(/<ref[^>]*\/>/g, '').replace(/<ref[^>]*>[\s\S]*?<\/ref>/g, '').replace(/\{\{\s*rating\s*\|\s*([\d.]+)\s*\|\s*([\d.]+)\s*[^}]*\}\}/i, '$1/$2').replace(/\[\[[^\]|]*\|([^\]]*)\]\]/g, '$1').replace(/\[\[([^\]]*)\]\]/g, '$1').replace(/''+/g, '').replace(/\{\{[^}]*\}\}/g, ' ').trim();
+}
+function stripWikitext(s) {
+  s = (s || '').replace(/<ref[^>]*\/>/g, '').replace(/<ref[^>]*>[\s\S]*?<\/ref>/g, '').replace(/<!--[\s\S]*?-->/g, '');
+  let out = ''; let depth = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '{' && s[i + 1] === '{') { depth++; i++; continue; }
+    if (s[i] === '}' && s[i + 1] === '}' && depth > 0) { depth--; i++; continue; }
+    if (depth === 0) out += s[i];
+  }
+  return out.replace(/\[\[(?:File|Image):[^\]]*\]\]/gi, '').replace(/\[\[[^\]|]*\|([^\]]*)\]\]/g, '$1').replace(/\[\[([^\]]*)\]\]/g, '$1').replace(/\[https?:\/\/\S+\s+([^\]]*)\]/g, '$1').replace(/\[https?:\/\/\S+\]/g, '').replace(/'{2,5}/g, '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/[ \t]+/g, ' ').trim();
+}
+function receptionExcerpt(text) {
+  const m = text.match(/\n(={2,4})\s*(?:critical\s+|commercial\s+and\s+critical\s+)?(?:reception|response|reviews|critical\s+response)[^=\n]*\1\s*\n/i);
+  if (!m) return '';
+  const level = m[1].length; const rest = text.slice(m.index + m[0].length);
+  const next = rest.search(new RegExp('\\n={2,' + level + '}[^=]'));
+  const sec = stripWikitext(next >= 0 ? rest.slice(0, next) : rest);
+  const paras = sec.split(/\n{2,}|\n(?=[A-Z])/).map(p => p.replace(/\s+/g, ' ').trim()).filter(p => p.length > 80 && !/^(Source|Rating|Aggregate|Review)/i.test(p));
+  const out = paras.slice(0, 2).join('\n\n');
+  return out.length > 1100 ? out.slice(0, 1100).replace(/\s+\S*$/, '') + '…' : out;
+}
+function ratingsFromWikitext(text) {
+  const block = templateBlock(text, '(?:Album|Music) ratings');
+  const blurb = receptionExcerpt(text);
+  if (!block) return { score: null, n: 0, mc: null, hasBox: false, sources: [], blurb };
+  const refMap = {};
+  text.replace(/<ref\s+name\s*=\s*"?([^">\/]+?)"?\s*>([\s\S]*?)<\/ref>/g, (m0, name, body) => { const u = (body.match(/\|\s*url\s*=\s*(https?:\/\/[^\s|}]+)/) || body.match(/(https?:\/\/[^\s|}\]]+)/) || [])[1]; if (u) refMap[name.trim()] = u; return m0; });
+  const refUrl = (field) => { let m = field.match(/<ref(?:\s[^>]*)?>([\s\S]*?)<\/ref>/); if (m) { const u = (m[1].match(/\|\s*url\s*=\s*(https?:\/\/[^\s|}]+)/) || m[1].match(/(https?:\/\/[^\s|}\]]+)/) || [])[1]; if (u) return u; } m = field.match(/<ref\s+name\s*=\s*"?([^">\/]+?)"?\s*\/>/); return m ? (refMap[m[1].trim()] || null) : null; };
+  const sources = []; let mc = null;
+  const fields = {}; block.split(/\n\s*\|/).forEach(part => { const m = part.match(/^\s*([A-Za-z0-9]+)\s*=\s*([\s\S]*)$/); if (m) fields[m[1]] = m[2].trim(); });
+  for (const k of Object.keys(fields)) {
+    let m = k.match(/^rev(\d+)Score$/);
+    if (m) { const sc = parseScore(wikiScoreText(fields[k])); if (!sc) continue; const nameRaw = fields['rev' + m[1]] || ''; const name = stripWikitext(nameRaw) || nameRaw.replace(/[{}\[\]']/g, '').trim() || 'Critic'; sources.push({ source: name, raw: sc.raw, norm: sc.norm, url: refUrl(fields[k]) || refUrl(nameRaw) }); continue; }
+    m = k.match(/^aggregate(\d+)Score$/);
+    if (m && /metacritic/i.test(fields['aggregate' + m[1]] || '')) { const sc = parseScore(wikiScoreText(fields[k])); if (sc) mc = Object.assign(sc, { url: refUrl(fields[k]) }); }
+    if (k === 'MC') { const sc = parseScore(wikiScoreText(fields[k])); if (sc) mc = Object.assign(sc, { url: refUrl(fields[k]) }); }
+  }
+  const score = sources.length ? sources.reduce((a, b) => a + b.norm, 0) / sources.length : (mc ? mc.norm : null);
+  return { score, n: sources.length, mc: mc ? mc.raw : null, mcUrl: mc ? mc.url : null, hasBox: true, sources, blurb };
+}
+const Ratings = {
+  mem: new Map(), queue: [], active: 0, max: 2,
+  key: (id) => 'hear.rating.' + id,
+  get(rgid, title, artist, opts = {}) {
+    if (!rgid) return Promise.resolve(null);
+    const cached = store.get(this.key(rgid), null);
+    const complete = cached && (cached.sources || cached.score == null);
+    if (!opts.full || complete) { if (this.mem.has(rgid)) return this.mem.get(rgid); }
+    if (cached && Date.now() - cached.t < 30 * 864e5 && (!opts.full || complete)) { const p = Promise.resolve(cached); this.mem.set(rgid, p); return p; }
+    const p = new Promise((resolve) => { this.queue.push({ rgid, title, artist, resolve }); this.pump(); });
+    this.mem.set(rgid, p);
+    return p;
+  },
+  put(rgid, data) { const r = Object.assign({ t: Date.now() }, data); store.set(this.key(rgid), r); this.mem.set(rgid, Promise.resolve(r)); return r; },
+  pump() {
+    while (this.active < this.max && this.queue.length) {
+      const job = this.queue.shift(); this.active++;
+      this.run(job).then(r => job.resolve(this.put(job.rgid, r))).catch(() => job.resolve(this.put(job.rgid, { score: null, n: 0 }))).finally(() => { this.active--; this.pump(); });
+    }
+  },
+  async run(job) {
+    let title = store.get('hear.wptitle.' + job.rgid, null);
+    if (!title) { title = await WP.findAlbumPage(job.title, job.artist, {}); if (!title) return { score: null, n: 0, noPage: true }; store.set('hear.wptitle.' + job.rgid, title); }
+    const wt = await WP.wikitext(title);
+    return Object.assign({ title: wt.title }, ratingsFromWikitext(wt.text));
+  }
+};
+// Load badges only when they scroll into view, so a 200-tile label page doesn't fire 400 lookups.
+const visIO = ('IntersectionObserver' in window) ? new IntersectionObserver((entries) => { for (const e of entries) if (e.isIntersecting) { visIO.unobserve(e.target); const fn = e.target._onVisible; if (fn) { e.target._onVisible = null; fn(); } } }, { rootMargin: '200px' }) : null;
+function whenVisible(node, fn) { if (!visIO) { fn(); return; } node._onVisible = fn; visIO.observe(node); }
+function ratingBadge(item, opts = {}) {
+  const b = el('span', { class: 'rb' + (opts.size === 'lg' ? ' lg' : '') });
+  if (!item.id) return b;
+  const fill = (r) => {
+    b.innerHTML = '';
+    if (!r || r.score == null) { if (opts.showEmpty) b.append(el('span', { class: 'rbn muted', text: 'no ratings' })); return; }
+    const inner = [starsEl(r.score, true), el('span', { class: 'rbn', text: r.score.toFixed(1) }), opts.count && r.n ? el('span', { class: 'rbc', text: `${r.n} review${r.n === 1 ? '' : 's'}` }) : null];
+    if (opts.sheet === false) b.append(...inner);
+    else b.append(el('button', { type: 'button', class: 'rbtn', 'aria-label': `${r.score.toFixed(1)} stars — see the reviews`, onclick: (e) => { e.preventDefault(); e.stopPropagation(); openRatingSheet(item); } }, ...inner));
+  };
+  const load = () => Ratings.get(item.id, item.title, item.artist).then(fill);
+  if (opts.now) load(); else whenVisible(b, load);
+  return b;
+}
+function albumTile(item, opts = {}) {
+  const tile = el('div', { class: 'tile' });
+  const link = el(item.id ? 'a' : 'div', Object.assign({ class: 'tl', title: item.why || '' }, item.id ? { href: `#/album/${item.id}` } : {}), coverEl(item.id || null, item.title, 250), el('div', { class: opts.twoLine ? 'a2' : 'a', text: opts.primary === 'title' ? item.title : (item.artist || item.title) }), el('div', { class: 'b', text: opts.primary === 'title' ? [item.year, item.type && item.type !== 'Album' ? item.type : ''].filter(Boolean).join(' · ') : [item.title, item.year].filter(Boolean).join(' · ') }));
+  tile.append(link, ratingBadge(item));
+  return tile;
+}
+function openRatingSheet(item) {
+  const back = el('div', { class: 'sheet-back', onclick: (e) => { if (e.target === back) close(); } });
+  const sheet = el('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': `Reviews of ${item.title}` });
+  back.append(sheet); document.body.append(back);
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  function close() { back.remove(); document.removeEventListener('keydown', onKey); }
+  sheet.append(el('div', { class: 'handle' }),
+    el('div', { class: 'row', style: { gap: '12px' } }, el('div', { style: { width: '56px', flexShrink: 0 } }, coverEl(item.id, item.title, 250)), el('div', { style: { minWidth: 0 } }, el('div', { style: { fontWeight: 700, fontSize: '16px', lineHeight: 1.2 } }, item.title), el('div', { class: 'mono' }, [item.artist, item.year].filter(Boolean).join(' · ')))),
+    el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Gathering the reviews…'));
+  Ratings.get(item.id, item.title, item.artist, { full: true }).then(r => {
+    if (!back.isConnected) return;
+    sheet.querySelector('.loading').remove();
+    if (!r || r.score == null) { sheet.append(el('div', { class: 'empty' }, 'No critic ratings found for this album.')); }
+    else {
+      sheet.append(el('div', { class: 'row', style: { gap: '12px', alignItems: 'baseline', paddingTop: '16px', flexWrap: 'wrap' } }, el('div', { class: 'score', text: r.score.toFixed(1) }), starsEl(r.score), el('div', { class: 'mono' }, r.n ? `from ${r.n} review${r.n === 1 ? '' : 's'}` : 'Metacritic only')));
+      if (r.mc) sheet.append(r.mcUrl ? el('a', { class: 'mono', href: r.mcUrl, target: '_blank', rel: 'noopener', style: { textDecoration: 'none', display: 'block', paddingTop: '4px' } }, `Metacritic ${r.mc} ↗`) : el('div', { class: 'mono', style: { paddingTop: '4px' } }, `Metacritic ${r.mc}`));
+      if (r.sources && r.sources.length) { const list = el('div', { style: { paddingTop: '10px' } }); for (const s of r.sources) list.append(el(s.url ? 'a' : 'div', Object.assign({ class: 'srow' }, s.url ? { href: s.url, target: '_blank', rel: 'noopener' } : {}), el('span', { class: 'src', text: s.source }), el('span', { class: 'raw', text: s.raw }), starsEl(s.norm, true), s.url ? el('span', { class: 'arrow' }, icon('ext')) : null)); sheet.append(list); }
+      if (r.blurb) sheet.append(el('div', { class: 'section', style: { paddingTop: '14px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'What critics said'), r.title ? el('a', { class: 'mono', href: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(r.title.replace(/ /g, '_')), target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, 'Wikipedia · CC BY-SA ↗') : null), el('div', { class: 'about', style: { whiteSpace: 'pre-line' } }, r.blurb)));
+    }
+    sheet.append(el('div', { class: 'btnrow', style: { paddingTop: '18px' } }, el('a', { class: 'btn primary', href: `#/album/${item.id}`, onclick: close }, 'Open album'), el('button', { class: 'btn quiet', onclick: close }, 'Close')));
+  });
+}
+
+// ---------- shelf ----------
+const Shelf = {
+  key: 'hear.shelf',
+  all() { return store.get(this.key, []); },
+  has(id) { return this.all().some(x => x.id === id); },
+  add(item) { const a = this.all().filter(x => x.id !== item.id); a.unshift(Object.assign({ addedAt: new Date().toISOString() }, item)); store.set(this.key, a); updateTabs(); },
+  remove(id) { store.set(this.key, this.all().filter(x => x.id !== id)); updateTabs(); },
+  replace(list) { store.set(this.key, list); updateTabs(); }
+};
+
+// ---------- cover element ----------
+function coverEl(rgid, title, size, extra) {
+  const wrap = el('div', { class: 'cover' + (extra ? ' ' + extra : '') });
+  const ph = el('div', { class: 'ph', style: { background: `hsl(${hue(title || rgid || '')} 28% 48%)` }, text: initials(title) });
+  wrap.append(ph);
+  if (rgid) {
+    const img = el('img', { alt: '', loading: 'lazy', decoding: 'async' });
+    img.addEventListener('load', () => wrap.classList.add('has-img'));
+    img.addEventListener('error', () => { img.remove(); wrap.dispatchEvent(new CustomEvent('nocover')); });
+    img.src = caa(rgid, size || 250);
+    wrap.append(img);
+    wrap.setImage = (src) => { const i = el('img', { alt: '', loading: 'lazy', decoding: 'async' }); i.addEventListener('load', () => wrap.classList.add('has-img')); i.src = src; wrap.append(i); };
+  }
+  return wrap;
+}
+
+// ---------- router ----------
+const view = $('#view');
+const topbar = $('#topbar');
+let currentCleanup = null;
+let routeSeq = 0;
+function setTop(opts = {}) {
+  topbar.innerHTML = '';
+  if (opts.back) topbar.append(el('button', { class: 'iconbtn', 'aria-label': 'Back', onclick: () => { if (history.length > 1) history.back(); else location.hash = '#/'; } }, icon('back')));
+  if (opts.brand) topbar.append(el('div', { class: 'brand', text: 'Hear' }));
+  if (opts.title) topbar.append(el('div', { class: 'ttl', text: opts.title }));
+  topbar.append(el('div', { class: 'spacer' }));
+  if (opts.right) topbar.append(opts.right);
+}
+function updateTabs() {
+  const hash = location.hash || '#/';
+  const tab = hash.startsWith('#/shelf') || hash.startsWith('#/crate') ? 'shelf' : hash.startsWith('#/moods') ? 'moods' : hash.startsWith('#/settings') ? 'settings' : hash.startsWith('#/search') ? 'search' : (hash === '#/' || hash === '#' || hash === '') ? 'home' : '';
+  document.querySelectorAll('.tabs a').forEach(a => a.classList.toggle('active', a.dataset.tab === tab));
+}
+async function route() {
+  if (currentCleanup) { try { currentCleanup(); } catch (e) { } currentCleanup = null; }
+  const rid = ++routeSeq;
+  MB.dropStale(rid);
+  const parts = (location.hash || '#/').slice(2).split('/').map(decodeURIComponent);
+  updateTabs();
+  window.scrollTo(0, 0);
+  view.innerHTML = '';
+  try {
+    switch (parts[0]) {
+      case 'artist': await ArtistView(parts[1], rid); break;
+      case 'album': await AlbumView(parts[1], rid); break;
+      case 'label': await LabelView(parts[1], rid); break;
+      case 'genre': await GenreView(parts.slice(1).join('/'), rid); break;
+      case 'search': SearchView(parts[1]); break;
+      case 'shelf': ShelfView(); break;
+      case 'moods': MoodsView(); break;
+      case 'crate': CrateView(parts[1]); break;
+      case 'settings': SettingsView(); break;
+      default: await HomeView(rid); break;
+    }
+  } catch (err) {
+    if (rid !== routeSeq || err.message === 'stale') return;
+    console.error(err);
+    view.append(el('div', { class: 'notice warn' }, 'Something went wrong: ' + err.message + '. ', el('a', { class: 'link', href: location.hash, onclick: (e) => { e.preventDefault(); route(); } }, 'Try again')));
+  }
+}
+window.addEventListener('hashchange', route);
+
+// ============================================================
+// Home — three cover flows that change on every refresh
+// ============================================================
+const GENRES = ['Dub', 'Krautrock', 'Bossa nova', 'Post-punk', 'Afrobeat', 'Minimal techno', 'Free jazz', 'Shoegaze', 'Ethio-jazz', 'Highlife', 'Dream pop', 'Drum and bass', 'Chamber pop', 'Delta blues', 'Bebop', 'Spiritual jazz', 'Trip hop', 'Baroque pop', 'Tropicália', 'Cumbia', 'Doom metal', 'Outlaw country', 'Bluegrass', 'Zydeco', 'Chicago house', 'Detroit techno', 'UK garage', 'Grime', 'Boom bap', 'G-funk', 'Neo-soul', 'Quiet storm', 'Philly soul', 'Northern soul', 'Rocksteady', 'Lovers rock', 'Dancehall', 'Jùjú', 'Gnawa', 'Fado', 'Flamenco', 'Tango nuevo', 'Minimalism', 'Ambient', 'Library music', 'Exotica', 'Lounge', 'Yacht rock', 'Power pop', 'Jangle pop', 'Riot grrrl', 'Post-rock', 'Math rock', 'Slowcore', 'Freak folk', 'British folk rock', 'Hard bop', 'Cool jazz', 'Modal jazz', 'Jazz fusion', 'Chanson', 'Yé-yé', 'Italo disco', 'Synth-pop', 'New wave', 'Industrial', 'Coldwave', 'Goth rock', 'Noise rock', 'No wave', 'Jazz-funk', 'Rare groove', 'Acid jazz', 'Broken beat', 'Footwork', 'Jungle', 'IDM', 'City pop', 'Shibuya-kei', 'Qawwali', 'Afro-Cuban jazz', 'Klezmer', 'Rebetiko', 'Anatolian rock', 'Thai funk', 'Soukous', 'Afrobeats', 'Amapiano', 'Desert blues', 'Reggaeton', 'Salsa', 'Son cubano', 'Bolero', 'Carnatic', 'Hindustani classical', 'Country soul', 'Gospel', 'Doo-wop', 'Rockabilly', 'Surf rock', 'Garage rock', 'Psychedelic rock', 'Progressive rock', 'Glam rock', 'Pub rock', 'Hardcore punk', 'Post-hardcore', 'Emo', 'Grunge', 'Britpop', 'Madchester', 'Big beat', 'Downtempo', 'Deep house', 'Acid house', 'Electro', 'Conscious hip hop', 'Jazz rap', 'Reggae', 'Ska', 'Calypso', 'Zouk', 'Mbalax', 'Makossa', 'Benga', 'Morna', 'Mariachi', 'Norteño', 'Tejano', 'Nueva canción', 'MPB', 'Samba', 'Forró', 'Choro', 'Andean folk', 'Sacred Harp', 'Western swing', 'Honky-tonk', 'Americana', 'Alt-country', 'Cosmic American music', 'Sophisti-pop', 'Blue-eyed soul', 'Boogie', 'Disco', 'Hi-NRG', 'Electroclash', 'Microhouse', 'Dubstep', 'Vaporwave', 'Hyperpop', 'Bedroom pop', 'Indie folk', 'Folktronica', 'Modern classical', 'Fourth world', 'Space rock', 'Stoner rock', 'Sludge metal', 'Black metal', 'Thrash metal', 'NWOBHM', 'Avant-garde jazz', 'Third stream', 'Vocal jazz', 'Latin jazz', 'Bebop vocalese', 'Swing', 'Ragtime', 'Stride piano', 'Boogie-woogie', 'Chicago blues', 'Piedmont blues', 'Country blues', 'Jump blues', 'Soul jazz', 'Organ trio'];
+const LABELS = ['Blue Note', 'Warp', '4AD', 'Factory', 'Stax', 'Motown', 'Sub Pop', 'Rough Trade', 'Stones Throw', 'Ninja Tune', 'Impulse!', 'ECM', 'Def Jam', 'Mo Wax', 'Drag City', 'Thrill Jockey', 'Kranky', 'Constellation', 'Matador', 'Merge', 'Touch and Go', 'SST', 'Dischord', 'Creation', 'Sarah Records', 'Mute', 'Trojan', 'Studio One', 'Island Records', 'Chess', 'Atlantic', 'Verve', 'Prestige', 'Riverside', 'CTI', 'Strata-East', 'Tzadik', 'Nonesuch', 'Harvest', 'Vertigo', 'Brain', 'Kompakt', 'Tresor', 'Underground Resistance', 'Hyperdub', 'Planet Mu', 'Rephlex', 'Ghost Box', 'Light in the Attic', 'Numero Group', 'Soul Jazz', 'Analog Africa', 'Luaka Bop', 'Smithsonian Folkways', 'Sacred Bones', 'Dead Oceans', 'Jagjaguwar', 'Secretly Canadian', 'Domino', 'XL Recordings', 'Brainfeeder', 'Daptone', 'International Anthem', 'Erased Tapes', 'Bella Union', 'Captured Tracks', 'Mexican Summer', 'RVNG Intl.', 'Music From Memory', 'Finders Keepers', 'Now-Again', 'Strut', 'Mr Bongo', 'Ed Banger', 'Saravah', 'Elektra', 'Reprise Records', 'Asylum', 'Virgin', 'Charisma', 'Stiff', 'Postcard', 'Cherry Red', 'Heavenly', 'Beggars Banquet', 'Too Pure', 'Duophonic', 'Flying Nun', 'Mushroom', 'Chapter Music', 'Elefant', 'Marina', 'Tôt ou tard', 'Barclay', 'Philips', 'Deutsche Grammophon', 'Ohr', 'Sky', 'Bureau B', 'Kitty-Yo', 'City Slang', 'Morr Music', 'Ostgut Ton', 'Dial', 'Perlon', 'Rush Hour', 'Dekmantel', 'Awesome Tapes From Africa', 'Sahel Sounds', 'Honest Jon\'s', 'Soundway', 'Far Out', 'Tru Thoughts', 'BBE', 'Jazzman', 'Gearbox', 'Edition', 'ACT', 'Enja', 'Black Saint', 'Steeplechase', 'Candid', 'Contemporary', 'Pacific Jazz', 'Fantasy', 'Milestone', 'Flying Dutchman', 'Perception', 'Mainstream', 'Cadet', 'Chess', 'Vee-Jay', 'King', 'Hi Records', 'Goldwax', 'Fame', 'Muscle Shoals Sound', 'Philadelphia International', 'Salsoul', 'West End', 'Prelude', 'Sleeping Bag', 'Tommy Boy', 'Sugar Hill', 'Cold Chillin\'', 'Wild Pitch', 'Rawkus', 'Fondle \'Em', 'Definitive Jux', 'Anticon', 'Rhymesayers', 'Mello Music Group'];
+const ARTISTS = [['Alice Coltrane'], ['Stereolab'], ['Fela Kuti'], ['Nina Simone'], ['Kraftwerk'], ['Cocteau Twins'], ['Boards of Canada'], ['Caetano Veloso'], ['Gal Costa'], ['Jorge Ben Jor'], ['Mulatu Astatke'], ['Pharoah Sanders'], ['Sun Ra'], ['Charles Mingus'], ['Thelonious Monk'], ['Joni Mitchell'], ['Nick Drake'], ['Talk Talk'], ['Scott Walker'], ['Serge Gainsbourg'], ['Françoise Hardy'], ['Can', 'country:DE'], ['Neu!'], ['Harmonia'], ['Brian Eno'], ['Robert Wyatt'], ['Arthur Russell'], ['Tom Waits'], ['Leonard Cohen'], ['Bob Dylan'], ['Marvin Gaye'], ['Stevie Wonder'], ['Curtis Mayfield'], ['Funkadelic'], ['Prince', 'type:person'], ['D\'Angelo'], ['Erykah Badu'], ['The Roots'], ['A Tribe Called Quest'], ['De La Soul'], ['Madlib'], ['J Dilla'], ['MF DOOM'], ['Kendrick Lamar'], ['OutKast'], ['Missy Elliott'], ['Björk'], ['Portishead'], ['Massive Attack'], ['Tricky'], ['Aphex Twin'], ['Autechre'], ['Burial'], ['Four Tet'], ['Caribou'], ['Floating Points'], ['Jon Hassell'], ['Laraaji'], ['Hiroshi Yoshimura'], ['Haruomi Hosono'], ['Yellow Magic Orchestra'], ['Ryuichi Sakamoto'], ['Cornelius'], ['Pizzicato Five'], ['Fishmans'], ['Os Mutantes'], ['Milton Nascimento'], ['Elis Regina'], ['João Gilberto'], ['Tim Maia'], ['Ali Farka Touré'], ['Tinariwen'], ['Orchestra Baobab'], ['Youssou N\'Dour'], ['Oumou Sangaré'], ['Ebo Taylor'], ['William Onyeabor'], ['Manu Dibango'], ['Hailu Mergia'], ['The Velvet Underground'], ['Television', 'country:US'], ['Patti Smith'], ['Wire', 'country:GB'], ['Joy Division'], ['New Order'], ['The Cure'], ['The Smiths'], ['My Bloody Valentine'], ['Slowdive'], ['Broadcast'], ['Pavement'], ['Yo La Tengo'], ['Low', 'country:US'], ['Sparklehorse'], ['Elliott Smith'], ['Sufjan Stevens'], ['Joanna Newsom'], ['Fleet Foxes'], ['Radiohead'], ['PJ Harvey'], ['Nick Cave & The Bad Seeds'], ['Sonic Youth'], ['Pixies'], ['Fugazi'], ['Slint'], ['Tortoise'], ['Godspeed You! Black Emperor'], ['Sigur Rós'], ['Mogwai'], ['Beach House'], ['Grizzly Bear'], ['Animal Collective'], ['Deerhunter'], ['Spiritualized'], ['Spacemen 3'], ['Galaxie 500'], ['Mazzy Star'], ['Cat Power'], ['Lucinda Williams'], ['Gillian Welch'], ['Townes Van Zandt'], ['Emmylou Harris'], ['Willie Nelson'], ['Dolly Parton'], ['Johnny Cash'], ['Miles Davis'], ['John Coltrane'], ['Herbie Hancock'], ['Wayne Shorter'], ['Ornette Coleman'], ['Eric Dolphy'], ['Yusef Lateef'], ['Don Cherry'], ['Abdullah Ibrahim'], ['Hugh Masekela'], ['Bobby Hutcherson'], ['Lee Morgan'], ['Horace Silver'], ['Art Blakey'], ['Ella Fitzgerald'], ['Billie Holiday'], ['Sarah Vaughan'], ['Chet Baker'], ['Julie London'], ['Dusty Springfield'], ['Aretha Franklin'], ['Otis Redding'], ['Al Green'], ['Bill Withers'], ['Roberta Flack'], ['Donny Hathaway'], ['Shuggie Otis'], ['Terry Callier'], ['Gil Scott-Heron'], ['Sade'], ['Kate Bush'], ['Peter Gabriel'], ['David Bowie'], ['Roxy Music'], ['Talking Heads'], ['Fleetwood Mac'], ['Steely Dan'], ['Big Star'], ['Todd Rundgren'], ['Harry Nilsson'], ['Randy Newman'], ['Van Morrison'], ['The Zombies'], ['The Kinks'], ['Fairport Convention'], ['Pentangle'], ['Sandy Denny'], ['Vashti Bunyan'], ['Linda Perhacs'], ['Karen Dalton'], ['Judee Sill'], ['Bill Evans', 'type:person'], ['Cluster'], ['Popol Vuh'], ['Faust', 'country:DE'], ['Ash Ra Tempel'], ['Tangerine Dream'], ['Jean-Michel Jarre'], ['Vangelis'], ['Wendy Carlos'], ['Delia Derbyshire'], ['Laurie Anderson'], ['Meredith Monk'], ['Steve Reich'], ['Terry Riley'], ['Philip Glass'], ['Arvo Pärt'], ['Nils Frahm'], ['Ólafur Arnalds'], ['Max Richter'], ['Jóhann Jóhannsson'], ['Hildur Guðnadóttir'], ['Colleen'], ['Grouper'], ['Julianna Barwick'], ['Mary Lattimore'], ['Kali Malone'], ['Sarah Davachi'], ['Ryoji Ikeda'], ['Alva Noto'], ['Fennesz'], ['Tim Hecker'], ['William Basinski'], ['Stars of the Lid'], ['Labradford'], ['Bark Psychosis'], ['Disco Inferno'], ['Pram'], ['Movietone'], ['Flying Saucer Attack'], ['Hood'], ['Boards of Canada']];
+let homePicks = null;
+const rand = (a) => a[Math.floor(Math.random() * a.length)];
+const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+function sample(arr, n) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a.slice(0, n); }
+function pickHome() {
+  const shelf = Shelf.all().filter(x => x.artistId);
+  const s = shelf.length && Math.random() < 0.5 ? rand(shelf) : null;
+  const a = rand(ARTISTS);
+  return { genre: rand(GENRES), label: rand(LABELS), artist: s ? { name: s.artist, id: s.artistId, fromShelf: true } : { name: a[0], extra: a[1] || '' } };
+}
+function homeSection(eyebrow, title) {
+  const t = el('h2', { text: title, style: { fontSize: '22px' } });
+  const link = el('a', { class: 'link', href: '#/', style: { fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0 }, hidden: true });
+  const sub = el('div', { class: 'mono', hidden: true });
+  const body = el('div', {}, el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading…'));
+  const root = el('div', { class: 'section', style: { paddingTop: '24px', gap: '4px' } }, el('div', { class: 'eyebrow', text: eyebrow }), el('div', { class: 'sechead', style: { alignItems: 'baseline' } }, t, link), sub, body);
+  return { root, body, setTitle: (s) => { t.textContent = s; }, setSub: (s) => { sub.textContent = s; sub.hidden = !s; }, setLink: (href, label, onclick) => { link.href = href; link.textContent = label; link.hidden = false; if (onclick) link.addEventListener('click', onclick); } };
+}
+async function labelStrip(name) {
+  const key = 'hear.home.label.' + slug(name); const c = store.get(key, null);
+  if (c && Date.now() - c.t < 14 * 864e5) return c;
+  const s = await MB.get('label', { query: `label:"${luceneEscape(name)}"`, limit: 5 });
+  const ls = s.labels || []; const l = ls.find(x => WP.norm(x.name) === WP.norm(name)) || ls[0]; if (!l) return null;
+  const d = await MB.get('release', { label: l.id, inc: 'release-groups+artist-credits', limit: 100 });
+  const seen = new Map();
+  for (const r of d.releases || []) { const rg = r['release-group']; if (!rg || seen.has(rg.id) || bucket(rg) !== 'album') continue; seen.set(rg.id, { id: rg.id, title: rg.title, artist: credit(r['artist-credit']), year: year(rg['first-release-date'] || r.date), type: rgType(rg) }); }
+  const data = { t: Date.now(), id: l.id, name: l.name, all: [...seen.values()] }; store.set(key, data); return data;
+}
+async function artistStrip(a) {
+  let id = a.id, name = a.name;
+  if (!id) {
+    const key = 'hear.home.artist.' + slug(name); const c = store.get(key, null);
+    if (c) { id = c.id; name = c.name; }
+    else { const s = await MB.get('artist', { query: `artist:"${luceneEscape(name)}"${a.extra ? ' AND ' + a.extra : ''}`, limit: 5 }); const as = s.artists || []; const hit = as.find(x => WP.norm(x.name) === WP.norm(name)) || as[0]; if (!hit) return null; id = hit.id; name = hit.name; store.set(key, { id, name }); }
+  }
+  const d = await MB.get('release-group', { artist: id, limit: 100, inc: 'artist-credits' });
+  const items = (d['release-groups'] || []).filter(g => bucket(g) === 'album').sort((x, y) => (x['first-release-date'] || '9999').localeCompare(y['first-release-date'] || '9999')).map(g => ({ id: g.id, title: g.title, artist: credit(g['artist-credit']) || name, artistId: id, year: year(g['first-release-date']), type: rgType(g) }));
+  return { id, name, items };
+}
+async function genreStrip(genre) {
+  const key = 'hear.home.genre.' + slug(genre); let data = store.get(key, null);
+  if (data && Date.now() - data.t < 30 * 864e5 && data.items.length) return { key, data };
+  if (settings.anthropicKey) {
+    const reply = await askClaude(`List 12 essential ${genre} albums: a mix of foundational classics and lesser-known gems that a serious fan would call definitive. No more than one album per artist, real releases only. Reply with ONLY JSON: {"albums":[{"artist":"...","title":"...","year":1972,"why":"one short sentence"}]}`, 1400);
+    data = { t: Date.now(), source: settings.model || DEFAULTS.model, items: (parseJSON(reply).albums || []).slice(0, 12).map(a => ({ title: a.title, artist: a.artist, year: a.year ? String(a.year) : '', why: a.why })) };
+  } else {
+    const d = await MB.get('release-group', { query: `tag:"${luceneEscape(genre.toLowerCase())}" AND primarytype:album`, limit: 14 });
+    data = { t: Date.now(), source: 'tags', items: (d['release-groups'] || []).map(g => ({ id: g.id, title: g.title, artist: credit(g['artist-credit']), year: year(g['first-release-date']), type: rgType(g) })) };
+  }
+  store.set(key, data); return { key, data };
+}
+async function HomeView(rid) {
+  setTop({ brand: true, right: el('button', { class: 'iconbtn ring', 'aria-label': 'Shuffle the home page', title: 'Shuffle', onclick: () => { homePicks = pickHome(); route(); } }, icon('shuffle')) });
+  if (!homePicks) homePicks = pickHome();
+  const p = homePicks;
+  const q = el('input', { id: 'homeq', type: 'search', placeholder: 'Search artists, albums, labels', enterkeyhint: 'search', autocomplete: 'off', 'aria-label': 'Search the catalog' });
+  const homeField = el('div', { class: 'field', style: { marginTop: '4px' } }, icon('search'), q);
+  view.append(homeField);
+  attachTypeahead(q, { modes: () => ['artist', 'album', 'label'] });
+  q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const v = q.value.trim(); if (!v) return; if (searchState.mode === 'describe') searchState.mode = 'artist'; searchState.q = v; searchState.results = null; searchState.pendingRun = true; store.set('hear.search', { mode: searchState.mode, q: v, results: null, describe: searchState.describe, describeOut: searchState.describeOut }); location.hash = '#/search'; } });
+  const genreSec = homeSection('Genre spotlight', p.genre);
+  const labelSec = homeSection('On the label', p.label);
+  const artistSec = homeSection(p.artist.fromShelf ? 'From your shelf · discography' : 'Discography', p.artist.name);
+  view.append(genreSec.root, labelSec.root, artistSec.root);
+  const recent = store.get('hear.recentAlbums', []);
+  if (recent.length) view.append(el('div', { class: 'section', style: { paddingTop: '24px' } }, el('div', { class: 'eyebrow' }, 'Recently viewed'), el('div', { class: 'grid', style: { paddingTop: '4px' } }, recent.slice(0, 6).map(it => albumTile(it)))));
+  const fail = (sec, msg) => { sec.body.innerHTML = ''; sec.body.append(el('div', { class: 'muted', style: { fontSize: '13px', padding: '8px 0 16px' } }, msg)); };
+  (async () => {
+    try {
+      const r = await genreStrip(p.genre); if (rid !== routeSeq) return;
+      const items = r.data.items; if (!items.length) { fail(genreSec, 'Nothing came back for this genre. Shuffle for another.'); return; }
+      genreSec.setSub(r.data.source === 'tags' ? 'from MusicBrainz tags · add a Claude key for curated picks' : `picked by ${r.data.source}`);
+      genreSec.setLink('#/search', 'Dig deeper →', (e) => { e.preventDefault(); searchState.mode = 'describe'; searchState.describe = `${p.genre}: deeper cuts beyond the obvious classics`; store.set('hear.search', { mode: 'describe', q: searchState.q, results: searchState.results, describe: searchState.describe, describeOut: null }); location.hash = '#/search'; });
+      genreSec.body.innerHTML = '';
+      const flow = coverFlow(items, { size: 180, years: false, showArtist: true, actions: 'light', label: p.genre + ' essentials' });
+      genreSec.body.append(flow);
+      (async () => { for (let i = 0; i < items.length; i++) { if (items[i].id) continue; const id = await resolveAlbum(items[i].artist, items[i].title); if (rid !== routeSeq) return; if (id) { flow.setId(i, id); store.set(r.key, r.data); } } })();
+    } catch (e) { if (e.message === 'stale') return; fail(genreSec, "Couldn't load this genre (" + e.message + ')'); }
+  })();
+  (async () => {
+    try {
+      const d = await labelStrip(p.label); if (rid !== routeSeq) return;
+      if (!d || !d.all.length) { fail(labelSec, 'Nothing found for this label. Shuffle for another.'); return; }
+      labelSec.setTitle(d.name); labelSec.setLink(`#/label/${d.id}`, 'Browse the label →');
+      labelSec.body.innerHTML = '';
+      labelSec.body.append(coverFlow(sample(d.all, 14).sort((x, y) => (x.year || '9999').localeCompare(y.year || '9999')), { size: 180, years: false, showArtist: true, actions: 'light', label: d.name }));
+    } catch (e) { if (e.message === 'stale') return; fail(labelSec, "Couldn't load this label (" + e.message + ')'); }
+  })();
+  (async () => {
+    try {
+      const d = await artistStrip(p.artist); if (rid !== routeSeq) return;
+      if (!d || !d.items.length) { fail(artistSec, 'No albums found for this artist. Shuffle for another.'); return; }
+      artistSec.setTitle(d.name); artistSec.setLink(`#/artist/${d.id}`, 'All releases →');
+      artistSec.body.innerHTML = '';
+      artistSec.body.append(coverFlow(d.items, { size: 180, years: true, actions: 'light', label: d.name + ' albums' }));
+    } catch (e) { if (e.message === 'stale') return; fail(artistSec, "Couldn't load this artist (" + e.message + ')'); }
+  })();
+}
+
+// ---------- Search helpers: one function for the results list and the type-ahead ----------
+function taQuery(q) {
+  const tokens = q.split(/\s+/).filter(Boolean).map(luceneEscape);
+  const base = tokens.join(' '); const last = tokens[tokens.length - 1] || '';
+  // Whole-word matches score normally; the wildcard on the last word catches what's still being typed.
+  return last.length >= 3 ? `(${base}) OR (${tokens.slice(0, -1).concat([last + '*']).join(' ')})` : base;
+}
+async function searchEntity(mode, q, opts = {}) {
+  const query = opts.partial ? taQuery(q) : luceneEscape(q);
+  const o = { ta: !!opts.ta };
+  if (mode === 'artist') { const d = await MB.get('artist', { query, limit: 12 }, o); return (d.artists || []).map(a => ({ kind: 'artist', id: a.id, name: a.name, sub: [a.disambiguation, a.type, a.country, lifespan(a['life-span'])].filter(Boolean).join(' · ') })); }
+  if (mode === 'album') { const d = await MB.get('release-group', { query, limit: 20 }, o); return (d['release-groups'] || []).map(g => ({ kind: 'album', id: g.id, name: g.title, artist: credit(g['artist-credit']), sub: [credit(g['artist-credit']), year(g['first-release-date']), rgType(g)].filter(Boolean).join(' · ') })); }
+  const d = await MB.get('label', { query, limit: 12 }, o); return (d.labels || []).map(l => ({ kind: 'label', id: l.id, name: l.name, sub: [l.disambiguation, l.type, l.country || (l.area && l.area.name), lifespan(l['life-span'])].filter(Boolean).join(' · ') }));
+}
+function remember(it) {
+  if (!it || !it.id) return;
+  const known = store.get('hear.known', []).filter(k => k.id !== it.id);
+  known.unshift({ kind: it.kind, id: it.id, name: it.name, sub: it.sub || '', artist: it.artist || '' });
+  store.set('hear.known', known.slice(0, 300));
+}
+const foldText = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+function attachTypeahead(input, opts = {}) {
+  const host = input.closest('.field'); if (!host) return null;
+  const box = el('div', { class: 'ta', hidden: true, role: 'listbox' });
+  host.append(box);
+  let timer = 0, seq = 0, items = [], hi = -1;
+  const hide = () => { box.hidden = true; hi = -1; };
+  function localMatches(q) {
+    const n = foldText(q); const out = [];
+    for (const k of store.get('hear.known', [])) {
+      const name = foldText(k.name);
+      const score = name.startsWith(n) ? 3 : name.split(/\s+/).some(w => w.startsWith(n)) ? 2 : name.includes(n) || foldText(k.artist).includes(n) ? 1 : 0;
+      if (score) out.push(Object.assign({ score }, k));
+    }
+    return out.sort((a, b) => b.score - a.score).slice(0, 4);
+  }
+  function render(groups, q) {
+    box.innerHTML = ''; items = []; hi = -1;
+    const seen = new Set();
+    for (const g of groups) {
+      const rows = g.items.filter(it => !seen.has(it.id)); rows.forEach(it => seen.add(it.id));
+      if (!rows.length) continue;
+      box.append(el('div', { class: 'ta-h', text: g.label }));
+      for (const it of rows.slice(0, g.max || 6)) {
+        const row = el('button', { type: 'button', class: 'ta-row', role: 'option', onclick: () => pick(it) },
+          it.kind === 'album' ? coverEl(it.id, it.name, 250) : el('span', { class: 'ta-ic', html: it.kind === 'artist' ? ICONS.artist : ICONS.label }),
+          el('span', { class: 'ta-main' }, el('span', { class: 'ta-t', text: it.name }), el('span', { class: 'ta-s', text: [it.kind === 'label' ? 'Label' : it.kind === 'album' ? '' : 'Artist', it.sub].filter(Boolean).join(' · ') })));
+        row.addEventListener('pointerdown', (e) => e.preventDefault());
+        it.el = row; items.push(it); box.append(row);
+      }
+    }
+    if (q && opts.footer !== false) box.append(el('div', { class: 'ta-foot', text: `Press Enter to search everything for “${q}”` }));
+    box.hidden = !items.length && !q;
+  }
+  function pick(it) { remember(it); hide(); if (opts.onPick) opts.onPick(it); else location.hash = it.kind === 'artist' ? `#/artist/${it.id}` : it.kind === 'album' ? `#/album/${it.id}` : `#/label/${it.id}`; }
+  async function suggest(q) {
+    const my = ++seq;
+    const groups = [{ label: 'Yours', items: localMatches(q), max: 4 }];
+    render(groups, q);
+    MB.dropTypeahead();
+    const modes = opts.modes ? opts.modes() : ['artist'];
+    for (let i = 0; i < modes.length; i++) {
+      if (i > 0) { await sleep(600); if (my !== seq) return; }
+      try {
+        const res = await searchEntity(modes[i], q, { partial: true, ta: true });
+        if (my !== seq) return;
+        groups.push({ label: modes[i] === 'artist' ? 'Artists' : modes[i] === 'album' ? 'Albums' : 'Labels', items: res, max: 6 });
+        render(groups, q);
+      } catch (e) { if (my !== seq) return; }
+    }
+  }
+  input.addEventListener('input', () => { const q = input.value.trim(); clearTimeout(timer); if (q.length < 2) { hide(); seq++; MB.dropTypeahead(); return; } timer = setTimeout(() => suggest(q), 260); });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { hide(); return; }
+    if (box.hidden || !items.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); hi = (hi + 1) % items.length; mark(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); hi = (hi - 1 + items.length) % items.length; mark(); }
+    else if (e.key === 'Enter' && hi >= 0) { e.preventDefault(); e.stopImmediatePropagation(); pick(items[hi]); }
+  });
+  function mark() { items.forEach((it, i) => it.el.classList.toggle('on', i === hi)); if (hi >= 0) items[hi].el.scrollIntoView({ block: 'nearest' }); }
+  input.addEventListener('blur', () => setTimeout(hide, 160));
+  input.addEventListener('focus', () => { if (items.length && input.value.trim().length >= 2) box.hidden = false; });
+  return { hide };
+}
+
+// ============================================================
+// Search
+// ============================================================
+let searchState = Object.assign({ mode: 'artist', q: '', results: null }, store.get('hear.search', {}));
+function SearchView() {
+  setTop({ brand: true });
+  const modes = [['artist', 'Artist'], ['album', 'Album'], ['label', 'Label'], ['describe', 'Describe it']];
+  const input = el('input', { id: 'q', type: 'search', placeholder: 'Artist, album, or label', autocomplete: 'off', autocapitalize: 'none', enterkeyhint: 'search', value: searchState.q || '' });
+  const field = el('div', { class: 'field' }, icon('search'), input, el('button', { class: 'iconbtn', 'aria-label': 'Clear', style: { width: '36px', height: '36px' }, onclick: () => { input.value = ''; searchState.q = ''; searchState.results = null; input.focus(); renderResults(); } }, icon('x')));
+  const chips = el('div', { class: 'chips', role: 'tablist' });
+  const results = el('div', { class: 'stack', style: { paddingTop: '14px' } });
+  const describeBox = el('div', { class: 'stack', style: { paddingTop: '14px' } });
+
+  function drawChips() {
+    chips.innerHTML = '';
+    for (const [m, label] of modes) chips.append(el('button', { class: 'chip' + (searchState.mode === m ? ' on' : '') + (m === 'describe' && searchState.mode !== m ? ' accent' : ''), role: 'tab', 'aria-selected': String(searchState.mode === m), onclick: () => { searchState.mode = m; persist(); drawChips(); toggleMode(); } }, m === 'describe' ? icon('spark') : null, label));
+  }
+  function persist() { store.set('hear.search', { mode: searchState.mode, q: searchState.q, results: searchState.results, describe: searchState.describe, describeOut: searchState.describeOut }); }
+  function toggleMode() {
+    const d = searchState.mode === 'describe';
+    field.hidden = d; results.hidden = d; describeBox.hidden = !d;
+    if (!d) { input.placeholder = searchState.mode === 'label' ? 'Label name, e.g. Warp Records' : searchState.mode === 'album' ? 'Album title' : 'Artist name'; renderResults(); }
+    else renderDescribe();
+  }
+  async function runSearch() {
+    const q = input.value.trim(); searchState.q = q; if (!q) return;
+    results.innerHTML = ''; results.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Searching MusicBrainz…'));
+    try {
+      const mode = searchState.mode;
+      MB.dropTypeahead();
+      const items = await searchEntity(mode === 'describe' ? 'artist' : mode, q, { partial: true });
+      searchState.results = { mode, q, items };
+      addRecent(mode, q);
+      persist();
+      renderResults();
+    } catch (err) { results.innerHTML = ''; results.append(el('div', { class: 'notice warn' }, "Couldn't reach MusicBrainz (" + err.message + '). Check your connection and try again.')); }
+  }
+  function renderResults() {
+    results.innerHTML = '';
+    const r = searchState.results;
+    if (r && r.mode === searchState.mode && r.items) {
+      if (!r.items.length) { results.append(el('div', { class: 'empty' }, `No ${r.mode === 'label' ? 'labels' : r.mode + 's'} found for “${r.q}”.`)); return; }
+      results.append(el('div', { class: 'eyebrow' }, `${r.items.length} result${r.items.length === 1 ? '' : 's'} · ${r.mode}`));
+      const list = el('div', { class: 'list' });
+      for (const it of r.items) {
+        const href = it.kind === 'artist' ? `#/artist/${it.id}` : it.kind === 'album' ? `#/album/${it.id}` : `#/label/${it.id}`;
+        const row = el('a', { class: 'item', href, onclick: () => remember(it) }, it.kind === 'album' ? coverEl(it.id, it.name, 250) : null, el('div', { class: 'main' }, el('div', { class: 't', text: it.name }), el('div', { class: 's', text: it.sub }), it.kind === 'album' ? ratingBadge({ id: it.id, title: it.name, artist: it.artist }) : null), el('span', { class: 'arrow' }, icon('chevron')));
+        list.append(row);
+      }
+      results.append(list);
+      return;
+    }
+    const rec = store.get('hear.recent', []);
+    if (rec.length) {
+      results.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Recent'), el('button', { class: 'link', style: { background: 'none', border: 0, fontSize: '13px' }, onclick: () => { store.set('hear.recent', []); renderResults(); } }, 'Clear')));
+      const list = el('div', { class: 'list' });
+      for (const r2 of rec) list.append(el('button', { class: 'item', onclick: () => { searchState.mode = r2.mode; input.value = r2.q; drawChips(); toggleMode(); runSearch(); } }, el('div', { class: 'main' }, el('div', { class: 't', text: r2.q })), el('span', { class: 'mono', text: r2.mode })));
+      results.append(list);
+    } else {
+      results.append(el('div', { class: 'empty' }, 'Search any artist, album or label. Tap an artist to flip through their discography.'));
+    }
+  }
+  function renderDescribe() {
+    describeBox.innerHTML = '';
+    const hasKey = !!settings.anthropicKey;
+    const ta = el('textarea', { id: 'describe', class: 'area', placeholder: 'Lush orchestral arrangements, an intimate female vocal, dark, a little jazzy', text: searchState.describe || '' });
+    ta.addEventListener('input', () => { searchState.describe = ta.value; });
+    const out = el('div', { class: 'stack' });
+    const card = el('div', { class: 'card dark' },
+      el('div', { class: 'eyebrow' }, 'Describe it'),
+      el('label', { for: 'describe', style: { fontWeight: 600, fontSize: '15px' } }, 'Tell it what you feel like hearing'),
+      ta);
+    if (hasKey) {
+      card.append(el('div', { class: 'row', style: { justifyContent: 'space-between', alignItems: 'center', gap: '10px' } },
+        el('div', { style: { fontSize: '12px', opacity: 0.75, lineHeight: 1.3 } }, `Claude picks albums that fit every part of the description; each is matched to the catalog. You can refine afterwards.`),
+        el('button', { class: 'btn accent', style: { flexShrink: 0 }, onclick: () => describeIt(ta.value.trim(), out) }, icon('spark'), 'Find albums')));
+    } else {
+      const ask = el('a', { class: 'btn accent', href: 'https://claude.ai/new', target: '_blank', rel: 'noopener' }, icon('spark'), 'Ask Claude ↗');
+      ask.addEventListener('click', (e) => { const t = ta.value.trim(); if (!t) { e.preventDefault(); toast('Describe what you want to hear first'); return; } searchState.describe = t; persist(); ask.href = 'https://claude.ai/new?q=' + enc(handoffPrompt(t)); });
+      card.append(el('div', { style: { fontSize: '12px', opacity: 0.75, lineHeight: 1.35 } }, 'This opens claude.ai with your description already typed in. Copy its list, paste it below, and the albums appear as cards with play links.'),
+        el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap' } }, ask, el('button', { class: 'btn', style: { background: 'transparent', color: 'inherit', borderColor: 'rgba(255,255,255,0.4)' }, onclick: () => describeIt(ta.value.trim(), out) }, 'Rough tag search instead')));
+      const paste = el('textarea', { id: 'paste', class: 'area', placeholder: 'Paste Claude’s list here, one album per line:\nPortishead — Dummy (1994) — why it fits', style: { minHeight: '76px' } });
+      card.append(el('label', { for: 'paste', style: { fontSize: '13px', fontWeight: 600, paddingTop: '4px' } }, 'Then paste the list back'), paste,
+        el('div', { class: 'row', style: { justifyContent: 'flex-end' } }, el('button', { class: 'btn', style: { background: 'transparent', color: 'inherit', borderColor: 'rgba(255,255,255,0.4)' }, onclick: () => {
+          const albums = parseAlbumList(paste.value);
+          if (!albums.length) { toast('Couldn’t read any albums. One per line: Artist — Album (Year)', 3500); return; }
+          searchState.describeOut = { text: ta.value.trim() || 'your pasted list', albums, source: 'claude.ai' }; persist();
+          drawOut(out); out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } }, 'Show these albums')));
+    }
+    describeBox.append(card);
+    if (!hasKey) describeBox.append(el('div', { class: 'notice' }, 'For one-tap picks and refining inside the app, add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), '.'));
+    describeBox.append(out);
+    if (searchState.describeOut) drawOut(out);
+  }
+  function drawOut(out) {
+    const res = searchState.describeOut;
+    if (!res) { out.innerHTML = ''; return; }
+    renderPicks(out, res, {
+      onRefine: res.convo ? async (t) => { out.innerHTML = ''; out.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Refining…')); try { searchState.describeOut = await refinePicks(res, t); persist(); drawOut(out); } catch (err) { drawOut(out); toast(err.message, 4000); } } : null,
+      onClear: () => { searchState.describeOut = null; persist(); out.innerHTML = ''; },
+      onChange: persist
+    });
+  }
+  async function describeIt(text, out) {
+    if (!text) { toast('Describe what you want to hear first'); return; }
+    searchState.describe = text; persist();
+    out.innerHTML = ''; out.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), settings.anthropicKey ? 'Asking Claude…' : 'Searching tags…'));
+    try {
+      let res;
+      if (settings.anthropicKey) res = await askPicks(text);
+      else {
+        const stop = new Set(['the', 'a', 'an', 'and', 'or', 'with', 'of', 'in', 'on', 'for', 'to', 'some', 'something', 'like', 'music', 'album', 'albums', 'around', 'from', 'that', 'this', 'i', 'want', 'feel', 'hear', 'listen', 'vocals', 'vocal', 'performance', 'slightly', 'very', 'really', 'sounds', 'sound']);
+        const words = text.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !stop.has(w) && !/^\d+$/.test(w));
+        if (!words.length) throw new Error('Try a few descriptive words, like “dreamy”, “dub” or “krautrock”.');
+        const d = await MB.get('release-group', { query: '(' + words.map(w => `tag:${luceneEscape(w)}`).join(' OR ') + ') AND primarytype:album', limit: 12 });
+        res = { text, albums: (d['release-groups'] || []).map(g => ({ artist: credit(g['artist-credit']), title: g.title, year: year(g['first-release-date']), id: g.id, why: (g.tags || []).slice(0, 4).map(t => t.name).join(', ') })), source: 'tags' };
+      }
+      searchState.describeOut = res; persist();
+      drawOut(out);
+    } catch (err) { out.innerHTML = ''; out.append(el('div', { class: 'notice warn' }, err.message)); }
+  }
+  attachTypeahead(input, { modes: () => [searchState.mode === 'describe' ? 'artist' : searchState.mode] });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
+  input.addEventListener('search', () => runSearch());
+  drawChips();
+  view.append(el('div', { class: 'stack' }, el('label', { for: 'q', class: 'eyebrow' }, 'Search the catalog'), field, chips), results, describeBox);
+  toggleMode();
+  if (searchState.pendingRun) { searchState.pendingRun = false; runSearch(); }
+  else if (!searchState.results && searchState.mode !== 'describe') setTimeout(() => input.focus(), 50);
+}
+function lifespan(ls) { if (!ls || (!ls.begin && !ls.end)) return ''; return [year(ls.begin), ls.ended ? year(ls.end) || '' : ''].join(ls.ended || ls.end ? '–' : ' –').trim(); }
+function rgType(g) { const sec = g['secondary-types'] || []; if (sec.length) return sec.join(' / '); return g['primary-type'] || ''; }
+function addRecent(mode, q) { const rec = store.get('hear.recent', []).filter(r => !(r.mode === mode && r.q.toLowerCase() === q.toLowerCase())); rec.unshift({ mode, q }); store.set('hear.recent', rec.slice(0, 8)); }
+
+// ============================================================
+// Artist — the cover flow
+// ============================================================
+const FILTERS = [['album', 'Albums'], ['ep', 'EPs'], ['single', 'Singles'], ['comp', 'Compilations'], ['live', 'Live'], ['other', 'Other']];
+function bucket(g) {
+  const sec = (g['secondary-types'] || []).map(s => s.toLowerCase());
+  const p = (g['primary-type'] || '').toLowerCase();
+  if (sec.includes('compilation')) return 'comp';
+  if (sec.includes('live')) return 'live';
+  if (sec.length) return 'other';
+  if (p === 'album') return 'album';
+  if (p === 'ep') return 'ep';
+  if (p === 'single') return 'single';
+  return 'other';
+}
+async function artistProfile(artist) {
+  // Photo and short bio from the artist's Wikipedia page; Discogs photo as a fallback when a token is set.
+  const key = 'hear.aprof.' + artist.id; const c = store.get(key, null);
+  if (c && Date.now() - c.t < 30 * 864e5) return c;
+  const out = { t: Date.now(), img: null, extract: null, wikiUrl: null };
+  try {
+    const rels = artist.relations || [];
+    const wd = rels.find(r => r.type === 'wikidata'); const wp = rels.find(r => r.type === 'wikipedia' && /en\.wikipedia\.org\/wiki\//.test(r.url.resource));
+    let title = null;
+    if (wd) { const m = wd.url.resource.match(/Q\d+/); if (m) title = await WP.titleFromWikidata(m[0]); }
+    if (!title && wp) title = decodeURIComponent(wp.url.resource.split('/wiki/')[1].split('#')[0]).replace(/_/g, ' ');
+    if (!title) {
+      const d = await WP.call({ action: 'query', list: 'search', srsearch: `intitle:"${artist.name}" (musician OR band OR singer OR rapper OR composer OR producer OR group OR duo OR DJ)`, srlimit: 5 });
+      const want = WP.norm(artist.name); const hit = ((d.query && d.query.search) || []).find(s => WP.norm(s.title) === want || WP.norm(s.title).startsWith(want + ' '));
+      title = hit ? hit.title : null;
+    }
+    if (title) {
+      const r = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/ /g, '_')));
+      if (r.ok) { const s = await r.json(); if (s.type !== 'disambiguation') { out.extract = s.extract || null; out.wikiUrl = s.content_urls && s.content_urls.desktop ? s.content_urls.desktop.page : null; if (s.thumbnail && s.thumbnail.source) out.img = s.thumbnail.source.replace(/\/(\d+)px-/, '/480px-'); } }
+    }
+  } catch (e) { console.warn('artist profile', e); }
+  if (!out.img && settings.discogsToken) {
+    try { const dg = (artist.relations || []).find(r => r.type === 'discogs'); const m = dg && dg.url.resource.match(/artist\/(\d+)/); if (m) { const a = await Discogs.get('artists/' + m[1]); if (a.images && a.images[0]) out.img = a.images[0].uri; } } catch (e) { }
+  }
+  store.set(key, out); return out;
+}
+function artistGenres(artist) {
+  const list = (artist.genres && artist.genres.length ? artist.genres : (artist.tags || [])).filter(t => t.count > 0).sort((a, b) => b.count - a.count);
+  const seen = new Set(); const out = [];
+  for (const t of list) { const n = t.name.toLowerCase(); if (seen.has(n)) continue; seen.add(n); out.push(n); if (out.length >= 8) break; }
+  return out;
+}
+const BUCKET_LABELS = { album: 'Albums', ep: 'EPs', single: 'Singles', comp: 'Compilations', live: 'Live', other: 'Other releases' };
+async function ArtistView(id, rid) {
+  setTop({ back: true, title: '' });
+  view.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading artist…'));
+  const artist = await MB.get(`artist/${id}`, { inc: 'url-rels+genres+tags' });
+  if (rid !== routeSeq) return;
+  remember({ kind: 'artist', id: artist.id, name: artist.name, sub: [artist.disambiguation, artist.type, artist.country].filter(Boolean).join(' · ') });
+  const alinks = collectArtistLinks(artist.relations);
+  view.innerHTML = '';
+  setTop({ back: true, title: artist.name });
+  const img = el('div', { class: 'aimg ph', style: { background: `hsl(${hue(artist.name)} 28% 48%)` }, text: initials(artist.name) });
+  const textCol = el('div', { class: 'stack', style: { gap: '6px', minWidth: 0, flex: 1 } },
+    el('h1', { text: artist.name }),
+    el('div', { class: 'mono' }, [artist.disambiguation, artist.type, artist.country || (artist.area && artist.area.name), lifespan(artist['life-span'])].filter(Boolean).join(' · ')));
+  const genres = artistGenres(artist);
+  if (genres.length) textCol.append(el('div', { class: 'wrap' }, genres.map(g => el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(g)}` }, titleCase(g)))));
+  const head = el('div', { class: 'ahead' }, img, textCol);
+  const bioHost = el('div', { class: 'stack', style: { gap: '4px', paddingTop: '12px' } });
+  const extLinks = el('div', { class: 'wrap', style: { paddingTop: '10px' } });
+  for (const [k, label] of [['bandcamp', 'Bandcamp'], ['discogs', 'Discogs'], ['allmusic', 'AllMusic'], ['wikipedia', 'Wikipedia'], ['homepage', 'Website']]) if (alinks[k]) extLinks.append(el('a', { class: 'tag soft', href: alinks[k], target: '_blank', rel: 'noopener' }, label + ' ↗'));
+  view.append(head, bioHost, extLinks.children.length ? extLinks : null);
+  artistProfile(artist).then(p => {
+    if (rid !== routeSeq) return;
+    if (p.img) { const im = el('img', { class: 'aimg', src: p.img, alt: artist.name }); im.addEventListener('error', () => im.replaceWith(img)); img.replaceWith(im); }
+    if (p.extract) {
+      const bio = el('div', { class: 'bio', text: p.extract });
+      const more = el('button', { class: 'link', style: { background: 'none', border: 0, padding: 0, fontSize: '13px', textAlign: 'left' }, onclick: () => { bio.classList.toggle('open'); more.textContent = bio.classList.contains('open') ? 'Less' : 'More'; } }, 'More');
+      bioHost.append(bio, el('div', { class: 'row', style: { gap: '10px' } }, more, p.wikiUrl ? el('a', { class: 'mono', href: p.wikiUrl, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, 'Wikipedia · CC BY-SA ↗') : null));
+      if (p.wikiUrl && !alinks.wikipedia) extLinks.append(el('a', { class: 'tag soft', href: p.wikiUrl, target: '_blank', rel: 'noopener' }, 'Wikipedia ↗'));
+      if (extLinks.children.length && !extLinks.isConnected) bioHost.after(extLinks);
+    }
+  });
+  const disco = el('div', { class: 'stack', style: { gap: '0' } });
+  view.append(disco);
+  disco.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading discography…'));
+  let groups = []; let offset = 0; let total = Infinity;
+  while (offset < total && offset < 600) {
+    const d = await MB.get('release-group', { artist: id, limit: 100, offset, inc: 'artist-credits' });
+    if (rid !== routeSeq) return;
+    groups = groups.concat(d['release-groups'] || []);
+    total = d['release-group-count'] || 0; offset += 100;
+  }
+  for (const g of groups) g._b = bucket(g);
+  groups.sort((a, b) => (b['first-release-date'] || '0000').localeCompare(a['first-release-date'] || '0000'));
+  disco.innerHTML = '';
+  if (!groups.length) { disco.append(el('div', { class: 'empty' }, 'MusicBrainz has no releases for this artist yet.')); return; }
+  for (const [k, label] of Object.entries(BUCKET_LABELS)) {
+    const items = groups.filter(g => g._b === k);
+    if (!items.length) continue;
+    const sec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, label), el('div', { class: 'mono', text: String(items.length) })));
+    const strip = el('div', { class: 'strip' });
+    for (const g of items) strip.append(albumTile({ id: g.id, title: g.title, artist: credit(g['artist-credit']) || artist.name, artistId: artist.id, year: year(g['first-release-date']), type: rgType(g) }, { primary: 'title', twoLine: true }));
+    sec.append(strip);
+    disco.append(sec);
+  }
+}
+
+// ============================================================
+// Genre — essential artists and albums, plus everyone tagged with it
+// ============================================================
+async function GenreView(name, rid) {
+  const genre = (name || '').trim(); if (!genre) { location.hash = '#/'; return; }
+  setTop({ back: true, title: titleCase(genre) });
+  view.append(el('div', { class: 'stack', style: { gap: '6px' } }, el('div', { class: 'eyebrow' }, 'Genre'), el('h1', { text: titleCase(genre) }),
+    el('div', { class: 'wrap' }, el('a', { class: 'tag soft', href: '#/search', onclick: (e) => { e.preventDefault(); searchState.mode = 'describe'; searchState.describe = `${genre}: deeper cuts beyond the obvious classics`; store.set('hear.search', { mode: 'describe', q: searchState.q, results: searchState.results, describe: searchState.describe, describeOut: null }); location.hash = '#/search'; } }, 'Dig deeper with Describe it →'))));
+  const artistsSec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Essential artists'), el('div', { class: 'mono', text: settings.anthropicKey ? 'picked by ' + (settings.model || DEFAULTS.model) : '' })), el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading…'));
+  const albumsSec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Essential albums')), el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading…'));
+  const moreSec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, `Artists tagged “${genre}”`), el('div', { class: 'mono' }, 'MusicBrainz')), el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading…'));
+  view.append(settings.anthropicKey ? artistsSec : null, albumsSec, moreSec);
+  const artistRow = (a) => {
+    const row = el(a.id ? 'a' : 'button', Object.assign({ class: 'item' }, a.id ? { href: `#/artist/${a.id}` } : { type: 'button' }), el('span', { class: 'ta-ic' }, icon('artist')), el('div', { class: 'main' }, el('div', { class: 't', text: a.name }), el('div', { class: 's', text: a.sub || a.why || '' })), el('span', { class: 'arrow' }, icon('chevron')));
+    if (!a.id) row.addEventListener('click', async () => { row.style.opacity = '0.5'; const hit = await resolveArtist(a.name); if (hit) location.hash = `#/artist/${hit.id}`; else { row.style.opacity = '1'; toast('Not found in the catalog'); } });
+    return row;
+  };
+  if (settings.anthropicKey) (async () => {
+    const key = 'hear.genre.artists.' + slug(genre);
+    try {
+      let data = store.get(key, null);
+      if (!data || Date.now() - data.t > 30 * 864e5) {
+        const reply = await askClaude(`List 14 essential ${genre} artists: the originators and defining names first, then a few lesser-known ones a serious fan would insist on. Real artists only. Reply with ONLY JSON: {"artists":[{"name":"...","why":"one short phrase, e.g. 'the sound's architect' or 'the 90s revival'"}]}`, 900);
+        data = { t: Date.now(), items: (parseJSON(reply).artists || []).slice(0, 14) }; store.set(key, data);
+      }
+      if (rid !== routeSeq) return;
+      artistsSec.querySelector('.loading').remove();
+      const list = el('div', { class: 'list' }); artistsSec.append(list);
+      for (const a of data.items) list.append(artistRow(a));
+      (async () => { for (const a of data.items) { if (a.id) continue; const hit = await resolveArtist(a.name); if (rid !== routeSeq) return; if (hit) { a.id = hit.id; store.set(key, data); const old = [...list.children].find(r => r.querySelector('.t') && r.querySelector('.t').textContent === a.name); if (old) old.replaceWith(artistRow(a)); } } })();
+    } catch (e) { if (e.message === 'stale') return; artistsSec.querySelector('.loading').replaceWith(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't get picks: " + e.message)); }
+  })();
+  (async () => {
+    try {
+      const r = await genreStrip(genre); if (rid !== routeSeq) return;
+      albumsSec.querySelector('.loading').remove();
+      if (!r.data.items.length) { albumsSec.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Nothing found.')); return; }
+      albumsSec.querySelector('.sechead').append(el('div', { class: 'mono', text: r.data.source === 'tags' ? 'MusicBrainz tags' : 'picked by ' + r.data.source }));
+      const strip = el('div', { class: 'strip' }); albumsSec.append(strip);
+      const tiles = r.data.items.map(it => { const t = albumTile(it); strip.append(t); return t; });
+      (async () => { for (let i = 0; i < r.data.items.length; i++) { const it = r.data.items[i]; if (it.id) continue; const id = await resolveAlbum(it.artist, it.title); if (rid !== routeSeq) return; if (id) { it.id = id; store.set(r.key, r.data); tiles[i].replaceWith(albumTile(it)); } } })();
+    } catch (e) { if (e.message === 'stale') return; albumsSec.querySelector('.loading').replaceWith(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load albums: " + e.message)); }
+  })();
+  (async () => {
+    try {
+      const d = await MB.get('artist', { query: `tag:"${luceneEscape(genre)}"`, limit: 40 }); if (rid !== routeSeq) return;
+      moreSec.querySelector('.loading').remove();
+      const as = (d.artists || []).map(a => ({ id: a.id, name: a.name, sub: [a.disambiguation, a.type, a.country, lifespan(a['life-span'])].filter(Boolean).join(' · ') }));
+      if (!as.length) { moreSec.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'No artists carry this tag yet.')); return; }
+      const list = el('div', { class: 'list' }); for (const a of as) list.append(artistRow(a)); moreSec.append(list);
+    } catch (e) { if (e.message === 'stale') return; moreSec.querySelector('.loading').replaceWith(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load: " + e.message)); }
+  })();
+}
+async function resolveArtist(name) {
+  try { const d = await MB.get('artist', { query: `artist:"${luceneEscape(name)}"`, limit: 3 }, { bg: true }); const as = d.artists || []; return as.find(a => WP.norm(a.name) === WP.norm(name)) || (as[0] && as[0].score >= 70 ? as[0] : null); } catch (e) { return null; }
+}
+function collectArtistLinks(rels) {
+  const out = {};
+  for (const r of rels || []) { const u = r.url && r.url.resource; if (!u) continue; const t = (r.type || '').toLowerCase(); if (t === 'bandcamp' || t === 'discogs' || t === 'allmusic' || t === 'wikipedia') { if (!out[t]) out[t] = u; } else if (t === 'official homepage' && !out.homepage) out.homepage = u; }
+  return out;
+}
+function coverFlow(items, opts = {}) {
+  // items: [{id, title, artist, artistId, year, type, why}]. opts.size = cover px; opts.actions = 'full' | 'light' | 'none'.
+  const COVER = opts.size || 240; const SLOT = Math.round(COVER / 2); const STAGE = COVER + 60;
+  const root = el('div', { class: 'stack', style: { gap: '0' } });
+  const flow = el('div', { class: 'flow', tabindex: '0', role: 'listbox', 'aria-label': opts.label || 'Albums', style: { height: STAGE + 'px', padding: `0 calc(50% - ${SLOT / 2}px)` } });
+  const covers = [];
+  const slots = items.map((g, i) => {
+    const c = coverEl(g.id || null, g.title, COVER > 200 ? 500 : 250); covers[i] = c;
+    c.style.width = COVER + 'px'; c.style.height = COVER + 'px';
+    const btn = el('button', { class: 'fc', role: 'option', 'aria-label': `${g.title}${g.artist ? ' by ' + g.artist : ''}${g.year ? ', ' + g.year : ''}`, style: { width: COVER + 'px', height: COVER + 'px', marginLeft: (-COVER / 2) + 'px' }, onclick: () => { if (i === current) { if (g.id) location.hash = `#/album/${g.id}`; else toast('Still matching this one to the catalog…'); } else goTo(i); } }, c);
+    return el('div', { class: 'slot', style: { flex: `0 0 ${SLOT}px`, height: COVER + 'px' } }, btn);
+  });
+  flow.append(...slots);
+  const years = el('div', { class: 'years', role: 'tablist' });
+  const yearBtns = opts.years === false ? [] : items.map((g, i) => el('button', { onclick: () => goTo(i) }, g.year || '—'));
+  if (yearBtns.length) years.append(...yearBtns);
+  const now = el('div', { class: 'nowplaying' });
+  const actions = el('div', { class: 'stack', style: { paddingTop: '12px' } });
+  root.append(flow); if (yearBtns.length) root.append(years); root.append(now); if (opts.actions !== 'none') root.append(actions);
+  let current = -1; let settleT = null;
+  function layout() {
+    const sl = flow.scrollLeft;
+    slots.forEach((slot, i) => {
+      const d = (i * SLOT - sl) / SLOT; const ad = Math.abs(d); const a = Math.min(ad, 1);
+      const rot = -Math.max(-1, Math.min(1, d)) * 58;
+      const tx = Math.sign(d) * a * (COVER * 0.14); const tz = -a * (COVER * 0.62) - Math.max(ad - 1, 0) * 6; const sc = 1 - a * 0.14;
+      const c = slot.firstElementChild;
+      c.style.transform = `perspective(900px) translate3d(${tx}px,0,${tz}px) rotateY(${rot}deg) scale(${sc})`;
+      c.style.zIndex = String(200 - Math.round(ad * 10));
+      c.style.opacity = ad > 6 ? '0' : '1';
+    });
+  }
+  function settle() {
+    const i = Math.max(0, Math.min(items.length - 1, Math.round(flow.scrollLeft / SLOT)));
+    if (i === current) return; current = i;
+    const g = items[i];
+    yearBtns.forEach((b, j) => b.classList.toggle('on', j === i));
+    if (yearBtns[i]) yearBtns[i].scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    now.innerHTML = '';
+    now.append(el('h2', { text: g.title }), el('div', { class: 'mono' }, [opts.showArtist ? g.artist : '', g.year, g.type, `${i + 1} of ${items.length}`].filter(Boolean).join(' · ')), ratingBadge(g, { now: true, count: true }));
+    if (g.why) now.append(el('div', { style: { fontSize: '13px', lineHeight: 1.35 } }, g.why));
+    if (opts.actions === 'none') return;
+    actions.innerHTML = '';
+    actions.append(hearButtons(serviceLinks(g.artist || '', g.title)));
+    if (opts.actions !== 'light') actions.append(el('div', { class: 'btnrow' }, g.id ? el('a', { class: 'btn quiet', href: `#/album/${g.id}` }, 'Details, links & tracks') : el('span', { class: 'btn quiet', style: { opacity: 0.5 } }, 'Matching…'), g.id ? shelfButton({ id: g.id, title: g.title, artist: g.artist, artistId: g.artistId, year: g.year, type: g.type }, true) : null));
+    else if (g.id) actions.append(el('div', { class: 'row', style: { justifyContent: 'center' } }, el('a', { class: 'link', href: `#/album/${g.id}`, style: { fontSize: '14px', height: '36px', display: 'inline-flex', alignItems: 'center' } }, 'Details, links & reviews →')));
+  }
+  function goTo(i) { flow.scrollTo({ left: i * SLOT, behavior: 'smooth' }); }
+  let raf = 0;
+  flow.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; layout(); }); clearTimeout(settleT); settleT = setTimeout(settle, 90); }, { passive: true });
+  flow.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') { e.preventDefault(); goTo(Math.min(items.length - 1, current + 1)); } if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(Math.max(0, current - 1)); } if (e.key === 'Enter' && current >= 0 && items[current].id) location.hash = `#/album/${items[current].id}`; });
+  requestAnimationFrame(() => { layout(); if (opts.start) { flow.scrollLeft = opts.start * SLOT; layout(); } settle(); });
+  root.setId = (i, id) => { items[i].id = id; const c = coverEl(id, items[i].title, COVER > 200 ? 500 : 250); c.style.width = COVER + 'px'; c.style.height = COVER + 'px'; covers[i].replaceWith(c); covers[i] = c; if (i === current) { current = -1; settle(); } };
+  return root;
+}
+function shelfButton(item, compact) {
+  const b = el('button', { class: 'btn' + (compact ? ' quiet' : ' accent') });
+  function draw() { b.innerHTML = ''; const on = Shelf.has(item.id); b.append(icon(on ? 'check' : 'plus'), on ? 'On your shelf' : 'Add to shelf'); if (on) { b.classList.remove('accent'); b.classList.add('quiet'); } else if (!compact) { b.classList.add('accent'); b.classList.remove('quiet'); } }
+  b.addEventListener('click', () => { if (Shelf.has(item.id)) { Shelf.remove(item.id); toast('Removed from your shelf'); } else { Shelf.add(item); toast('Added to your shelf'); } draw(); });
+  draw();
+  return b;
+}
+
+// ============================================================
+// Album
+// ============================================================
+async function AlbumView(id, rid) {
+  setTop({ back: true, title: '' });
+  view.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading album…'));
+  const g = await MB.get(`release-group/${id}`, { inc: 'artist-credits+url-rels+genres+tags' });
+  if (rid !== routeSeq) return;
+  const artistName = credit(g['artist-credit']); const fa = firstArtist(g['artist-credit']);
+  remember({ kind: 'album', id: g.id, name: g.title, artist: artistName, sub: [artistName, year(g['first-release-date'])].filter(Boolean).join(' · ') });
+  view.innerHTML = '';
+  setTop({ back: true, title: g.title });
+  const exact = collectLinks(g.relations);
+  let links = serviceLinks(artistName, g.title, exact);
+  const cover = coverEl(g.id, g.title, 500, 'big');
+  const meta = el('div', { class: 'mono' }, [year(g['first-release-date']), rgType(g)].filter(Boolean).join(' · '));
+  const ratingLine = el('div', { style: { paddingTop: '2px', minHeight: '20px' } });
+  Ratings.get(g.id, g.title, fa ? fa.name : artistName).then(r => { if (r && r.score != null && !ratingLine.children.length) ratingLine.append(ratingBadge({ id: g.id, title: g.title, artist: artistName }, { now: true, count: true, size: 'lg' })); });
+  try { const rv = store.get('hear.recentAlbums', []).filter(x => x.id !== g.id); rv.unshift({ id: g.id, title: g.title, artist: artistName, artistId: fa && fa.id, year: year(g['first-release-date']), type: rgType(g) }); store.set('hear.recentAlbums', rv.slice(0, 12)); } catch (e) { }
+  const linkRow = el('div', { class: 'stack' });
+  const secondary = el('div', { class: 'wrap' });
+  const shelfItem = { id: g.id, title: g.title, artist: artistName, artistId: fa && fa.id, year: year(g['first-release-date']), type: rgType(g), labels: [] };
+  const shelfBtn = shelfButton(shelfItem, false);
+  function drawLinks() {
+    linkRow.innerHTML = '';
+    linkRow.append(hearButtons(links));
+    secondary.innerHTML = '';
+    const add = (label, href, exactFlag) => secondary.append(el('a', { class: 'tag' + (exactFlag ? '' : ' soft'), href, target: '_blank', rel: 'noopener', title: exactFlag ? 'Direct link' : 'Search link' }, label + ' ↗'));
+    add('Bandcamp', links.bandcamp, links.bandcampExact);
+    if (links.apple && settings.showApple) add('Apple Music', links.apple, true);
+    if (links.deezer) add('Deezer', links.deezer, true);
+    if (links.tidal) add('Tidal', links.tidal, true);
+    add('Discogs', links.discogs, links.discogsExact);
+    linkRow.append(secondary);
+  }
+  drawLinks();
+  view.append(el('div', { class: 'stack' },
+    el('div', { style: { padding: '4px 12px 0' } }, cover),
+    el('div', { class: 'stack', style: { gap: '4px', paddingTop: '6px' } },
+      el('h1', { text: g.title }),
+      fa ? el('a', { class: 'link', href: `#/artist/${fa.id}`, style: { fontSize: '15px' } }, artistName) : el('div', { text: artistName }),
+      meta,
+      ratingLine),
+    linkRow,
+    el('div', { class: 'btnrow' }, shelfBtn)));
+
+  // Coverage: ratings, reviews, interviews & period press
+  const coverage = el('div');
+  view.append(coverage);
+  const ry = +year(g['first-release-date']) || null;
+  let covData = null;
+  const byYear = (a, b) => (a.year || 9999) - (b.year || 9999);
+  function drawCoverage(cov) {
+    coverage.innerHTML = '';
+    const rs = cov.ratings || [];
+    const mean = rs.length ? rs.reduce((s, r) => s + r.norm, 0) / rs.length : (cov.metacritic ? cov.metacritic.norm : null);
+    const ratingSec = el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Ratings'),
+      cov.wikiUrl ? el('a', { class: 'mono', href: cov.wikiUrl, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, 'via Wikipedia ↗') : el('div', { class: 'mono' }, 'no Wikipedia entry found')));
+    if (mean != null) {
+      const card = el('div', { class: 'card' });
+      card.append(el('div', { class: 'row', style: { gap: '12px', alignItems: 'baseline', flexWrap: 'wrap' } }, el('div', { class: 'score', text: mean.toFixed(1) }), starsEl(mean), el('div', { class: 'mono' }, rs.length ? `from ${rs.length} review${rs.length === 1 ? '' : 's'}` : 'Metacritic only')));
+      if (cov.metacritic && rs.length) card.append(cov.metacritic.url ? el('a', { class: 'mono', href: cov.metacritic.url, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, `Metacritic ${cov.metacritic.raw} ↗`) : el('div', { class: 'mono' }, `Metacritic ${cov.metacritic.raw}`));
+      const list = el('div');
+      for (const r of rs) list.append(el(r.url ? 'a' : 'div', Object.assign({ class: 'srow' }, r.url ? { href: r.url, target: '_blank', rel: 'noopener' } : {}), el('span', { class: 'src', text: r.source }), el('span', { class: 'raw', text: r.raw }), starsEl(r.norm, true), r.url ? el('span', { class: 'arrow' }, icon('ext')) : null));
+      card.append(list);
+      ratingSec.append(card);
+    } else {
+      ratingSec.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, cov.wikiUrl ? 'This Wikipedia entry has no ratings box.' : 'No critic ratings found for this album.'));
+    }
+    coverage.append(ratingSec);
+
+    const reviews = []; const seenUrl = new Set();
+    const push = (x) => { if (!x.url || seenUrl.has(x.url)) return; seenUrl.add(x.url); reviews.push(x); };
+    for (const r of rs) if (r.url) push({ title: r.source + ' review', work: r.source, url: r.url, year: r.year, score: r.raw });
+    for (const e of cov.entries || []) if (e.kind === 'review') push({ title: e.title, work: e.work, url: e.url, year: e.year });
+    if (links.allmusicExact) push({ title: 'AllMusic review', work: 'AllMusic', url: links.allmusic });
+    if (links.pitchfork) push({ title: 'Pitchfork review', work: 'Pitchfork', url: links.pitchfork });
+    if (links.review) push({ title: 'Review', work: hostOf(links.review), url: links.review });
+    if (links.rym) push({ title: 'RateYourMusic', work: 'RateYourMusic', url: links.rym });
+    reviews.sort(byYear);
+    const revSec = el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Reviews'), el('div', { class: 'mono', text: reviews.length ? String(reviews.length) : '' })));
+    if (reviews.length) revSec.append(el('div', { class: 'list' }, reviews.map(r => el('a', { class: 'crow', href: r.url, target: '_blank', rel: 'noopener' }, el('div', { class: 't', text: r.title }), el('div', { class: 'm', text: [r.work || hostOf(r.url), r.year, r.score].filter(Boolean).join(' · ') })))));
+    const hasHost = (h) => reviews.some(r => hostOf(r.url).endsWith(h));
+    revSec.append(el('div', { class: 'wrap', style: { paddingTop: '6px' } },
+      !hasHost('allmusic.com') ? el('a', { class: 'tag soft', href: links.allmusic, target: '_blank', rel: 'noopener' }, 'Find on AllMusic ↗') : null,
+      !hasHost('pitchfork.com') ? el('a', { class: 'tag soft', href: `https://pitchfork.com/search/?query=${enc(artistName + ' ' + g.title)}`, target: '_blank', rel: 'noopener' }, 'Find on Pitchfork ↗') : null,
+      el('a', { class: 'tag soft', href: `https://www.metacritic.com/search/${enc(g.title)}/?category=2`, target: '_blank', rel: 'noopener' }, 'Metacritic ↗')));
+    coverage.append(revSec);
+
+    const arts = (cov.entries || []).filter(e => e.kind !== 'review' && e.kind !== 'aggregate');
+    const press = cov.press || [];
+    const inWindow = (y) => !!(ry && y && y >= ry - 1 && y <= ry + 2);
+    const atTime = [...arts.filter(e => inWindow(e.year)), ...press.filter(p => inWindow(p.year))].sort(byYear);
+    const later = [...arts.filter(e => !inWindow(e.year)), ...press.filter(p => !inWindow(p.year))].sort(byYear);
+    const artSec = el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Interviews & articles'), el('div', { class: 'mono', text: String(atTime.length + later.length) })));
+    const rowFor = (e) => el('a', { class: 'crow', href: e.url, target: '_blank', rel: 'noopener' },
+      el('div', { class: 't' }, el('span', { class: 'kind', text: e.kind === 'press' ? 'magazine' : e.kind }), e.kind === 'press' ? e.work : e.title),
+      el('div', { class: 'm', text: e.kind === 'press' ? [e.date, 'Google Books'].filter(Boolean).join(' · ') : [e.work || hostOf(e.url), e.year].filter(Boolean).join(' · ') }),
+      e.snippet ? el('div', { class: 'snip', text: '…' + e.snippet + '…' }) : null);
+    if (atTime.length) artSec.append(el('div', { class: 'subhead', text: `At the time · ${ry - 1}–${ry + 2}` }), el('div', { class: 'list' }, atTime.map(rowFor)));
+    if (later.length) artSec.append(el('div', { class: 'subhead', text: atTime.length ? 'Later & undated' : 'Found' }), el('div', { class: 'list' }, later.map(rowFor)));
+    if (!atTime.length && !later.length) artSec.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Nothing found automatically. Try the searches below.'));
+    const q = enc(`"${g.title}" ${artistName}`);
+    artSec.append(el('div', { class: 'wrap', style: { paddingTop: '8px' } },
+      el('a', { class: 'tag soft', href: `https://archive.org/search?query=${q}&sin=TXT`, target: '_blank', rel: 'noopener' }, 'Internet Archive magazines ↗'),
+      el('a', { class: 'tag soft', href: `https://www.google.com/search?tbm=bks&q=${q}`, target: '_blank', rel: 'noopener' }, 'Google Books ↗')));
+    const digKey = 'hear.dig.' + g.id; const dug = store.get(digKey, null);
+    const digHost = el('div', { class: 'stack', style: { paddingTop: '10px' } });
+    const drawDug = (items) => { digHost.innerHTML = ''; digHost.append(el('div', { class: 'subhead', text: `Found on the web by Claude · ${items.length}` }), el('div', { class: 'list' }, items.map(i => el('a', { class: 'crow', href: i.url, target: '_blank', rel: 'noopener' }, el('div', { class: 't' }, el('span', { class: 'kind', text: i.kind }), i.title), el('div', { class: 'm', text: [i.work || hostOf(i.url), i.date, i.score].filter(Boolean).join(' · ') }))))); };
+    if (dug) drawDug(dug.items);
+    else if (settings.anthropicKey) digHost.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Searching the web…'; try { const items = await digDeeper(artistName, g.title, ry); store.set(digKey, { t: Date.now(), items }); drawDug(items); } catch (err) { b.disabled = false; b.textContent = 'Dig deeper with Claude'; toast(err.message, 4000); } } }, icon('spark'), 'Dig deeper with Claude'));
+    else digHost.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to search the web for more reviews and interviews.'));
+    artSec.append(digHost);
+    coverage.append(artSec);
+
+    if (cov.summary) coverage.append(el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'About'), el('a', { class: 'mono', href: cov.wikiUrl, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, 'Wikipedia · CC BY-SA ↗')), el('div', { class: 'about', text: cov.summary.length > 600 ? cov.summary.slice(0, 600).replace(/\s+\S*$/, '') + '…' : cov.summary })));
+  }
+  (async () => {
+    const cacheKey = 'hear.cov.' + g.id;
+    let cov = store.get(cacheKey, null);
+    if (cov && Date.now() - cov.t > 7 * 864e5) cov = null;
+    const status = el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Looking up ratings, reviews and press…');
+    coverage.append(status);
+    if (!cov) {
+      cov = { t: Date.now(), wikiUrl: null, wikiTitle: null, summary: null, ratings: [], metacritic: null, entries: [], press: [] };
+      const who = fa ? fa.name : artistName;
+      const wikiP = (async () => {
+        try {
+          const t = await WP.findAlbumPage(g.title, who, exact);
+          if (!t) return;
+          const p = await WP.page(t);
+          const parsed = parseWikipedia(p.html);
+          cov.wikiTitle = p.title; cov.wikiUrl = p.url; cov.ratings = parsed.ratings; cov.metacritic = parsed.metacritic; cov.entries = parsed.entries;
+          store.set('hear.wptitle.' + g.id, p.title);
+          const rs0 = parsed.ratings; const mean0 = rs0.length ? rs0.reduce((s, r) => s + r.norm, 0) / rs0.length : (parsed.metacritic ? parsed.metacritic.norm : null);
+          Ratings.put(g.id, { score: mean0, n: rs0.length, mc: parsed.metacritic ? parsed.metacritic.raw : null, mcUrl: parsed.metacritic ? parsed.metacritic.url : null, hasBox: !!(rs0.length || parsed.metacritic), title: p.title, sources: rs0.map(r => ({ source: r.source, raw: r.raw, norm: r.norm, url: r.url || null })), blurb: parsed.blurb || (store.get('hear.rating.' + g.id, {}) || {}).blurb || '' });
+          ratingLine.innerHTML = ''; if (mean0 != null) ratingLine.append(ratingBadge({ id: g.id, title: g.title, artist: artistName }, { now: true, count: true, size: 'lg' }));
+          cov.summary = await WP.summary(p.title);
+        } catch (e) { console.warn('Wikipedia', e); }
+      })();
+      const booksP = googleBooks(who, g.title).then(x => { cov.press = x; }).catch(e => console.warn('Google Books', e));
+      await Promise.all([wikiP, booksP]);
+      store.set(cacheKey, cov);
+    }
+    status.remove();
+    covData = cov;
+    drawCoverage(cov);
+  })();
+
+  // More like this (Claude)
+  const likeSec = el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'More like this'), el('div', { class: 'mono' }, 'Claude')));
+  const likeBody = el('div', { class: 'stack' });
+  likeSec.append(likeBody); view.append(likeSec);
+  const likeKey = 'hear.like.' + g.id; const liked = store.get(likeKey, null);
+  function likeTile(a) { return albumTile(a); }
+  function drawLike(items) {
+    likeBody.innerHTML = '';
+    const grid = el('div', { class: 'grid' });
+    for (const a of items) {
+      const tile = likeTile(a); grid.append(tile);
+      if (!a.id) resolveAlbum(a.artist, a.title).then(id => { if (!id || !tile.isConnected) return; a.id = id; store.set(likeKey, { t: Date.now(), items }); tile.replaceWith(likeTile(a)); });
+    }
+    likeBody.append(grid);
+    const whys = items.filter(a => a.why);
+    if (whys.length) likeBody.append(el('div', { class: 'list' }, whys.map(a => el('div', { class: 'crow' }, el('div', { class: 't', text: `${a.artist} — ${a.title}` }), el('div', { class: 'snip', text: a.why })))));
+  }
+  if (liked) drawLike(liked.items);
+  else if (settings.anthropicKey) likeBody.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const reply = await askClaude(`A listener loves the album "${g.title}" by ${artistName}${ry ? ' (' + ry + ')' : ''}. Recommend 6 albums to hear next: three close to it in sound and era, three that share its spirit but come from a different scene or decade. No other albums by ${artistName}; real releases only. Reply with ONLY JSON: {"albums":[{"artist":"...","title":"...","year":1999,"why":"one short sentence on the connection"}]}`, 900); const items = (parseJSON(reply).albums || []).slice(0, 8); store.set(likeKey, { t: Date.now(), items }); drawLike(items); } catch (err) { b.disabled = false; b.textContent = 'Find similar albums'; toast(err.message, 4000); } } }, icon('spark'), 'Find similar albums'));
+  else likeBody.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to get recommendations.'));
+
+  // Tags / genres from the community
+  const tags = [...(g.genres || []), ...(g.tags || [])].filter(t => t.count > 0).sort((a, b) => b.count - a.count);
+  const seen = new Set(); const tagNames = tags.map(t => t.name).filter(n => { const k = n.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 12);
+  const tagSection = el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Styles & tags'), el('div', { class: 'mono' }, 'MusicBrainz')), el('div', { class: 'wrap', id: 'tags' }, tagNames.length ? tagNames.map(n => el('a', { class: 'tag', href: `#/?${enc(n)}`, onclick: (e) => { e.preventDefault(); searchState = Object.assign(searchState, { mode: 'describe', describe: n }); store.set('hear.search', { mode: 'describe', q: '', results: null, describe: n }); location.hash = '#/search'; } }, titleCase(n))) : el('div', { class: 'muted', style: { fontSize: '13px' } }, 'No tags yet.')));
+  view.append(tagSection);
+
+  // Moods: AI-generated (optional)
+  const moodSection = el('div', { class: 'section' });
+  const moodHead = el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Moods'), el('div', { class: 'mono' }, 'AI-generated'));
+  const moodBody = el('div', { class: 'stack' });
+  moodSection.append(moodHead, moodBody);
+  view.append(moodSection);
+  const cachedMood = store.get('hear.ai.' + g.id, null);
+  function drawMoods(m) {
+    moodBody.innerHTML = '';
+    moodBody.append(el('div', { class: 'wrap' }, (m.moods || []).map(x => el('span', { class: 'tag soft', text: x }))));
+    if (m.blurb) moodBody.append(el('div', { style: { fontSize: '14px', lineHeight: 1.45 } }, m.blurb));
+    moodBody.append(el('div', { class: 'mono' }, `Written by ${settings.model || DEFAULTS.model} — may be wrong; check the links below.`));
+  }
+  if (cachedMood) drawMoods(cachedMood);
+  else if (settings.anthropicKey) moodBody.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const m = parseJSON(await askClaude(`Album: "${g.title}" by ${artistName}${year(g['first-release-date']) ? ' (' + year(g['first-release-date']) + ')' : ''}.\nGive AllMusic-style mood descriptors for this specific album. Reply with ONLY JSON: {"moods":["six to eight single words or two-word phrases"],"blurb":"two plain sentences describing how it sounds and when to play it; no superlatives; if you are not confident you know this album, say so in the blurb"}`, 600)); store.set('hear.ai.' + g.id, m); drawMoods(m); } catch (err) { b.disabled = false; b.textContent = 'Generate moods'; toast(err.message, 3500); } } }, icon('spark'), 'Generate moods'));
+  else moodBody.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to generate mood tags.'));
+
+  // Releases: labels, formats, exact streaming links, tracklist
+  const relSection = el('div', { class: 'section' }, el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading releases & links…'));
+  view.append(relSection);
+  try {
+    const rd = await MB.get('release', { 'release-group': id, inc: 'url-rels+labels+media', limit: 100 });
+    if (rid !== routeSeq) return;
+    const releases = (rd.releases || []).slice().sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
+    for (const r of releases) collectLinks(r.relations, exact);
+    links = serviceLinks(artistName, g.title, exact); drawLinks(); if (covData) drawCoverage(covData);
+    const labels = []; const seenL = new Set();
+    for (const r of releases) for (const li of r['label-info'] || []) { if (!li.label) continue; const key = li.label.id; if (seenL.has(key)) continue; seenL.add(key); labels.push({ id: li.label.id, name: li.label.name, catno: li['catalog-number'] }); }
+    shelfItem.labels = labels.map(l => l.name);
+    const formats = new Set(); for (const r of releases) for (const m of r.media || []) if (m.format) formats.add(m.format);
+    relSection.innerHTML = '';
+    if (labels.length) relSection.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Labels'), el('div', { class: 'mono' }, `${releases.length} release${releases.length === 1 ? '' : 's'}${formats.size ? ' · ' + [...formats].slice(0, 4).join(', ') : ''}`)),
+      el('div', { class: 'wrap' }, labels.slice(0, 8).map(l => el('a', { class: 'tag', href: `#/label/${l.id}` }, l.name + (l.catno ? ` · ${l.catno}` : '')))));
+    const primary = releases.find(r => r.status === 'Official' && (r.media || []).some(m => m['track-count'])) || releases[0];
+    if (primary) {
+      const trackHost = el('div', { class: 'section' }, el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading tracks…'));
+      view.append(trackHost);
+      try {
+        const rel = await MB.get(`release/${primary.id}`, { inc: 'recordings' });
+        if (rid !== routeSeq) return;
+        trackHost.innerHTML = '';
+        const media = rel.media || [];
+        const total = media.reduce((n, m) => n + (m.tracks || []).length, 0);
+        trackHost.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Tracks'), el('div', { class: 'mono' }, `${total} track${total === 1 ? '' : 's'}${primary.date ? ' · ' + primary.date : ''}${primary.country ? ' · ' + primary.country : ''}`)));
+        media.forEach((m, mi) => {
+          if (media.length > 1) trackHost.append(el('div', { class: 'mono', style: { paddingTop: '6px' } }, `${m.format || 'Disc'} ${m.position || mi + 1}${m.title ? ' · ' + m.title : ''}`));
+          for (const t of m.tracks || []) trackHost.append(el('div', { class: 'track' }, el('span', { class: 'n', text: t.number }), el('span', { class: 'tt', text: t.title }), el('span', { class: 'len', text: fmtLen(t.length) })));
+        });
+      } catch (e) { trackHost.innerHTML = ''; trackHost.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load the tracklist.")); }
+    }
+  } catch (e) { relSection.innerHTML = ''; relSection.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load release details.")); }
+
+  // Discogs enrichment (optional): styles and a cover fallback
+  if (settings.discogsToken) {
+    try {
+      let master = null;
+      const m = exact.discogs && exact.discogs.match(/master\/(\d+)/);
+      if (m) master = await Discogs.get(`masters/${m[1]}`);
+      else { const s = await Discogs.get('database/search', { type: 'master', artist: artistName, release_title: g.title, per_page: 1 }); const hit = s && s.results && s.results[0]; if (hit && hit.master_id) master = await Discogs.get(`masters/${hit.master_id}`); }
+      if (master) {
+        const styles = [...(master.genres || []), ...(master.styles || [])];
+        const host = $('#tags');
+        if (styles.length && host) { host.innerHTML = ''; styles.forEach(s => host.append(el('span', { class: 'tag', text: s }))); tagSection.querySelector('.mono').textContent = 'Discogs'; }
+        if (!cover.classList.contains('has-img') && master.images && master.images[0] && cover.setImage) cover.setImage(master.images[0].uri);
+        if (!links.discogsExact) { links.discogs = master.uri; links.discogsExact = true; drawLinks(); }
+      }
+    } catch (e) { console.warn('Discogs', e); }
+  }
+}
+
+// ============================================================
+// Label
+// ============================================================
+async function LabelView(id, rid) {
+  setTop({ back: true, title: '' });
+  view.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading label…'));
+  const label = await MB.get(`label/${id}`, {});
+  if (rid !== routeSeq) return;
+  remember({ kind: 'label', id: label.id, name: label.name, sub: [label.type, label.country].filter(Boolean).join(' · ') });
+  view.innerHTML = '';
+  setTop({ back: true, title: label.name });
+  view.append(el('div', { class: 'stack', style: { gap: '6px' } }, el('div', { class: 'eyebrow' }, 'Label'), el('h1', { text: label.name }), el('div', { class: 'mono' }, [label.disambiguation, label.type, label.country || (label.area && label.area.name), lifespan(label['life-span']) && ('est. ' + lifespan(label['life-span']))].filter(Boolean).join(' · '))));
+  const status = el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading releases…');
+  const chips = el('div', { class: 'chips', style: { paddingTop: '12px' } });
+  const grid = el('div', { class: 'grid', style: { paddingTop: '12px' } });
+  view.append(chips, status, grid);
+  const groups = new Map(); let offset = 0; let total = Infinity; let fetched = 0;
+  let filter = 'all';
+  function draw() {
+    grid.innerHTML = '';
+    const items = [...groups.values()].filter(g => filter === 'all' || g._b === filter).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    for (const g of items) grid.append(albumTile({ id: g.id, title: g.title, artist: g.artist, year: year(g.date) }));
+    chips.innerHTML = '';
+    const counts = { all: groups.size }; for (const g of groups.values()) counts[g._b] = (counts[g._b] || 0) + 1;
+    for (const [k, l] of [['all', 'All'], ...FILTERS]) { if (!counts[k]) continue; chips.append(el('button', { class: 'chip' + (filter === k ? ' on' : ''), onclick: () => { filter = k; draw(); } }, `${l} · ${counts[k]}`)); }
+  }
+  let cancelled = false; currentCleanup = () => { cancelled = true; };
+  while (offset < total && offset < 500 && !cancelled) {
+    const d = await MB.get('release', { label: id, inc: 'release-groups+artist-credits', limit: 100, offset });
+    if (rid !== routeSeq) return;
+    total = d['release-count'] || 0;
+    for (const r of d.releases || []) {
+      const rg = r['release-group']; if (!rg) continue;
+      const prev = groups.get(rg.id);
+      const date = rg['first-release-date'] || r.date || '';
+      if (!prev) groups.set(rg.id, { id: rg.id, title: rg.title, artist: credit(r['artist-credit']), date, _b: bucket(rg) });
+      else if (!prev.date && date) prev.date = date;
+    }
+    offset += 100; fetched = Math.min(offset, total);
+    status.innerHTML = ''; status.append(el('div', { class: 'mono' }, `${groups.size} release${groups.size === 1 ? '' : 's'}${fetched < total ? ` · loaded ${fetched} of ${total} entries…` : ''}`));
+    draw();
+  }
+  if (total > 500) status.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, `Showing the first 500 of ${total} catalog entries.`));
+  if (!groups.size) { status.innerHTML = ''; status.append(el('div', { class: 'empty' }, 'MusicBrainz lists no releases for this label.')); }
+}
+
+// ============================================================
+// Shelf
+// ============================================================
+function ShelfView() {
+  setTop({ brand: true });
+  const items = Shelf.all();
+  const crates = Crates.all();
+  let mode = store.get('hear.shelfMode', 'albums');
+  let group = store.get('hear.shelfGroup', 'added');
+  const head = el('div', { class: 'stack', style: { gap: '4px' } }, el('div', { class: 'row', style: { justifyContent: 'space-between', alignItems: 'flex-end' } }, el('h1', { text: 'Shelf' }), el('div', { class: 'mono', text: `${items.length} album${items.length === 1 ? '' : 's'} · ${crates.length} crate${crates.length === 1 ? '' : 's'}` })));
+  const seg = el('div', { class: 'seg', style: { marginTop: '12px' } });
+  const chips = el('div', { class: 'chips', style: { paddingTop: '12px' } });
+  const body = el('div', { class: 'stack' });
+  view.append(head, seg, chips, body);
+  function drawSeg() { seg.innerHTML = ''; for (const [k, l] of [['albums', 'Albums'], ['crates', 'Crates']]) seg.append(el('button', { class: mode === k ? 'on' : '', onclick: () => { mode = k; store.set('hear.shelfMode', k); drawSeg(); draw(); } }, l)); }
+  const groupings = [['added', 'Recently added'], ['artist', 'By artist'], ['label', 'By label'], ['decade', 'By decade']];
+  function drawChips() { chips.innerHTML = ''; for (const [k, l] of groupings) chips.append(el('button', { class: 'chip' + (group === k ? ' on' : ''), onclick: () => { group = k; store.set('hear.shelfGroup', k); drawChips(); draw(); } }, l)); }
+  function tile(it) { return albumTile(it); }
+  function drawAlbums() {
+    chips.hidden = !items.length;
+    if (!items.length) { body.append(el('div', { class: 'empty' }, 'Your shelf is empty. Open any album and tap “Add to shelf”; it shows up here, grouped however you like.')); return; }
+    if (group === 'added') { body.append(el('div', { class: 'grid', style: { paddingTop: '12px' } }, items.map(tile))); }
+    else {
+      const buckets = new Map();
+      for (const it of items) {
+        let keys = [];
+        if (group === 'artist') keys = [it.artist || 'Unknown'];
+        else if (group === 'label') keys = (it.labels && it.labels.length) ? it.labels : ['Label unknown'];
+        else keys = [it.year ? it.year.slice(0, 3) + '0s' : 'Undated'];
+        for (const k of keys) { if (!buckets.has(k)) buckets.set(k, []); buckets.get(k).push(it); }
+      }
+      const keys = [...buckets.keys()].sort((a, b) => group === 'decade' ? b.localeCompare(a) : a.localeCompare(b, undefined, { sensitivity: 'base' }));
+      for (const k of keys) body.append(el('div', { class: 'grouphead' }, el('span', { style: { fontWeight: 700 } }, k), el('span', { class: 'mono', text: String(buckets.get(k).length) })), el('div', { class: 'grid', style: { paddingTop: '10px' } }, buckets.get(k).map(tile)));
+    }
+    const tools = el('div', { class: 'row', style: { paddingTop: '20px', gap: '8px', flexWrap: 'wrap' } });
+    tools.append(el('button', { class: 'btn sm quiet', onclick: () => { const blob = new Blob([JSON.stringify({ app: 'Hear', exported: new Date().toISOString(), shelf: Shelf.all(), crates: Crates.all() }, null, 2)], { type: 'application/json' }); const a = el('a', { href: URL.createObjectURL(blob), download: 'hear-shelf.json' }); document.body.append(a); a.click(); a.remove(); } }, 'Export shelf'));
+    const fileIn = el('input', { type: 'file', accept: 'application/json,.json', hidden: true, onchange: async (e) => { const f = e.target.files[0]; if (!f) return; try { const data = JSON.parse(await f.text()); const list = Array.isArray(data) ? data : data.shelf; if (!Array.isArray(list)) throw new Error('Not a shelf file'); const cur = Shelf.all(); const ids = new Set(cur.map(x => x.id)); let n = 0; for (const it of list) if (it && it.id && !ids.has(it.id)) { cur.push(it); ids.add(it.id); n++; } Shelf.replace(cur); if (Array.isArray(data.crates)) { const cc = Crates.all(); const cids = new Set(cc.map(c => c.id)); for (const c of data.crates) if (c && c.id && !cids.has(c.id)) cc.push(c); store.set(Crates.key, cc); } toast(`Imported ${n} album${n === 1 ? '' : 's'}`); route(); } catch (err) { toast('Import failed: ' + err.message, 3000); } } });
+    tools.append(el('button', { class: 'btn sm quiet', onclick: () => fileIn.click() }, 'Import'), fileIn);
+    body.append(tools);
+  }
+  function drawCrates() {
+    chips.hidden = true;
+    if (!crates.length) { body.append(el('div', { class: 'empty' }, 'No crates yet. Run a Describe-it search or pick some Moods, then tap “Save as crate” above the results.')); return; }
+    const list = el('div', { class: 'list', style: { paddingTop: '8px' } });
+    for (const c of crates) list.append(el('a', { class: 'item', href: `#/crate/${c.id}` }, el('div', { class: 'main' }, el('div', { class: 't', text: c.name }), el('div', { class: 's', text: `${c.albums.length} albums · ${c.createdAt.slice(0, 10)}${c.text && c.text !== c.name ? ' · “' + c.text + '”' : ''}` })), el('span', { class: 'arrow' }, icon('chevron'))));
+    body.append(list);
+  }
+  function draw() { body.innerHTML = ''; if (mode === 'crates') drawCrates(); else drawAlbums(); }
+  drawSeg(); drawChips(); draw();
+}
+function CrateView(id) {
+  const c = Crates.get(id);
+  setTop({ back: true, title: c ? c.name : 'Crate' });
+  if (!c) { view.append(el('div', { class: 'empty' }, 'This crate is gone.')); return; }
+  const out = el('div', { class: 'stack', style: { paddingTop: '12px' } });
+  view.append(el('div', { class: 'stack', style: { gap: '4px' } }, el('div', { class: 'eyebrow' }, 'Crate'), el('h1', { text: c.name }), el('div', { class: 'mono', text: `${c.albums.length} albums · saved ${c.createdAt.slice(0, 10)}` }), c.text && c.text !== c.name ? el('div', { class: 'muted', style: { fontSize: '14px' } }, `“${c.text}”${c.refined ? ' · refined: ' + c.refined : ''}`) : null), out);
+  renderPicks(out, { text: c.text, albums: c.albums, source: c.source }, { title: 'Records in this crate', crate: false, onChange: () => Crates.update(c) });
+  view.append(el('div', { class: 'row', style: { paddingTop: '16px' } }, el('button', { class: 'btn sm quiet', onclick: () => { Crates.remove(c.id); toast('Crate removed'); location.hash = '#/shelf'; } }, 'Remove crate')));
+}
+
+// ============================================================
+// Moods
+// ============================================================
+function MoodsView() {
+  setTop({ brand: true });
+  let picked = store.get('hear.moodPick', []).filter(w => MOODS.some(([, ws]) => ws.includes(w)));
+  const keyFor = (p) => 'hear.mood.' + p.slice().sort().join('|').toLowerCase();
+  const head = el('div', { class: 'stack', style: { gap: '4px' } }, el('h1', { text: 'Moods' }), el('div', { class: 'muted', style: { fontSize: '14px', lineHeight: 1.4 } }, 'Pick up to three. Claude finds records that feel like that, across genres and decades.'));
+  const groups = el('div', { class: 'stack', style: { gap: '14px', paddingTop: '14px' } });
+  const bar = el('div', { style: { paddingTop: '14px' } });
+  const out = el('div', { class: 'stack', style: { paddingTop: '10px' } });
+  view.append(head, groups, bar, out);
+  function drawChips() {
+    groups.innerHTML = '';
+    for (const [fam, words] of MOODS) groups.append(el('div', { class: 'stack', style: { gap: '6px' } }, el('div', { class: 'eyebrow', text: fam }), el('div', { class: 'wrap' }, words.map(w => el('button', { class: 'chip' + (picked.includes(w) ? ' on' : ''), 'aria-pressed': String(picked.includes(w)), onclick: () => { if (picked.includes(w)) picked = picked.filter(x => x !== w); else if (picked.length < 3) picked = picked.concat([w]); else { toast('Three moods at most'); return; } store.set('hear.moodPick', picked); drawChips(); drawBar(); out.innerHTML = ''; } }, w)))));
+  }
+  let chipsOpen = true;
+  function drawBar() {
+    bar.innerHTML = '';
+    groups.hidden = !chipsOpen;
+    if (!picked.length) { chipsOpen = true; groups.hidden = false; bar.append(el('div', { class: 'row', style: { justifyContent: 'space-between' } }, el('div', { class: 'mono' }, 'nothing picked yet'), el('button', { class: 'btn sm quiet', onclick: surprise }, 'Surprise me'))); return; }
+    const right = el('div', { class: 'row', style: { gap: '8px' } });
+    if (chipsOpen) right.append(el('button', { class: 'btn sm quiet', onclick: () => { picked = []; store.set('hear.moodPick', picked); drawChips(); drawBar(); out.innerHTML = ''; } }, 'Clear'), el('button', { class: 'btn sm accent', onclick: () => run() }, icon('spark'), 'Find albums'));
+    else right.append(el('button', { class: 'btn sm quiet', onclick: () => { chipsOpen = true; drawBar(); window.scrollTo({ top: 0, behavior: 'smooth' }); } }, 'Change moods'));
+    bar.append(el('div', { class: 'row', style: { justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' } }, el('div', { class: 'mono' }, picked.join(' · ')), right));
+  }
+  function surprise() { const all = MOODS.flatMap(([, w]) => w); picked = []; while (picked.length < 2) { const w = all[Math.floor(Math.random() * all.length)]; if (!picked.includes(w)) picked.push(w); } store.set('hear.moodPick', picked); drawChips(); drawBar(); run(); }
+  function moodText(p) { return `Albums that feel ${p.map(x => x.toLowerCase()).join(' and ')}. Span genres and decades. Every pick must embody all of these qualities across the whole album, not just one track.`; }
+  async function run() {
+    const key = keyFor(picked);
+    let res = store.get(key, null);
+    out.innerHTML = '';
+    if (!res) {
+      if (!settings.anthropicKey) { out.append(el('div', { class: 'notice' }, 'Moods need a Claude API key. Add one in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), '.')); return; }
+      out.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Asking Claude…'));
+      try { res = await askPicks(moodText(picked)); store.set(key, res); } catch (err) { out.innerHTML = ''; out.append(el('div', { class: 'notice warn' }, err.message)); return; }
+    }
+    draw(res);
+  }
+  function draw(res) {
+    const key = keyFor(picked); const label = picked.map(x => x.toLowerCase()).join(', ');
+    chipsOpen = false; drawBar();
+    renderPicks(out, res, {
+      title: `${res.albums.length} records that feel ${label}`,
+      crateName: picked.join(' · '),
+      onRefine: async (t) => { out.innerHTML = ''; out.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Refining…')); try { const r2 = await refinePicks(res, t); store.set(key, r2); draw(r2); } catch (err) { draw(res); toast(err.message, 4000); } },
+      onChange: () => store.set(key, res),
+      onClear: () => { store.del(key); out.innerHTML = ''; }
+    });
+    out.append(el('div', { class: 'row', style: { justifyContent: 'center', paddingTop: '8px' } }, el('button', { class: 'btn sm quiet', onclick: async () => { out.innerHTML = ''; out.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Finding a different set…')); try { const r2 = await refinePicks(res, 'Give me 10 different albums than any you have listed so far, same brief.'); store.set(key, r2); draw(r2); } catch (err) { draw(res); toast(err.message, 4000); } } }, 'Fresh picks')));
+  }
+  drawChips();
+  const cachedNow = picked.length ? store.get(keyFor(picked), null) : null;
+  if (cachedNow) draw(cachedNow); else drawBar();
+}
+
+// ============================================================
+// Settings
+// ============================================================
+function SettingsView() {
+  setTop({ brand: true });
+  const f = {};
+  function field(key, label, help, type = 'text', extra = {}) {
+    const inp = el('input', Object.assign({ id: 's-' + key, type, value: settings[key] || '', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false' }, extra)); f[key] = inp;
+    const tools = type === 'password' ? el('div', { class: 'row', style: { gap: '8px' } },
+      el('button', { type: 'button', class: 'btn sm quiet', onclick: (e) => { inp.type = inp.type === 'password' ? 'text' : 'password'; e.currentTarget.textContent = inp.type === 'password' ? 'Show' : 'Hide'; } }, 'Show'),
+      el('button', { type: 'button', class: 'btn sm quiet', onclick: async () => { const v = inp.value.trim(); if (!v) { toast('Nothing to copy'); return; } try { await navigator.clipboard.writeText(v); toast('Copied'); } catch (err) { inp.type = 'text'; inp.focus(); inp.select(); toast('Select and copy it from the field'); } } }, 'Copy')) : null;
+    return el('div', { class: 'setting' }, el('label', { for: 's-' + key, text: label }), inp, tools, help ? el('div', { class: 'help' }, help) : null);
+  }
+  function select(key, label, options, help) { const s = el('select', { id: 's-' + key }, options.map(([v, l]) => el('option', { value: v, selected: settings[key] === v ? true : null }, l))); f[key] = s; return el('div', { class: 'setting' }, el('label', { for: 's-' + key, text: label }), s, help ? el('div', { class: 'help' }, help) : null); }
+  const statusRow = el('div', { class: 'stack', style: { gap: '6px' } },
+    el('div', { class: 'status' }, el('span', { class: 'dot ok' }), 'MusicBrainz & Cover Art Archive — always on, no key'),
+    el('div', { class: 'status' }, el('span', { class: 'dot' + (settings.discogsToken ? ' ok' : '') }), settings.discogsToken ? 'Discogs — token set' : 'Discogs — optional, not set'),
+    el('div', { class: 'status' }, el('span', { class: 'dot' + (settings.anthropicKey ? ' ok' : '') }), settings.anthropicKey ? 'Claude — key set' : 'Claude — optional, not set'));
+  const form = el('form', { class: 'stack', style: { gap: '18px', paddingTop: '18px' }, onsubmit: (e) => { e.preventDefault(); saveSettings({ discogsToken: f.discogsToken.value.trim(), anthropicKey: f.anthropicKey.value.trim(), model: f.model.value.trim() || DEFAULTS.model, qobuzRegion: f.qobuzRegion.value.trim() || 'us-en', primary: f.primary.value, theme: f.theme.value, showApple: f.showApple.value === 'yes' }); toast('Settings saved'); route(); } },
+    el('div', { class: 'eyebrow' }, 'Listening'),
+    select('primary', 'Main service', [['spotify', 'Spotify first'], ['qobuz', 'Qobuz first']], 'Which “Hear on…” button is the big one.'),
+    field('qobuzRegion', 'Qobuz store region', 'Used for Qobuz search links, e.g. us-en, gb-en, fr-fr.'),
+    select('showApple', 'Show Apple Music links when known', [['yes', 'Yes'], ['no', 'No']]),
+    select('theme', 'Appearance', [['auto', 'Match system'], ['light', 'Light'], ['dark', 'Dark']]),
+    el('div', { class: 'eyebrow', style: { paddingTop: '8px' } }, 'Data sources'),
+    field('discogsToken', 'Discogs personal access token (optional)', el('span', {}, 'Adds Discogs genres/styles and extra cover art. Create one at ', el('a', { class: 'link', href: 'https://www.discogs.com/settings/developers', target: '_blank', rel: 'noopener' }, 'discogs.com/settings/developers'), '.'), 'password'),
+    field('anthropicKey', 'Claude API key (optional)', el('span', {}, 'Powers “Describe it” recommendations and mood tags. Keys stay in this browser only. Get one at ', el('a', { class: 'link', href: 'https://console.anthropic.com/', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), '.'), 'password'),
+    field('model', 'Claude model', 'Model name for recommendations.'),
+    el('div', { class: 'btnrow' }, el('button', { class: 'btn primary', type: 'submit' }, 'Save settings')));
+  view.append(el('div', { class: 'stack', style: { gap: '10px' } }, el('h1', { text: 'Settings' }), statusRow), form,
+    el('div', { class: 'section' }, el('div', { class: 'eyebrow' }, 'Housekeeping'),
+      el('div', { class: 'row', style: { flexWrap: 'wrap', gap: '8px' } },
+        el('button', { class: 'btn sm quiet', onclick: () => { diskCache.clear(); toast('Catalog cache cleared'); } }, 'Clear catalog cache'),
+        el('button', { class: 'btn sm quiet', onclick: () => { store.set('hear.recent', []); toast('Recent searches cleared'); } }, 'Clear recent searches'))),
+    el('div', { class: 'section' }, el('div', { class: 'eyebrow' }, 'About'),
+      el('div', { class: 'notice' }, el('b', {}, 'Hear'), ' is a record-collection front end. The catalog comes from ', el('a', { class: 'link', href: 'https://musicbrainz.org', target: '_blank', rel: 'noopener' }, 'MusicBrainz'), ' and covers from the ', el('a', { class: 'link', href: 'https://coverartarchive.org', target: '_blank', rel: 'noopener' }, 'Cover Art Archive'), '. “Hear on” buttons open Spotify or Qobuz — a direct album link when MusicBrainz knows it (solid chip), otherwise a search in that app (soft chip). Nothing is stored anywhere but this browser.')));
+}
+
+// ---------- boot ----------
+// One-time migration from the app's earlier name: copy any old 'here.*' entries to 'hear.*'.
+try { if (!localStorage.getItem('hear.settings') && localStorage.getItem('here.settings')) { for (const k of Object.keys(localStorage)) if (k.startsWith('here.')) localStorage.setItem('hear.' + k.slice(5), localStorage.getItem(k)); settings = Object.assign({}, DEFAULTS, store.get('hear.settings', {})); applyTheme(); } } catch (e) { }
+updateTabs();
+route();
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
+</script>
+</body>
+</html>
