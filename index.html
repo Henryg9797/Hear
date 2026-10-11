@@ -179,6 +179,8 @@ textarea.area { width: 100%; resize: vertical; min-height: 84px; border: 1px sol
 .rb.lg .stars.sm { font-size: 16px; letter-spacing: 1px; }
 .rb.lg .rbn { font-size: 13px; font-weight: 600; }
 .rb.lg .rbc { font-size: 12px; }
+.rb.est .stars .fill { color: var(--muted); }
+.rb .rbe { font-family: var(--mono); font-size: 10px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
 .score { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
 .srow { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; text-decoration: none; color: inherit; }
 .srow:first-of-type { border-top: 0; }
@@ -192,6 +194,17 @@ textarea.area { width: 100%; resize: vertical; min-height: 84px; border: 1px sol
 .kind { display: inline-block; font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: var(--chip); color: var(--ink); margin-right: 6px; vertical-align: 1px; }
 .subhead { font-family: var(--mono); font-size: 11px; color: var(--muted); padding: 12px 0 4px; }
 .about { font-size: 14px; line-height: 1.5; }
+
+/* Album page folds: collapsed rows for reviews, press, about, more like this */
+.folds { margin-top: 22px; }
+.fold { border-top: 1px solid var(--line); }
+.fold:last-child { border-bottom: 1px solid var(--line); }
+.fhead { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 54px; padding: 10px 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.fhead .ft { font-weight: 700; font-size: 16px; letter-spacing: -0.01em; white-space: nowrap; }
+.fhead .fmeta { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; font-variant-numeric: tabular-nums; }
+.fhead svg { width: 18px; height: 18px; color: var(--muted); transition: transform 0.18s; flex-shrink: 0; }
+.fold.open .fhead svg { transform: rotate(90deg); }
+.fbody { padding: 0 0 18px; display: flex; flex-direction: column; gap: 10px; }
 
 /* Review box */
 .quote { padding: 12px 14px; background: var(--surface); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; font-size: 14px; line-height: 1.45; }
@@ -248,8 +261,34 @@ textarea.area { width: 100%; resize: vertical; min-height: 84px; border: 1px sol
 
 /* Segmented control */
 .seg { display: flex; background: var(--chip); border-radius: 12px; padding: 3px; }
-.seg button { flex: 1; height: 36px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; }
+.seg button { flex: 1; height: 36px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.seg button svg { width: 15px; height: 15px; }
 .seg button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+
+/* Home browse: Genres / Moods / Ask Claude */
+.browse-seg { margin-top: 12px; }
+.browse { padding-top: 12px; }
+.gtable { display: flex; flex-direction: column; }
+.grow { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); }
+.grow:first-child { border-top: 0; padding-top: 2px; }
+.ghead { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; text-decoration: none; color: inherit; }
+.ghead .mono { flex: 1; }
+.ghead svg { width: 18px; height: 18px; color: var(--muted); }
+.field.ai .btn { flex-shrink: 0; }
+
+/* Ask Claude: vertical cover flow of recommendations */
+h1.aiq { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; }
+html.snapy { scroll-snap-type: y proximity; }
+.vflow { display: flex; flex-direction: column; padding-top: 6px; }
+.vcard { display: flex; flex-direction: column; gap: 10px; padding: 22px 0 26px; border-top: 1px solid var(--line); scroll-snap-align: start; scroll-margin-top: 10px; }
+.vcard:first-child { border-top: 0; }
+.vcov { width: min(100%, 320px); margin: 0 auto; will-change: transform, opacity; }
+.vcov .cover { box-shadow: var(--shadow); border-radius: 6px; }
+.vcov .cover .ph { font-size: 72px; }
+.vcard .vn { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: center; padding-top: 6px; }
+.vcard h2 { font-size: 24px; letter-spacing: -0.02em; }
+.vartist { background: none; border: 0; padding: 0; text-align: left; font: inherit; font-size: 16px; font-weight: 600; color: var(--accent); text-decoration: none; cursor: pointer; align-self: flex-start; }
+.vwhy { font-size: 15px; line-height: 1.55; }
 
 /* Misc */
 .toast { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; z-index: 60; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
@@ -327,7 +366,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { } }
 };
-const DEFAULTS = { discogsToken: '', discogsUser: '', discogsOk: null, source: 'auto', anthropicKey: '', model: 'claude-sonnet-5-5', qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
+const DEFAULTS = { discogsToken: '', discogsUser: '', discogsOk: null, source: 'auto', anthropicKey: '', model: 'claude-sonnet-5-5', autoRate: false, qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
 let settings = Object.assign({}, DEFAULTS, store.get('hear.settings', {}));
 function saveSettings(patch) { settings = Object.assign({}, settings, patch); store.set('hear.settings', settings); applyTheme(); }
 function applyTheme() {
@@ -417,7 +456,21 @@ const DG = {
   mem: new Map(), times: [], waiting: [], active: 0, max: 3, _t: null,
   on() { return !!settings.discogsToken && settings.discogsOk === true && settings.source !== 'musicbrainz'; },
   clean(name) { return (name || '').replace(/\s*\(\d+\)\s*$/, '').trim(); },
-  splitTitle(t) { const i = (t || '').indexOf(' - '); return i < 0 ? { artist: '', title: t || '' } : { artist: this.clean(t.slice(0, i)), title: t.slice(i + 3).trim() }; },
+  splitTitle(t) { const i = (t || '').indexOf(' - '); return i < 0 ? { artist: '', raw: '', title: t || '' } : { artist: this.clean(t.slice(0, i)), raw: t.slice(0, i).trim(), title: t.slice(i + 3).trim() }; },
+  img(u) { return u && !/spacer\.gif/.test(u) ? u : ''; },
+  // Is this artist (Discogs name, numbered suffix and all) credited on a search-result title like "A & B - Title"?
+  credited(title, rawName) { const s = this.splitTitle(title); if (!s.raw) return false; if (s.raw === rawName) return true; return s.raw.split(/\s*(?:&|,|\/|\+|·|•|\bAnd\b|\bWith\b|\bFeat\.?|\bFeaturing\b|\bVs\.?|\bMeets\b|\bPresents\b)\s*/i).some(x => x.trim() === rawName); },
+  // An artist's discography: their most-collected masters (the main albums by definition), bucketed by format. Up to 300 masters.
+  async discography(num, rawName) {
+    const seen = new Set(); const items = [];
+    for (let p = 1; p <= 3; p++) {
+      const d = await this.get('database/search', { artist: this.clean(rawName), type: 'master', sort: 'have', sort_order: 'desc', per_page: 100, page: p });
+      let hits = 0;
+      for (const r of d.results || []) { if (!this.credited(r.title, rawName)) continue; const it = this.item(r, 'master'); if (seen.has(it.id)) continue; seen.add(it.id); it.artistId = 'da' + num; it.kind = it.type; it.type = KIND_LABEL[it.kind] || ''; items.push(it); hits++; }
+      if (!(d.pagination && d.pagination.pages > p) || hits < 30) break;
+    }
+    return items;
+  },
   text(s) { return (s || '').replace(/\[(?:a|l|r|m)=([^\]]+)\]/g, '$1').replace(/\[(?:a|l|r|m)\d+\]/g, '').replace(/\[url=[^\]]*\]([^\[]*)\[\/url\]/g, '$1').replace(/\[\/?(?:b|i|u)\]/g, '').replace(/\r\n/g, '\n').trim(); },
   bucket(fmt) { const f = fmt || ''; if (/\bComp\b|Compilation/i.test(f)) return 'comp'; if (/\bAlbum\b|\bLP\b/i.test(f)) return 'album'; if (/\bEP\b|Mini-Album/i.test(f)) return 'ep'; if (/\bSingle\b|\bMaxi\b|\b7"/i.test(f)) return 'single'; return 'other'; },
   slot() { return new Promise(resolve => { this.waiting.push(resolve); this.pump(); }); },
@@ -445,11 +498,11 @@ const DG = {
   async post(path) { const res = await fetch(this.base + path + '?token=' + encodeURIComponent(settings.discogsToken || ''), { method: 'POST' }); if (!res.ok) throw new Error('Discogs ' + res.status); try { return await res.json(); } catch (e) { return {}; } },
   identity() { return this.get('oauth/identity', {}, { nocache: true }); },
   item(r, type) {
-    if (type === 'artist') return { kind: 'artist', id: 'da' + r.id, name: this.clean(r.title), sub: '', img: r.thumb || '' };
-    if (type === 'label') return { kind: 'label', id: 'dl' + r.id, name: r.title, sub: '', img: r.thumb || '' };
+    if (type === 'artist') return { kind: 'artist', id: 'da' + r.id, name: this.clean(r.title), raw: r.title, sub: '', img: this.img(r.thumb) };
+    if (type === 'label') return { kind: 'label', id: 'dl' + r.id, name: r.title, sub: '', img: this.img(r.thumb) };
     const s = this.splitTitle(r.title);
     const id = (r.type === 'master' || r.master_id) ? 'dm' + (r.master_id || r.id) : 'dr' + r.id;
-    return { kind: 'album', id, name: s.title, title: s.title, artist: s.artist, year: r.year ? String(r.year) : '', img: r.cover_image || r.thumb || '', thumb: r.thumb || '', styles: r.style || [], genres: r.genre || [], labels: (r.label || []).slice(0, 2), type: this.bucket((r.format || []).join(', ')), sub: [s.artist, r.year, (r.style || [])[0]].filter(Boolean).join(' · ') };
+    return { kind: 'album', id, name: s.title, title: s.title, artist: s.artist, year: r.year ? String(r.year) : '', img: this.img(r.cover_image) || this.img(r.thumb), thumb: this.img(r.thumb), styles: r.style || [], genres: r.genre || [], labels: (r.label || []).slice(0, 2), type: this.bucket((r.format || []).join(', ')), sub: [s.artist, r.year, (r.style || [])[0]].filter(Boolean).join(' · ') };
   },
   async search(mode, q, opts = {}) {
     const type = mode === 'album' ? 'master' : mode;
@@ -470,9 +523,16 @@ async function askClaude(input, maxTokens = 1500) {
     headers: { 'content-type': 'application/json', 'x-api-key': settings.anthropicKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
     body: JSON.stringify({ model: settings.model || DEFAULTS.model, max_tokens: maxTokens, messages })
   });
-  if (!res.ok) { let msg = ''; try { msg = (await res.json()).error.message; } catch (e) { } throw new Error('Claude API ' + res.status + (msg ? ': ' + msg : '')); }
+  if (!res.ok) throw await claudeError(res);
   const data = await res.json();
   return (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+}
+// Errors from the Claude API, with the two common setup mistakes explained in plain words.
+async function claudeError(res) {
+  let msg = ''; try { msg = (await res.json()).error.message; } catch (e) { }
+  if (res.status === 401) return new Error('Claude rejected the API key. In Settings, paste a key from console.anthropic.com → API Keys (they start with sk-ant-api03-).');
+  if (res.status === 400 && /credit|billing/i.test(msg)) return new Error('The Claude account has no credit: add a small prepaid balance at console.anthropic.com → Billing.');
+  return new Error('Claude API ' + res.status + (msg ? ': ' + msg : ''));
 }
 function parseJSON(text) { const m = text.match(/\{[\s\S]*\}/); return JSON.parse(m ? m[0] : text); }
 
@@ -650,12 +710,48 @@ async function digDeeper(artist, title, yr) {
     headers: { 'content-type': 'application/json', 'x-api-key': settings.anthropicKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
     body: JSON.stringify({ model: settings.model || DEFAULTS.model, max_tokens: 3000, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }], messages: [{ role: 'user', content: prompt }] })
   });
-  if (!res.ok) { let msg = ''; try { msg = (await res.json()).error.message; } catch (e) { } throw new Error('Claude API ' + res.status + (msg ? ': ' + msg : '')); }
+  if (!res.ok) throw await claudeError(res);
   const data = await res.json();
   const texts = (data.content || []).filter(c => c.type === 'text').map(c => c.text);
   const last = [...texts].reverse().find(t => t.includes('"items"')) || texts.join('\n');
   const items = (parseJSON(last).items || []).filter(i => i && /^https?:/i.test(i.url || ''));
   return items.map(i => ({ title: i.title || i.url, url: i.url, work: i.source || '', year: i.date ? +String(i.date).slice(0, 4) || null : null, date: i.date || '', kind: ['review', 'interview', 'article'].includes(i.kind) ? i.kind : 'article', score: i.score || '' }));
+}
+async function estimateRatings(items, opts = {}) {
+  // Claude's consensus estimate for albums Wikipedia doesn't rate. Not from listening: from what it knows of the reception.
+  const todo = items.filter(it => it.id && it.title).slice(0, 20);
+  if (!todo.length || !settings.anthropicKey) return [];
+  const list = todo.map((it, i) => `${i}. ${it.artist || 'Unknown artist'} — ${it.title}${it.year ? ' (' + it.year + ')' : ''}`).join('\n');
+  const prompt = `You are an experienced music critic estimating consensus ratings. For each album below, estimate the rating AllMusic's editors would give on their 1-5 scale (5 = essential, 4 = excellent, 3 = good or solid, 2 = flawed, 1 = poor), judging the record within its genre and the artist's catalog and weighing the critical reception you actually know of (AllMusic, Pitchfork, RYM, Metacritic, Christgau, major press). You cannot hear the music; rate only from what you know, and never invent reception. Use half-stars (x.0 or x.5). If you do not recognize an album or know too little about its reception, set confidence "low" and omit the score.\nReply with ONLY JSON: {"ratings":[{"i":0,"score":4.0,"confidence":"high|medium|low","why":"one sentence naming the basis, e.g. 'widely regarded as their peak; Pitchfork 8.7, AllMusic 4.5'"}]}\nAlbums:\n${list}`;
+  const parsed = parseJSON(await askClaude(prompt, 1800));
+  const out = [];
+  for (const r of parsed.ratings || []) {
+    const it = todo[r.i]; if (!it) continue;
+    const conf = ['high', 'medium', 'low'].includes(r.confidence) ? r.confidence : 'low';
+    const score = conf !== 'low' && typeof r.score === 'number' ? Math.max(0.5, Math.min(5, Math.round(r.score * 2) / 2)) : null;
+    const prev = store.get('hear.rating.' + it.id, null);
+    if (prev && prev.score != null && !prev.est) continue; // a real score arrived meanwhile; keep it
+    // wp: has Wikipedia already been asked about this album? (any non-estimate record came from that lookup)
+    const wp = !!opts.checked || !!(prev && (prev.wp || (prev.t && !prev.est)));
+    out.push(Ratings.put(it.id, Object.assign({}, prev || {}, { score: score, n: 0, est: true, wp, confidence: conf, why: r.why || '', sources: [], model: settings.model || DEFAULTS.model })));
+  }
+  return out;
+}
+async function rateAll(items, onProgress = () => { }) {
+  // Real scores first (the normal Wikipedia lookup every badge does), then Claude's estimates for whatever is left, twenty albums per request, at most sixty per call.
+  const seen = new Set(); const list = items.filter(it => it && it.id && it.title && !seen.has(it.id) && seen.add(it.id));
+  const todo = []; let done = 0;
+  await Promise.all(list.map(async (it) => { const r = await Ratings.get(it.id, it.title, it.artist); done++; onProgress('check', done, list.length); if (!r || (r.score == null && !r.est)) todo.push(it); }));
+  const batch = todo.slice(0, 60); let rated = 0;
+  for (let i = 0; i < batch.length; i += 20) { onProgress('rate', rated, batch.length); await estimateRatings(batch.slice(i, i + 20), { checked: true }); rated = Math.min(batch.length, i + 20); }
+  onProgress('done', rated, batch.length);
+  return { checked: list.length, rated, left: todo.length - batch.length };
+}
+function scoresFromWeb(items) {
+  const sources = [];
+  for (const i of items || []) { if (i.kind !== 'review' || !i.score) continue; const sc = parseScore(String(i.score)); if (sc) sources.push({ source: i.work || hostOf(i.url), raw: sc.raw, norm: sc.norm, url: i.url }); }
+  if (!sources.length) return null;
+  return { score: sources.reduce((s, x) => s + x.norm, 0) / sources.length, n: sources.length, sources, web: true, est: false, hasBox: true };
 }
 function starsEl(v, small) {
   const w = Math.max(0, Math.min(5, v)) / 5 * 100;
@@ -672,8 +768,11 @@ const MOODS = [
   ['Mind', ['Cerebral', 'Nostalgic', 'Spiritual', 'Witty', 'Psychedelic', 'Experimental']],
   ['Time & place', ['Late night', 'Rainy day', 'Sunday morning', 'Road trip', 'Summer', 'Winter', 'City at night', 'Deep woods', 'Dinner party', 'Headphones']]
 ];
-function describePrompt(text) {
-  return `You are a deeply knowledgeable record-store clerk with wide-ranging, specific taste. A customer describes what they want to hear:\n\n"""${text}"""\n\nTreat every attribute in that description as a requirement, not a loose mood: the instrumentation, the voice, the tone, the era, the genre hints. Recommend 10 real, released albums (studio albums or EPs; no singles, no compilations unless essential) that satisfy ALL of it as exactly as possible. Prefer the best fit over the most famous. Mix well-known and lesser-known picks, and no more than one album per artist. Reply with ONLY a JSON object: {"albums":[{"artist":"...","title":"...","year":1979,"why":"one sentence naming which parts of the description it satisfies"}]}`;
+function describePrompt(text, rich) {
+  const why = rich
+    ? '"why" is two or three sentences spoken to the customer across the counter: what the record sounds like, which parts of their request it nails, and anything it only half-fits. Plain and specific; never repeat the artist and title, never gush.'
+    : '"why" is one sentence naming which parts of the description it satisfies.';
+  return `You are a deeply knowledgeable record-store clerk with wide-ranging, specific taste. A customer describes what they want to hear:\n\n"""${text}"""\n\nTreat every attribute in that description as a requirement, not a loose mood: the instrumentation, the voice, the tone, the era, the genre hints. Recommend 10 real, released albums (studio albums or EPs; no singles, no compilations unless essential) that satisfy ALL of it as exactly as possible. Prefer the best fit over the most famous. Mix well-known and lesser-known picks, and no more than one album per artist. Reply with ONLY a JSON object: {"albums":[{"artist":"...","title":"...","year":1979,"label":"the label that first released it","why":"..."}]} where ${why}`;
 }
 function handoffPrompt(text) {
   return `I'm looking for albums that fit this description: "${text}". Treat every attribute as a requirement, not a loose mood. Recommend 10 real albums (no singles or compilations) that fit it as exactly as possible, mixing well-known and lesser-known picks, no more than one per artist. Reply ONLY with a numbered list, one album per line, in exactly this format:\nArtist — Album Title (Year) — one short sentence on why it fits`;
@@ -695,22 +794,22 @@ async function resolveAlbum(artist, title) {
     if (DG.on()) {
       const d = await DG.get('database/search', { artist, release_title: title, type: 'master', per_page: 3 });
       const r = (d.results || [])[0]; if (!r) return null;
-      const it = DG.item(r, 'master'); return { id: it.id, img: it.img };
+      const it = DG.item(r, 'master'); return { id: it.id, img: it.img, label: (it.labels || [])[0] || '', year: it.year || '' };
     }
     const d = await MB.get('release-group', { query: `releasegroup:"${luceneEscape(title)}" AND artist:"${luceneEscape(artist)}"`, limit: 3 }, { bg: true });
     const g = (d['release-groups'] || [])[0];
-    return g && g.score >= 50 ? { id: g.id, img: null } : null;
+    return g && g.score >= 50 ? { id: g.id, img: null, label: '', year: year(g['first-release-date']) } : null;
   } catch (e) { return null; }
 }
-async function askPicks(text) {
-  const msgs = [{ role: 'user', content: describePrompt(text) }];
-  const reply = await askClaude(msgs, 1800);
+async function askPicks(text, opts = {}) {
+  const msgs = [{ role: 'user', content: describePrompt(text, opts.rich) }];
+  const reply = await askClaude(msgs, opts.rich ? 3000 : 1800);
   const albums = (parseJSON(reply).albums || []).slice(0, 12);
   return { text, albums, convo: msgs.concat([{ role: 'assistant', content: reply }]), source: settings.model || DEFAULTS.model };
 }
 async function refinePicks(prev, text) {
   const msgs = (prev.convo || [{ role: 'user', content: describePrompt(prev.text) }, { role: 'assistant', content: JSON.stringify({ albums: prev.albums }) }]).concat([{ role: 'user', content: `Refinement from the customer: "${text}". Apply it on top of the original description and reply again with ONLY the same JSON shape: a fresh list of 10, keeping earlier picks only if they still fit.` }]);
-  const reply = await askClaude(msgs, 1800);
+  const reply = await askClaude(msgs, 3000);
   const albums = (parseJSON(reply).albums || []).slice(0, 12);
   return { text: prev.text, refined: (prev.refined ? prev.refined + ' · ' : '') + text, albums, convo: msgs.concat([{ role: 'assistant', content: reply }]), source: prev.source };
 }
@@ -722,16 +821,12 @@ const Crates = {
   update(c) { store.set(this.key, this.all().map(x => x.id === c.id ? c : x)); },
   remove(id) { store.set(this.key, this.all().filter(c => c.id !== id)); }
 };
-function renderPicks(out, res, opts = {}) {
-  out.innerHTML = '';
-  if (!res.albums || !res.albums.length) { out.append(el('div', { class: 'empty' }, 'Nothing came back. Try different words.')); return; }
-  const srcLabel = res.source === 'tags' ? 'rough tag matches · add a Claude key for real picks' : res.source === 'claude.ai' ? 'from claude.ai' : res.source ? `picked by ${res.source}` : '';
-  const head = el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, opts.title || `${res.albums.length} picks for “${res.text}”`));
-  const tools = el('div', { class: 'row', style: { gap: '12px', flexShrink: 0 } });
-  const linkBtn = (label, fn) => el('button', { class: 'link', style: { background: 'none', border: 0, fontSize: '13px', padding: 0 }, onclick: fn }, label);
-  if (opts.crate !== false) tools.append(linkBtn('Save as crate', () => {
+const linkBtn = (label, fn) => el('button', { class: 'link', style: { background: 'none', border: 0, fontSize: '13px', padding: 0 }, onclick: fn }, label);
+// "Save as crate" link that turns into a name field inside `tools`, then into a "Saved" link.
+function crateSaver(tools, res, crateName) {
+  return linkBtn('Save as crate', () => {
     tools.innerHTML = '';
-    const full = (opts.crateName || res.text || 'Crate').trim(); const cut = full.length > 44 ? full.slice(0, 44).replace(/\s+\S*$/, '').replace(/[,;:\s]+$/, '') : full;
+    const full = (crateName || res.text || 'Crate').trim(); const cut = full.length > 44 ? full.slice(0, 44).replace(/\s+\S*$/, '').replace(/[,;:\s]+$/, '') : full;
     const name = el('input', { type: 'text', value: cut, 'aria-label': 'Crate name', style: { width: '160px', height: '32px', padding: '0 8px', border: '1px solid var(--line)', borderRadius: '8px', background: 'var(--surface)', fontSize: '13px' } });
     tools.append(name, linkBtn('Save', () => {
       const n = name.value.trim() || 'Crate';
@@ -739,7 +834,15 @@ function renderPicks(out, res, opts = {}) {
       tools.innerHTML = ''; tools.append(el('a', { class: 'link', href: '#/shelf', style: { fontSize: '13px' } }, 'Saved · view crates')); toast(`Saved “${n}” to your crates`);
     }), linkBtn('Cancel', () => { tools.innerHTML = ''; }));
     name.focus(); name.select();
-  }));
+  });
+}
+function renderPicks(out, res, opts = {}) {
+  out.innerHTML = '';
+  if (!res.albums || !res.albums.length) { out.append(el('div', { class: 'empty' }, 'Nothing came back. Try different words.')); return; }
+  const srcLabel = res.source === 'tags' ? 'rough tag matches · add a Claude key for real picks' : res.source === 'claude.ai' ? 'from claude.ai' : res.source ? `picked by ${res.source}` : '';
+  const head = el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, opts.title || `${res.albums.length} picks for “${res.text}”`));
+  const tools = el('div', { class: 'row', style: { gap: '12px', flexShrink: 0 } });
+  if (opts.crate !== false) tools.append(crateSaver(tools, res, opts.crateName));
   if (opts.onClear) tools.append(linkBtn('Clear', opts.onClear));
   head.append(tools);
   out.append(head);
@@ -826,21 +929,31 @@ function ratingsFromWikitext(text) {
 const Ratings = {
   mem: new Map(), queue: [], active: 0, max: 2,
   key: (id) => 'hear.rating.' + id,
+  pending: new Set(),
   get(rgid, title, artist, opts = {}) {
     if (!rgid) return Promise.resolve(null);
     const cached = store.get(this.key(rgid), null);
-    const complete = cached && (cached.sources || cached.score == null);
+    // An estimate Wikipedia has never been asked about: check once, so a real score replaces it when one exists.
+    const unchecked = !!(cached && cached.est && !cached.wp && title);
+    if (unchecked) return this.pending.has(rgid) ? this.mem.get(rgid) : this.enqueue(rgid, title, artist, cached);
+    const complete = !!cached && (cached.sources || cached.score == null);
     if (!opts.full || complete) { if (this.mem.has(rgid)) return this.mem.get(rgid); }
     if (cached && Date.now() - cached.t < 30 * 864e5 && (!opts.full || complete)) { const p = Promise.resolve(cached); this.mem.set(rgid, p); return p; }
-    const p = new Promise((resolve) => { this.queue.push({ rgid, title, artist, resolve }); this.pump(); });
-    this.mem.set(rgid, p);
-    return p;
+    return this.enqueue(rgid, title, artist, cached);
   },
-  put(rgid, data) { const r = Object.assign({ t: Date.now() }, data); store.set(this.key(rgid), r); this.mem.set(rgid, Promise.resolve(r)); return r; },
+  enqueue(rgid, title, artist, prev) { const p = new Promise((resolve) => { this.queue.push({ rgid, title, artist, resolve, prev }); this.pump(); }); this.mem.set(rgid, p); this.pending.add(rgid); return p; },
+  cached(rgid) { return rgid ? store.get(this.key(rgid), null) : null; },
+  put(rgid, data) { const r = Object.assign({ t: Date.now() }, data); store.set(this.key(rgid), r); this.mem.set(rgid, Promise.resolve(r)); this.notify(rgid, r); return r; },
+  // A real result always wins; when Wikipedia has nothing, an existing estimate stays, now marked as checked.
+  merge(prev, r) { if (r.score != null || !(prev && prev.est)) return r; return Object.assign({}, prev, { wp: true, noPage: !!r.noPage, blurb: r.blurb || prev.blurb || '' }); },
+  watchers: new Map(),
+  watch(rgid, fn) { const arr = this.watchers.get(rgid) || []; arr.push(fn); this.watchers.set(rgid, arr); },
+  notify(rgid, r) { const arr = this.watchers.get(rgid); if (!arr) return; const keep = arr.filter(fn => fn(r) !== false); if (keep.length) this.watchers.set(rgid, keep); else this.watchers.delete(rgid); },
+  async known(rgid) { const r = await this.get(rgid); return r && r.score != null; },
   pump() {
     while (this.active < this.max && this.queue.length) {
       const job = this.queue.shift(); this.active++;
-      this.run(job).then(r => job.resolve(this.put(job.rgid, r))).catch(() => job.resolve(this.put(job.rgid, { score: null, n: 0 }))).finally(() => { this.active--; this.pump(); });
+      this.run(job).then(r => job.resolve(this.put(job.rgid, this.merge(job.prev, r)))).catch(() => job.resolve(this.put(job.rgid, this.merge(job.prev, { score: null, n: 0 })))).finally(() => { this.active--; this.pending.delete(job.rgid); this.pump(); });
     }
   },
   async run(job) {
@@ -857,19 +970,34 @@ function ratingBadge(item, opts = {}) {
   const b = el('span', { class: 'rb' + (opts.size === 'lg' ? ' lg' : '') });
   if (!item.id) return b;
   const fill = (r) => {
-    b.innerHTML = '';
-    if (!r || r.score == null) { if (opts.showEmpty) b.append(el('span', { class: 'rbn muted', text: 'no ratings' })); return; }
-    const inner = [starsEl(r.score, true), el('span', { class: 'rbn', text: r.score.toFixed(1) }), opts.count && r.n ? el('span', { class: 'rbc', text: `${r.n} review${r.n === 1 ? '' : 's'}` }) : null];
+    b.innerHTML = ''; b.classList.toggle('est', !!(r && r.est));
+    if (!r || r.score == null) { if (opts.showEmpty) b.append(el('span', { class: 'rbn muted', text: r && r.est ? 'not enough known' : 'no ratings' })); return; }
+    const inner = [starsEl(r.score, true), el('span', { class: 'rbn', text: r.score.toFixed(1) }), r.est ? el('span', { class: 'rbe', text: 'est.' }) : null, opts.count && r.n ? el('span', { class: 'rbc', text: r.web ? `${r.n} review${r.n === 1 ? '' : 's'} · web` : `${r.n} review${r.n === 1 ? '' : 's'}` }) : null];
     if (opts.sheet === false) b.append(...inner);
     else b.append(el('button', { type: 'button', class: 'rbtn', 'aria-label': `${r.score.toFixed(1)} stars — see the reviews`, onclick: (e) => { e.preventDefault(); e.stopPropagation(); openRatingSheet(item); } }, ...inner));
   };
-  const load = () => Ratings.get(item.id, item.title, item.artist).then(fill);
+  const load = () => { const c = Ratings.cached(item.id); if (c && c.est && c.score != null) fill(c); Ratings.get(item.id, item.title, item.artist).then(fill); };
+  Ratings.watch(item.id, (r) => { if (!b.isConnected) return false; fill(r); return true; });
   if (opts.now) load(); else whenVisible(b, load);
   return b;
 }
+function rateRestButton(getItems) {
+  if (!settings.anthropicKey) return null;
+  const b = el('button', { class: 'btn sm quiet', title: 'Estimate ratings with Claude for the albums that have none' }, icon('spark'), 'Rate the rest');
+  b.addEventListener('click', async () => {
+    b.disabled = true;
+    try {
+      const r = await rateAll(getItems(), (phase, n, total) => { b.textContent = phase === 'check' ? `Checking ${n}/${total}…` : phase === 'rate' ? `Rating ${n}/${total}…` : total ? `Rated ${n}` : 'All rated'; });
+      if (r.left > 0) { b.textContent = `Rate ${r.left} more`; b.disabled = false; }
+    } catch (err) { b.disabled = false; b.innerHTML = ''; b.append(icon('spark'), 'Rate the rest'); toast(err.message, 4000); }
+  });
+  return b;
+}
+// With "auto-rate" on in Settings, pages rate their unrated albums in the background; badges fill in as estimates land.
+function autoRate(items) { if (settings.autoRate && settings.anthropicKey) rateAll(items).catch(() => { }); }
 function albumTile(item, opts = {}) {
   const tile = el('div', { class: 'tile' });
-  const link = el(item.id ? 'a' : 'div', Object.assign({ class: 'tl', title: item.why || '' }, item.id ? { href: `#/album/${item.id}` } : {}), coverEl(item.id || null, item.title, 250, null, item.img), el('div', { class: opts.twoLine ? 'a2' : 'a', text: opts.primary === 'title' ? item.title : (item.artist || item.title) }), el('div', { class: 'b', text: opts.primary === 'title' ? [item.year, item.type && item.type !== 'Album' ? item.type : ''].filter(Boolean).join(' · ') : [item.title, item.year].filter(Boolean).join(' · ') }));
+  const link = el(item.id ? 'a' : 'div', Object.assign({ class: 'tl', title: item.why || '' }, item.id ? { href: `#/album/${item.id}` } : {}), coverEl(item.id || null, item.title, 500, null, item.img), el('div', { class: opts.twoLine ? 'a2' : 'a', text: opts.primary === 'title' ? item.title : (item.artist || item.title) }), el('div', { class: 'b', text: opts.primary === 'title' ? [item.year, item.type && item.type !== 'Album' ? item.type : ''].filter(Boolean).join(' · ') : [item.title, item.year].filter(Boolean).join(' · ') }));
   tile.append(link, ratingBadge(item));
   return tile;
 }
@@ -886,7 +1014,12 @@ function openRatingSheet(item) {
   Ratings.get(item.id, item.title, item.artist, { full: true }).then(r => {
     if (!back.isConnected) return;
     sheet.querySelector('.loading').remove();
-    if (!r || r.score == null) { sheet.append(el('div', { class: 'empty' }, 'No critic ratings found for this album.')); }
+    if (r && r.est) {
+      sheet.append(el('div', { class: 'row', style: { gap: '12px', alignItems: 'baseline', paddingTop: '16px', flexWrap: 'wrap' } }, r.score != null ? el('div', { class: 'score', text: r.score.toFixed(1) }) : el('div', { class: 'score', text: '—' }), r.score != null ? el('span', { class: 'rb est' }, starsEl(r.score)) : null, el('div', { class: 'mono' }, `Claude's estimate · ${r.confidence} confidence`)),
+        el('div', { class: 'about', style: { paddingTop: '8px' } }, r.why || ''),
+        el('div', { class: 'mono', style: { paddingTop: '6px' } }, 'Estimated from what Claude knows of the record\'s reception, not from listening. Not a critic score.'));
+      if (settings.anthropicKey) { const vb = el('button', { class: 'btn sm quiet', style: { marginTop: '10px' }, onclick: async () => { vb.disabled = true; vb.textContent = 'Searching the web…'; try { const items = await digDeeper(item.artist, item.title, item.year ? +item.year : null); store.set('hear.dig.' + item.id, { t: Date.now(), items }); const web = scoresFromWeb(items); if (web) { Ratings.put(item.id, Object.assign({ title: r.title || '' }, web)); close(); openRatingSheet(item); } else { vb.textContent = 'No scored reviews found on the web'; } } catch (err) { vb.disabled = false; vb.textContent = 'Check the web for real scores'; toast(err.message, 4000); } } }, icon('spark'), 'Check the web for real scores'); sheet.append(vb); }
+    } else if (!r || r.score == null) { sheet.append(el('div', { class: 'empty' }, 'No critic ratings found for this album.')); }
     else {
       sheet.append(el('div', { class: 'row', style: { gap: '12px', alignItems: 'baseline', paddingTop: '16px', flexWrap: 'wrap' } }, el('div', { class: 'score', text: r.score.toFixed(1) }), starsEl(r.score), el('div', { class: 'mono' }, r.n ? `from ${r.n} review${r.n === 1 ? '' : 's'}` : 'Metacritic only')));
       if (r.mc) sheet.append(r.mcUrl ? el('a', { class: 'mono', href: r.mcUrl, target: '_blank', rel: 'noopener', style: { textDecoration: 'none', display: 'block', paddingTop: '4px' } }, `Metacritic ${r.mc} ↗`) : el('div', { class: 'mono', style: { paddingTop: '4px' } }, `Metacritic ${r.mc}`));
@@ -951,8 +1084,9 @@ async function route() {
       case 'label': await LabelView(parts[1], rid); break;
       case 'genre': await GenreView(parts.slice(1).join('/'), rid); break;
       case 'search': SearchView(parts[1]); break;
+      case 'ai': await AIView(parts.slice(1).join('/'), rid); break;
       case 'shelf': ShelfView(); break;
-      case 'moods': MoodsView(); break;
+      case 'moods': MoodsView(parts[1]); break;
       case 'crate': CrateView(parts[1]); break;
       case 'settings': SettingsView(); break;
       default: await HomeView(rid); break;
@@ -971,6 +1105,81 @@ window.addEventListener('hashchange', route);
 const GENRES = ['Dub', 'Krautrock', 'Bossa nova', 'Post-punk', 'Afrobeat', 'Minimal techno', 'Free jazz', 'Shoegaze', 'Ethio-jazz', 'Highlife', 'Dream pop', 'Drum and bass', 'Chamber pop', 'Delta blues', 'Bebop', 'Spiritual jazz', 'Trip hop', 'Baroque pop', 'Tropicália', 'Cumbia', 'Doom metal', 'Outlaw country', 'Bluegrass', 'Zydeco', 'Chicago house', 'Detroit techno', 'UK garage', 'Grime', 'Boom bap', 'G-funk', 'Neo-soul', 'Quiet storm', 'Philly soul', 'Northern soul', 'Rocksteady', 'Lovers rock', 'Dancehall', 'Jùjú', 'Gnawa', 'Fado', 'Flamenco', 'Tango nuevo', 'Minimalism', 'Ambient', 'Library music', 'Exotica', 'Lounge', 'Yacht rock', 'Power pop', 'Jangle pop', 'Riot grrrl', 'Post-rock', 'Math rock', 'Slowcore', 'Freak folk', 'British folk rock', 'Hard bop', 'Cool jazz', 'Modal jazz', 'Jazz fusion', 'Chanson', 'Yé-yé', 'Italo disco', 'Synth-pop', 'New wave', 'Industrial', 'Coldwave', 'Goth rock', 'Noise rock', 'No wave', 'Jazz-funk', 'Rare groove', 'Acid jazz', 'Broken beat', 'Footwork', 'Jungle', 'IDM', 'City pop', 'Shibuya-kei', 'Qawwali', 'Afro-Cuban jazz', 'Klezmer', 'Rebetiko', 'Anatolian rock', 'Thai funk', 'Soukous', 'Afrobeats', 'Amapiano', 'Desert blues', 'Reggaeton', 'Salsa', 'Son cubano', 'Bolero', 'Carnatic', 'Hindustani classical', 'Country soul', 'Gospel', 'Doo-wop', 'Rockabilly', 'Surf rock', 'Garage rock', 'Psychedelic rock', 'Progressive rock', 'Glam rock', 'Pub rock', 'Hardcore punk', 'Post-hardcore', 'Emo', 'Grunge', 'Britpop', 'Madchester', 'Big beat', 'Downtempo', 'Deep house', 'Acid house', 'Electro', 'Conscious hip hop', 'Jazz rap', 'Reggae', 'Ska', 'Calypso', 'Zouk', 'Mbalax', 'Makossa', 'Benga', 'Morna', 'Mariachi', 'Norteño', 'Tejano', 'Nueva canción', 'MPB', 'Samba', 'Forró', 'Choro', 'Andean folk', 'Sacred Harp', 'Western swing', 'Honky-tonk', 'Americana', 'Alt-country', 'Cosmic American music', 'Sophisti-pop', 'Blue-eyed soul', 'Boogie', 'Disco', 'Hi-NRG', 'Electroclash', 'Microhouse', 'Dubstep', 'Vaporwave', 'Hyperpop', 'Bedroom pop', 'Indie folk', 'Folktronica', 'Modern classical', 'Fourth world', 'Space rock', 'Stoner rock', 'Sludge metal', 'Black metal', 'Thrash metal', 'NWOBHM', 'Avant-garde jazz', 'Third stream', 'Vocal jazz', 'Latin jazz', 'Bebop vocalese', 'Swing', 'Ragtime', 'Stride piano', 'Boogie-woogie', 'Chicago blues', 'Piedmont blues', 'Country blues', 'Jump blues', 'Soul jazz', 'Organ trio'];
 const LABELS = ['Blue Note', 'Warp', '4AD', 'Factory', 'Stax', 'Motown', 'Sub Pop', 'Rough Trade', 'Stones Throw', 'Ninja Tune', 'Impulse!', 'ECM', 'Def Jam', 'Mo Wax', 'Drag City', 'Thrill Jockey', 'Kranky', 'Constellation', 'Matador', 'Merge', 'Touch and Go', 'SST', 'Dischord', 'Creation', 'Sarah Records', 'Mute', 'Trojan', 'Studio One', 'Island Records', 'Chess', 'Atlantic', 'Verve', 'Prestige', 'Riverside', 'CTI', 'Strata-East', 'Tzadik', 'Nonesuch', 'Harvest', 'Vertigo', 'Brain', 'Kompakt', 'Tresor', 'Underground Resistance', 'Hyperdub', 'Planet Mu', 'Rephlex', 'Ghost Box', 'Light in the Attic', 'Numero Group', 'Soul Jazz', 'Analog Africa', 'Luaka Bop', 'Smithsonian Folkways', 'Sacred Bones', 'Dead Oceans', 'Jagjaguwar', 'Secretly Canadian', 'Domino', 'XL Recordings', 'Brainfeeder', 'Daptone', 'International Anthem', 'Erased Tapes', 'Bella Union', 'Captured Tracks', 'Mexican Summer', 'RVNG Intl.', 'Music From Memory', 'Finders Keepers', 'Now-Again', 'Strut', 'Mr Bongo', 'Ed Banger', 'Saravah', 'Elektra', 'Reprise Records', 'Asylum', 'Virgin', 'Charisma', 'Stiff', 'Postcard', 'Cherry Red', 'Heavenly', 'Beggars Banquet', 'Too Pure', 'Duophonic', 'Flying Nun', 'Mushroom', 'Chapter Music', 'Elefant', 'Marina', 'Tôt ou tard', 'Barclay', 'Philips', 'Deutsche Grammophon', 'Ohr', 'Sky', 'Bureau B', 'Kitty-Yo', 'City Slang', 'Morr Music', 'Ostgut Ton', 'Dial', 'Perlon', 'Rush Hour', 'Dekmantel', 'Awesome Tapes From Africa', 'Sahel Sounds', 'Honest Jon\'s', 'Soundway', 'Far Out', 'Tru Thoughts', 'BBE', 'Jazzman', 'Gearbox', 'Edition', 'ACT', 'Enja', 'Black Saint', 'Steeplechase', 'Candid', 'Contemporary', 'Pacific Jazz', 'Fantasy', 'Milestone', 'Flying Dutchman', 'Perception', 'Mainstream', 'Cadet', 'Chess', 'Vee-Jay', 'King', 'Hi Records', 'Goldwax', 'Fame', 'Muscle Shoals Sound', 'Philadelphia International', 'Salsoul', 'West End', 'Prelude', 'Sleeping Bag', 'Tommy Boy', 'Sugar Hill', 'Cold Chillin\'', 'Wild Pitch', 'Rawkus', 'Fondle \'Em', 'Definitive Jux', 'Anticon', 'Rhymesayers', 'Mello Music Group'];
 const ARTISTS = [['Alice Coltrane'], ['Stereolab'], ['Fela Kuti'], ['Nina Simone'], ['Kraftwerk'], ['Cocteau Twins'], ['Boards of Canada'], ['Caetano Veloso'], ['Gal Costa'], ['Jorge Ben Jor'], ['Mulatu Astatke'], ['Pharoah Sanders'], ['Sun Ra'], ['Charles Mingus'], ['Thelonious Monk'], ['Joni Mitchell'], ['Nick Drake'], ['Talk Talk'], ['Scott Walker'], ['Serge Gainsbourg'], ['Françoise Hardy'], ['Can', 'country:DE'], ['Neu!'], ['Harmonia'], ['Brian Eno'], ['Robert Wyatt'], ['Arthur Russell'], ['Tom Waits'], ['Leonard Cohen'], ['Bob Dylan'], ['Marvin Gaye'], ['Stevie Wonder'], ['Curtis Mayfield'], ['Funkadelic'], ['Prince', 'type:person'], ['D\'Angelo'], ['Erykah Badu'], ['The Roots'], ['A Tribe Called Quest'], ['De La Soul'], ['Madlib'], ['J Dilla'], ['MF DOOM'], ['Kendrick Lamar'], ['OutKast'], ['Missy Elliott'], ['Björk'], ['Portishead'], ['Massive Attack'], ['Tricky'], ['Aphex Twin'], ['Autechre'], ['Burial'], ['Four Tet'], ['Caribou'], ['Floating Points'], ['Jon Hassell'], ['Laraaji'], ['Hiroshi Yoshimura'], ['Haruomi Hosono'], ['Yellow Magic Orchestra'], ['Ryuichi Sakamoto'], ['Cornelius'], ['Pizzicato Five'], ['Fishmans'], ['Os Mutantes'], ['Milton Nascimento'], ['Elis Regina'], ['João Gilberto'], ['Tim Maia'], ['Ali Farka Touré'], ['Tinariwen'], ['Orchestra Baobab'], ['Youssou N\'Dour'], ['Oumou Sangaré'], ['Ebo Taylor'], ['William Onyeabor'], ['Manu Dibango'], ['Hailu Mergia'], ['The Velvet Underground'], ['Television', 'country:US'], ['Patti Smith'], ['Wire', 'country:GB'], ['Joy Division'], ['New Order'], ['The Cure'], ['The Smiths'], ['My Bloody Valentine'], ['Slowdive'], ['Broadcast'], ['Pavement'], ['Yo La Tengo'], ['Low', 'country:US'], ['Sparklehorse'], ['Elliott Smith'], ['Sufjan Stevens'], ['Joanna Newsom'], ['Fleet Foxes'], ['Radiohead'], ['PJ Harvey'], ['Nick Cave & The Bad Seeds'], ['Sonic Youth'], ['Pixies'], ['Fugazi'], ['Slint'], ['Tortoise'], ['Godspeed You! Black Emperor'], ['Sigur Rós'], ['Mogwai'], ['Beach House'], ['Grizzly Bear'], ['Animal Collective'], ['Deerhunter'], ['Spiritualized'], ['Spacemen 3'], ['Galaxie 500'], ['Mazzy Star'], ['Cat Power'], ['Lucinda Williams'], ['Gillian Welch'], ['Townes Van Zandt'], ['Emmylou Harris'], ['Willie Nelson'], ['Dolly Parton'], ['Johnny Cash'], ['Miles Davis'], ['John Coltrane'], ['Herbie Hancock'], ['Wayne Shorter'], ['Ornette Coleman'], ['Eric Dolphy'], ['Yusef Lateef'], ['Don Cherry'], ['Abdullah Ibrahim'], ['Hugh Masekela'], ['Bobby Hutcherson'], ['Lee Morgan'], ['Horace Silver'], ['Art Blakey'], ['Ella Fitzgerald'], ['Billie Holiday'], ['Sarah Vaughan'], ['Chet Baker'], ['Julie London'], ['Dusty Springfield'], ['Aretha Franklin'], ['Otis Redding'], ['Al Green'], ['Bill Withers'], ['Roberta Flack'], ['Donny Hathaway'], ['Shuggie Otis'], ['Terry Callier'], ['Gil Scott-Heron'], ['Sade'], ['Kate Bush'], ['Peter Gabriel'], ['David Bowie'], ['Roxy Music'], ['Talking Heads'], ['Fleetwood Mac'], ['Steely Dan'], ['Big Star'], ['Todd Rundgren'], ['Harry Nilsson'], ['Randy Newman'], ['Van Morrison'], ['The Zombies'], ['The Kinks'], ['Fairport Convention'], ['Pentangle'], ['Sandy Denny'], ['Vashti Bunyan'], ['Linda Perhacs'], ['Karen Dalton'], ['Judee Sill'], ['Bill Evans', 'type:person'], ['Cluster'], ['Popol Vuh'], ['Faust', 'country:DE'], ['Ash Ra Tempel'], ['Tangerine Dream'], ['Jean-Michel Jarre'], ['Vangelis'], ['Wendy Carlos'], ['Delia Derbyshire'], ['Laurie Anderson'], ['Meredith Monk'], ['Steve Reich'], ['Terry Riley'], ['Philip Glass'], ['Arvo Pärt'], ['Nils Frahm'], ['Ólafur Arnalds'], ['Max Richter'], ['Jóhann Jóhannsson'], ['Hildur Guðnadóttir'], ['Colleen'], ['Grouper'], ['Julianna Barwick'], ['Mary Lattimore'], ['Kali Malone'], ['Sarah Davachi'], ['Ryoji Ikeda'], ['Alva Noto'], ['Fennesz'], ['Tim Hecker'], ['William Basinski'], ['Stars of the Lid'], ['Labradford'], ['Bark Psychosis'], ['Disco Inferno'], ['Pram'], ['Movietone'], ['Flying Saucer Attack'], ['Hood'], ['Boards of Canada']];
+// Browse table: major genres with their styles, AllMusic-style. Names follow Discogs styles where one exists, so genre pages resolve well.
+const GENRE_TREE = [
+  ['Rock', ['Indie Rock', 'Alternative Rock', 'Psychedelic Rock', 'Garage Rock', 'Post-Punk', 'Post Rock', 'Shoegaze', 'Krautrock', 'Prog Rock', 'Art Rock', 'Folk Rock', 'Hard Rock', 'Classic Rock', 'Glam', 'New Wave', 'Grunge', 'Britpop', 'Noise Rock', 'Math Rock', 'Slowcore', 'Space Rock', 'Stoner Rock', 'Power Pop', 'Jangle Pop', 'Soft Rock', 'Southern Rock', 'Surf', 'Rockabilly', 'Rock & Roll', 'Lo-Fi', 'Emo', 'Post-Hardcore']],
+  ['Pop', ['Synth-pop', 'Indie Pop', 'Dream Pop', 'Chamber Pop', 'Baroque Pop', 'Art Pop', 'Sophisti-pop', 'Electropop', 'Dance-pop', 'Bedroom Pop', 'Hyperpop', 'City Pop', 'Shibuya-kei', 'Yé-yé', 'Chanson', 'Schlager', 'Europop', 'Vocal', 'Easy Listening', 'Exotica', 'Lounge', 'Bubblegum']],
+  ['Electronic', ['Ambient', 'Techno', 'House', 'Deep House', 'Acid House', 'Detroit Techno', 'Minimal', 'Dub Techno', 'Electro', 'IDM', 'Downtempo', 'Trip Hop', 'Drum n Bass', 'Jungle', 'UK Garage', 'Dubstep', 'Grime', 'Footwork', 'Breakbeat', 'Big Beat', 'Trance', 'Progressive House', 'Tech House', 'Italo-Disco', 'Synthwave', 'Vaporwave', 'Chillwave', 'Glitch', 'Leftfield', 'Berlin-School', 'Electroclash', 'Microhouse', 'Broken Beat', 'Future Jazz', 'Bass Music', 'Juke', 'Gabber']],
+  ['Hip Hop', ['Boom Bap', 'Conscious', 'Jazzy Hip-Hop', 'G-Funk', 'Gangsta', 'Hardcore Hip-Hop', 'Trap', 'Drill', 'Cloud Rap', 'Instrumental', 'Abstract', 'Southern Rap', 'Crunk', 'Bounce', 'UK Hip Hop', 'Turntablism', 'Old School', 'Golden Age', 'Alternative Hip Hop', 'Lo-Fi Hip Hop']],
+  ['Jazz', ['Bop', 'Hard Bop', 'Cool Jazz', 'Modal', 'Post Bop', 'Free Jazz', 'Spiritual Jazz', 'Avant-garde Jazz', 'Fusion', 'Jazz-Funk', 'Soul-Jazz', 'Latin Jazz', 'Afro-Cuban Jazz', 'Big Band', 'Swing', 'Dixieland', 'Ragtime', 'Vocal Jazz', 'Contemporary Jazz', 'Smooth Jazz', 'Free Improvisation', 'Third Stream', 'Ethio-jazz', 'Nu Jazz', 'Space-Age', 'Bossa Nova']],
+  ['Funk / Soul', ['Soul', 'Funk', 'Disco', 'Rhythm & Blues', 'Neo Soul', 'Gospel', 'P.Funk', 'Boogie', 'Contemporary R&B', 'New Jack Swing', 'Northern Soul', 'Southern Soul', 'Philly Soul', 'Deep Soul', 'Psychedelic Soul', 'Quiet Storm', 'Rare Groove', 'Afro-Funk', 'Go-Go', 'Doo Wop', 'Motown']],
+  ['Blues', ['Delta Blues', 'Chicago Blues', 'Electric Blues', 'Country Blues', 'Texas Blues', 'Piedmont Blues', 'Jump Blues', 'Louisiana Blues', 'Harmonica Blues', 'Piano Blues', 'Boogie Woogie', 'Modern Electric Blues', 'Blues Rock', 'Acoustic Blues', 'Hill Country Blues', 'Soul Blues']],
+  ['Folk', ['Folk', 'Folk Rock', 'Singer-Songwriter', 'British Folk', 'Celtic', 'Americana', 'Freak Folk', 'Indie Folk', 'Psych Folk', 'Anti-Folk', 'Traditional', 'Nordic', 'Acoustic', 'Folktronica', 'Old-Time', 'Appalachian']],
+  ['Country', ['Country', 'Outlaw Country', 'Honky Tonk', 'Bluegrass', 'Alt-Country', 'Country Rock', 'Western Swing', 'Hillbilly', 'Cosmic American', 'Bakersfield Sound', 'Nashville Sound', 'Country Soul', 'Texas Country', 'Red Dirt', 'Country Pop', 'Cowboy', 'Cajun', 'Zydeco']],
+  ['Reggae', ['Roots Reggae', 'Dub', 'Ska', 'Rocksteady', 'Dancehall', 'Lovers Rock', 'Ragga', 'Reggae-Pop', 'Calypso', 'Soca', 'Mento', 'Steel Band', 'Digital Reggae', 'Early Reggae', 'Nyahbinghi']],
+  ['Latin', ['Salsa', 'Cumbia', 'Bossa Nova', 'Samba', 'MPB', 'Tropicália', 'Forró', 'Choro', 'Tango', 'Bolero', 'Son', 'Mambo', 'Boogaloo', 'Merengue', 'Bachata', 'Reggaeton', 'Norteño', 'Ranchera', 'Mariachi', 'Tejano', 'Nueva Cancion', 'Nueva Trova', 'Latin Rock', 'Vallenato', 'Timba', 'Rumba']],
+  ['World', ['Afrobeat', 'Highlife', 'Afro-Cuban', 'Soukous', 'Mbalax', 'Makossa', 'Benga', 'Juju', 'Fuji', 'Mbaqanga', 'Desert Blues', 'Gnawa', 'Raï', 'Ethiopian', 'Afrobeats', 'Amapiano', 'Fado', 'Flamenco', 'Rebetiko', 'Laïkó', 'Klezmer', 'Qawwali', 'Hindustani', 'Carnatic', 'Bhangra', 'Bollywood', 'Gamelan', 'Enka', 'Thai Funk', 'Luk Thung', 'Andean', 'Polka', 'Balkan', 'Anatolian Rock', 'Zouk', 'Morna']],
+  ['Classical', ['Baroque', 'Classical Period', 'Romantic', 'Modern', 'Contemporary', 'Minimalism', 'Opera', 'Choral', 'Chamber Music', 'Piano', 'Early Music', 'Medieval', 'Renaissance', 'Impressionism', 'Neo-Classical', 'Modern Classical', 'Post-Minimalism', 'Film Score', 'Serial', 'Spectral']],
+  ['Metal', ['Heavy Metal', 'Thrash', 'Death Metal', 'Black Metal', 'Doom Metal', 'Sludge Metal', 'Stoner Metal', 'Post-Metal', 'Progressive Metal', 'Power Metal', 'Speed Metal', 'NWOBHM', 'Grindcore', 'Metalcore', 'Nu Metal', 'Gothic Metal', 'Folk Metal', 'Symphonic Metal', 'Atmospheric Black Metal', 'Funeral Doom', 'Drone Metal', 'Industrial Metal']],
+  ['Punk', ['Punk', 'Hardcore', 'Post-Punk', 'Post-Hardcore', 'Pop Punk', 'Garage Punk', 'Anarcho-Punk', 'Oi!', 'Riot Grrrl', 'Emo', 'Screamo', 'Skate Punk', 'Crust', 'D-Beat', 'Proto-Punk', 'Art Punk', 'Egg Punk', 'No Wave', 'Ska Punk', 'Psychobilly']],
+  ['Experimental', ['Experimental', 'Avant-garde', 'Noise', 'Drone', 'Dark Ambient', 'Industrial', 'Musique Concrète', 'Sound Collage', 'Field Recording', 'Free Improvisation', 'Electroacoustic', 'Minimalism', 'Lowercase', 'Power Electronics', 'Harsh Noise', 'Plunderphonics', 'Sound Art', 'Fourth World', 'New Age', 'Spoken Word']]
+];
+// Where a major genre's own page should point when its name isn't a Discogs style or genre.
+const GENRE_KEY = { Metal: 'Heavy Metal' };
+let homeBrowse = ''; // which browse panel is open on Home ('' = none); kept for the session, not across reloads
+const AI_EXAMPLES = ['Hazy late-night dub-tinged post-punk with a female vocal', 'Spiritual jazz from the 70s that feels like a sunrise', 'Like the last two Talk Talk records, but made this decade', 'Warm, wordless music for cooking dinner on a Sunday', 'Brazilian records from the late 60s with strings and fuzz guitar', 'Country albums for a long drive at night'];
+function aiGo(text) { const t = (text || '').trim(); if (!t) { toast('Describe what you want to hear first'); return; } location.hash = '#/ai/' + encodeURIComponent(t); }
+function aiBar(initial, opts = {}) {
+  const inp = el('input', { id: opts.id || 'aiq', type: 'search', placeholder: opts.placeholder || 'What do you want to hear?', enterkeyhint: 'search', autocomplete: 'off', value: initial || '', 'aria-label': 'Ask Claude for albums' });
+  const go = () => aiGo(inp.value);
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+  return el('div', { class: 'field ai' }, icon('spark'), inp, el('button', { type: 'button', class: 'btn sm accent', onclick: go }, 'Ask'));
+}
+// "Deeper cuts" for a genre: the Ask Claude page with a key, otherwise the Search tab's Describe-it hand-off.
+function digDeeperInto(genre) {
+  const text = `${genre}: deeper cuts beyond the obvious classics`;
+  if (settings.anthropicKey) { aiGo(text); return; }
+  searchState.mode = 'describe'; searchState.describe = text; store.set('hear.search', { mode: 'describe', q: searchState.q, results: searchState.results, describe: text, describeOut: null }); location.hash = '#/search';
+}
+function rememberAsk(q) { const rec = store.get('hear.aiRecent', []).filter(r => r.q.toLowerCase() !== q.toLowerCase()); rec.unshift({ q, t: Date.now() }); store.set('hear.aiRecent', rec.slice(0, 8)); }
+// Keep at most `max` entries under a key prefix (oldest by `t` go first), so caches don't grow forever.
+function pruneKeys(prefix, max) {
+  try {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith(prefix));
+    if (keys.length <= max) return;
+    keys.map(k => ({ k, t: (store.get(k, {}) || {}).t || 0 })).sort((a, b) => a.t - b.t).slice(0, keys.length - max).forEach(x => store.del(x.k));
+  } catch (e) { }
+}
+function browseGenres() {
+  const host = el('div', { class: 'gtable' });
+  for (const [name, subs] of GENRE_TREE) {
+    const chips = el('div', { class: 'wrap' });
+    const LIMIT = 8;
+    const draw = (all) => {
+      chips.innerHTML = '';
+      for (const s of all ? subs : subs.slice(0, LIMIT)) chips.append(el('a', { class: 'tag soft', href: `#/genre/${encodeURIComponent(s)}` }, s));
+      if (!all && subs.length > LIMIT) chips.append(el('button', { type: 'button', class: 'tag', onclick: () => draw(true) }, `+${subs.length - LIMIT} more`));
+    };
+    draw(false);
+    host.append(el('div', { class: 'grow' }, el('a', { class: 'ghead', href: `#/genre/${encodeURIComponent(GENRE_KEY[name] || name)}` }, el('span', { text: name }), el('span', { class: 'mono', text: `${subs.length} styles` }), icon('chevron')), chips));
+  }
+  return host;
+}
+function browseMoods() {
+  const host = el('div', { class: 'gtable' });
+  for (const [fam, words] of MOODS) host.append(el('div', { class: 'grow' }, el('div', { class: 'ghead', style: { cursor: 'default' } }, el('span', { text: fam }), el('span', { class: 'mono', text: `${words.length} moods` })), el('div', { class: 'wrap' }, words.map(w => el('a', { class: 'tag soft', href: `#/moods/${encodeURIComponent(w)}` }, w)))));
+  host.append(el('div', { class: 'row', style: { paddingTop: '12px' } }, el('a', { class: 'link', href: '#/moods', style: { fontSize: '13px' } }, 'Mix up to three moods →')));
+  return host;
+}
+function browseAsk() {
+  const host = el('div', { class: 'stack', style: { gap: '12px', paddingTop: '4px' } });
+  host.append(el('div', { class: 'muted', style: { fontSize: '14px', lineHeight: 1.4 } }, 'Describe it the way you would to a friend behind the counter: sound, era, mood, instruments, a reference point. Claude answers with ten records and says why each one fits.'), aiBar(''));
+  if (!settings.anthropicKey) host.append(el('div', { class: 'notice' }, 'Needs a Claude API key: add one in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), '.'));
+  const recent = store.get('hear.aiRecent', []);
+  if (recent.length) host.append(el('div', { class: 'stack', style: { gap: '4px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Recent asks'), linkBtn('Clear', () => { store.set('hear.aiRecent', []); route(); })), el('div', { class: 'list' }, recent.map(r => el('a', { class: 'item', href: '#/ai/' + encodeURIComponent(r.q), style: { minHeight: '44px', padding: '6px 0' } }, el('div', { class: 'main' }, el('div', { class: 't', style: { fontSize: '14px', whiteSpace: 'normal' }, text: r.q })), el('span', { class: 'arrow' }, icon('chevron')))))));
+  host.append(el('div', { class: 'stack', style: { gap: '6px' } }, el('div', { class: 'eyebrow' }, 'Try one'), el('div', { class: 'wrap' }, sample(AI_EXAMPLES, 3).map(x => el('a', { class: 'tag', href: '#/ai/' + encodeURIComponent(x), style: { height: 'auto', padding: '7px 11px', whiteSpace: 'normal', lineHeight: 1.3 } }, x)))));
+  return host;
+}
 let homePicks = null;
 const rand = (a) => a[Math.floor(Math.random() * a.length)];
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -1009,10 +1218,10 @@ async function labelStrip(name) {
 async function artistStrip(a) {
   let id = a.id, name = a.name;
   if ((id && /^da\d/.test(id)) || (!id && DG.on())) {
-    if (!id) { const hit = await resolveArtist(name); if (!hit) return null; id = hit.id; name = hit.name; }
-    const d = await DG.get(`artists/${id.slice(2)}/releases`, { sort: 'year', sort_order: 'desc', per_page: 100, page: 1 });
-    const seen = new Set();
-    const items = (d.releases || []).filter(r => r.role === 'Main' && DG.bucket(r.format) === 'album').map(r => ({ id: r.type === 'master' ? 'dm' + r.id : 'dr' + r.id, title: r.title, artist: DG.clean(r.artist) || name, artistId: id, year: r.year ? String(r.year) : '', type: 'Album', img: r.thumb || '' })).filter(it => !seen.has(it.id) && seen.add(it.id)).sort((x, y) => (x.year || '9999').localeCompare(y.year || '9999'));
+    let raw = a.raw || '';
+    if (!id) { const hit = await resolveArtist(name); if (!hit) return null; id = hit.id; name = hit.name; raw = hit.raw || hit.name; }
+    if (!raw) { const art = await DG.get(`artists/${id.slice(2)}`); raw = art.name; name = DG.clean(art.name); }
+    const items = (await DG.discography(id.slice(2), raw)).filter(it => it.kind === 'album' || it.kind === 'live').sort((x, y) => (x.year || '9999').localeCompare(y.year || '9999'));
     return { id, name, items };
   }
   if (!id) {
@@ -1053,6 +1262,19 @@ async function HomeView(rid) {
   view.append(homeField);
   attachTypeahead(q, { modes: () => ['artist', 'album', 'label'] });
   q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const v = q.value.trim(); if (!v) return; if (searchState.mode === 'describe') searchState.mode = 'artist'; searchState.q = v; searchState.results = null; searchState.pendingRun = true; store.set('hear.search', { mode: searchState.mode, q: v, results: null, describe: searchState.describe, describeOut: searchState.describeOut }); location.hash = '#/search'; } });
+  // Browse: Genres (a table of majors and their styles), Moods, or Ask Claude. One panel open at a time; tap again to close.
+  const browseSeg = el('div', { class: 'seg browse-seg', role: 'tablist', 'aria-label': 'Browse by' });
+  const browsePanel = el('div', { class: 'browse', hidden: true });
+  function drawBrowse() {
+    browseSeg.innerHTML = '';
+    for (const [k, label] of [['genres', 'Genres'], ['moods', 'Moods'], ['ai', 'Ask Claude']]) browseSeg.append(el('button', { type: 'button', class: homeBrowse === k ? 'on' : '', role: 'tab', 'aria-selected': String(homeBrowse === k), onclick: () => { homeBrowse = homeBrowse === k ? '' : k; drawBrowse(); if (homeBrowse === 'ai') setTimeout(() => { const i = browsePanel.querySelector('#aiq'); if (i) i.focus(); }, 50); } }, k === 'ai' ? icon('spark') : null, label));
+    browsePanel.innerHTML = ''; browsePanel.hidden = !homeBrowse;
+    if (homeBrowse === 'genres') browsePanel.append(browseGenres());
+    else if (homeBrowse === 'moods') browsePanel.append(browseMoods());
+    else if (homeBrowse === 'ai') browsePanel.append(browseAsk());
+  }
+  drawBrowse();
+  view.append(browseSeg, browsePanel);
   const genreSec = homeSection('Genre spotlight', p.genre);
   const labelSec = homeSection('On the label', p.label);
   const artistSec = homeSection(p.artist.fromShelf ? 'From your shelf · discography' : 'Discography', p.artist.name);
@@ -1065,7 +1287,7 @@ async function HomeView(rid) {
       const r = await genreStrip(p.genre); if (rid !== routeSeq) return;
       const items = r.data.items; if (!items.length) { fail(genreSec, 'Nothing came back for this genre. Shuffle for another.'); return; }
       genreSec.setSub(r.data.source === 'tags' ? 'from MusicBrainz tags · add a Claude key for curated picks' : r.data.source === 'discogs' ? 'most collected on Discogs' : `picked by ${r.data.source}`);
-      genreSec.setLink('#/search', 'Dig deeper →', (e) => { e.preventDefault(); searchState.mode = 'describe'; searchState.describe = `${p.genre}: deeper cuts beyond the obvious classics`; store.set('hear.search', { mode: 'describe', q: searchState.q, results: searchState.results, describe: searchState.describe, describeOut: null }); location.hash = '#/search'; });
+      genreSec.setLink('#/search', 'Dig deeper →', (e) => { e.preventDefault(); digDeeperInto(p.genre); });
       genreSec.body.innerHTML = '';
       const flow = coverFlow(items, { size: 180, years: false, showArtist: true, actions: 'light', label: p.genre + ' essentials' });
       genreSec.body.append(flow);
@@ -1252,8 +1474,8 @@ function SearchView() {
       ta);
     if (hasKey) {
       card.append(el('div', { class: 'row', style: { justifyContent: 'space-between', alignItems: 'center', gap: '10px' } },
-        el('div', { style: { fontSize: '12px', opacity: 0.75, lineHeight: 1.3 } }, `Claude picks albums that fit every part of the description; each is matched to the catalog. You can refine afterwards.`),
-        el('button', { class: 'btn accent', style: { flexShrink: 0 }, onclick: () => describeIt(ta.value.trim(), out) }, icon('spark'), 'Find albums')));
+        el('div', { style: { fontSize: '12px', opacity: 0.75, lineHeight: 1.3 } }, `Claude picks ten records that fit every part of the description and says why each one does. You can refine the list afterwards.`),
+        el('button', { class: 'btn accent', style: { flexShrink: 0 }, onclick: () => { const t = ta.value.trim(); if (!t) { toast('Describe what you want to hear first'); return; } searchState.describe = t; persist(); aiGo(t); } }, icon('spark'), 'Ask Claude')));
     } else {
       const ask = el('a', { class: 'btn accent', href: 'https://claude.ai/new', target: '_blank', rel: 'noopener' }, icon('spark'), 'Ask Claude ↗');
       ask.addEventListener('click', (e) => { const t = ta.value.trim(); if (!t) { e.preventDefault(); toast('Describe what you want to hear first'); return; } searchState.describe = t; persist(); ask.href = 'https://claude.ai/new?q=' + enc(handoffPrompt(t)); });
@@ -1361,10 +1583,18 @@ function artistGenres(artist) {
   return out;
 }
 const BUCKET_LABELS = { album: 'Albums', ep: 'EPs', single: 'Singles', comp: 'Compilations', live: 'Live', other: 'Other releases' };
+const KIND_LABEL = { album: 'Album', ep: 'EP', single: 'Single', comp: 'Compilation', live: 'Live', other: '' };
+// AllMusic-style discography rows, oldest first. items carry .kind (album/ep/single/comp/live/other).
+const DISCO_GROUPS = [['Albums', ['album', 'live']], ['Singles & EPs', ['single', 'ep']], ['Compilations', ['comp']], ['Other', ['other']]];
+function groupDisco(items) {
+  const out = [];
+  for (const [label, kinds] of DISCO_GROUPS) { const list = items.filter(it => kinds.includes(it.kind)); if (list.length) out.push({ label, items: list.slice().sort((x, y) => (x.year || '9999').localeCompare(y.year || '9999')) }); }
+  return out;
+}
 function skeletonStrip(n = 4) { const s = el('div', { class: 'strip', 'aria-hidden': 'true' }); for (let i = 0; i < n; i++) s.append(el('div', { class: 'tile skel' }, el('div', { class: 'cover' }), el('div', { class: 'a' }), el('div', { class: 'b' }))); return s; }
 function dgLinkLabel(u) { const h = hostOf(u); if (/bandcamp\.com/.test(h)) return 'Bandcamp'; if (/wikipedia\.org/.test(h)) return 'Wikipedia'; if (/allmusic\.com/.test(h)) return 'AllMusic'; if (/facebook|instagram|twitter|x\.com|youtube|soundcloud|myspace|last\.fm|tiktok|spotify|apple\.com|discogs\.com|imdb|rateyourmusic|setlist|songkick/.test(h)) return null; return 'Website'; }
 function stripSection(label, items, opts = {}) {
-  const sec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, label), el('div', { class: 'mono', text: String(items.length) })));
+  const sec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead', style: { alignItems: 'center' } }, el('div', { class: 'eyebrow' }, label), el('div', { class: 'row', style: { gap: '10px' } }, opts.tools || null, el('div', { class: 'mono', text: String(items.length) }))));
   const strip = el('div', { class: 'strip' });
   for (const it of items) strip.append(albumTile(it, opts));
   sec.append(strip); return sec;
@@ -1373,15 +1603,15 @@ async function ArtistViewDG(rawId, rid) {
   const num = rawId.slice(2);
   setTop({ back: true, title: '' });
   view.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading artist…'));
-  const [a, rel1] = await Promise.all([DG.get(`artists/${num}`), DG.get(`artists/${num}/releases`, { sort: 'year', sort_order: 'desc', per_page: 100, page: 1 })]);
+  const a = await DG.get(`artists/${num}`);
   if (rid !== routeSeq) return;
   const name = DG.clean(a.name);
   const primaryImg = (a.images || []).find(i => i.type === 'primary') || (a.images || [])[0];
-  remember({ kind: 'artist', id: rawId, name, sub: a.realname && a.realname !== name ? a.realname : '', img: primaryImg ? primaryImg.uri150 : '' });
+  remember({ kind: 'artist', id: rawId, name, raw: a.name, sub: a.realname && a.realname !== name ? a.realname : '', img: primaryImg ? DG.img(primaryImg.uri150) : '' });
   view.innerHTML = ''; setTop({ back: true, title: name });
   const ph = el('div', { class: 'aimg ph', style: { background: `hsl(${hue(name)} 28% 48%)` }, text: initials(name) });
   let img = ph;
-  if (primaryImg) { img = el('img', { class: 'aimg', src: primaryImg.uri, alt: name }); img.addEventListener('error', () => img.replaceWith(ph)); }
+  if (primaryImg && DG.img(primaryImg.uri)) { img = el('img', { class: 'aimg', src: primaryImg.uri, alt: name }); img.addEventListener('error', () => img.replaceWith(ph)); }
   const members = (a.members || []).filter(m => m.active !== false).map(m => DG.clean(m.name)).slice(0, 6);
   const textCol = el('div', { class: 'stack', style: { gap: '6px', minWidth: 0, flex: 1 } }, el('h1', { text: name }));
   const metaBits = [a.realname && a.realname !== name ? a.realname : '', members.length ? 'Members: ' + members.join(', ') : ''].filter(Boolean);
@@ -1399,31 +1629,30 @@ async function ArtistViewDG(rawId, rid) {
   for (const u of a.urls || []) { const lab = dgLinkLabel(u); if (!lab || seenKinds.has(lab)) continue; seenKinds.add(lab); extLinks.append(el('a', { class: 'tag soft', href: u, target: '_blank', rel: 'noopener' }, lab + ' ↗')); }
   extLinks.append(el('a', { class: 'tag soft', href: a.uri, target: '_blank', rel: 'noopener' }, 'Discogs ↗'));
   view.append(el('div', { class: 'ahead' }, img, textCol), bioHost, extLinks);
-  DG.get('database/search', { artist: name, type: 'master', per_page: 30 }).then(d => {
-    if (rid !== routeSeq) return;
-    const counts = {}; for (const r of d.results || []) for (const s of [...(r.style || []), ...(r.genre || [])]) counts[s] = (counts[s] || 0) + 1;
-    const top = Object.entries(counts).sort((x, y) => y[1] - x[1]).slice(0, 7).map(x => x[0]);
-    for (const s of top) styleHost.append(el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(s)}` }, s));
-  }).catch(() => { });
   const disco = el('div');
   view.append(disco);
   disco.append(el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'eyebrow' }, 'Albums'), skeletonStrip(4)));
-  let items = rel1.releases || [];
-  const pages = Math.min((rel1.pagination || {}).pages || 1, 3);
-  const rest = []; for (let p = 2; p <= pages; p++) rest.push(DG.get(`artists/${num}/releases`, { sort: 'year', sort_order: 'desc', per_page: 100, page: p }));
-  for (const d of await Promise.all(rest)) items = items.concat(d.releases || []);
+  // The discography: the artist's most-collected masters (so the main albums always make it), grouped like AllMusic.
+  let items = [];
+  try { items = await DG.discography(num, a.name); } catch (e) { console.warn('Discogs discography', e); }
   if (rid !== routeSeq) return;
-  const main = items.filter(r => r.role === 'Main');
-  const seen = new Set();
-  const toItem = (r) => ({ id: r.type === 'master' ? 'dm' + r.id : 'dr' + r.id, title: r.title, artist: DG.clean(r.artist) || name, artistId: rawId, year: r.year ? String(r.year) : '', type: BUCKET_LABELS[DG.bucket(r.format)].replace(/s$/, ''), img: r.thumb || '' });
-  const buckets = {};
-  for (const r of main) { const it = toItem(r); if (seen.has(it.id)) continue; seen.add(it.id); const b = DG.bucket(r.format); (buckets[b] = buckets[b] || []).push(it); }
+  if (!items.length) {
+    // Fallback (name mismatch or an obscure artist): the id-exact release list, oldest first; main credits only
+    try {
+      const d = await DG.get(`artists/${num}/releases`, { sort: 'year', sort_order: 'asc', per_page: 100, page: 1 });
+      if (rid !== routeSeq) return;
+      const seen = new Set();
+      for (const r of d.releases || []) { if (r.role !== 'Main') continue; const id = r.type === 'master' ? 'dm' + r.id : 'dr' + r.id; if (seen.has(id)) continue; seen.add(id); const kind = DG.bucket(r.format); items.push({ id, title: r.title, artist: DG.clean(r.artist) || name, artistId: rawId, year: r.year ? String(r.year) : '', kind, type: KIND_LABEL[kind] || '', img: DG.img(r.thumb), styles: [], genres: [] }); }
+    } catch (e) { }
+  }
+  // Styles: the ones that recur across the discography
+  const counts = {}; for (const it of items) for (const st of [...(it.styles || []), ...(it.genres || [])]) counts[st] = (counts[st] || 0) + 1;
+  for (const st of Object.entries(counts).sort((x, y) => y[1] - x[1]).slice(0, 7).map(x => x[0])) styleHost.append(el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(st)}` }, st));
   disco.innerHTML = '';
-  let any = false;
-  for (const [k, label] of Object.entries(BUCKET_LABELS)) { if (!buckets[k] || !buckets[k].length) continue; any = true; disco.append(stripSection(label, buckets[k], { primary: 'title', twoLine: true })); }
-  const appear = items.filter(r => r.role !== 'Main' && r.role !== 'UnofficialRelease').slice(0, 30).map(toItem).filter(it => !seen.has(it.id) && seen.add(it.id));
-  if (appear.length) disco.append(stripSection('Appears on', appear, { primary: 'title', twoLine: true }));
-  if (!any && !appear.length) disco.append(el('div', { class: 'empty' }, 'Discogs lists no releases for this artist yet.'));
+  const groups = groupDisco(items);
+  groups.forEach((g, i) => disco.append(stripSection(g.label, g.items, { primary: 'title', twoLine: true, tools: i === 0 ? rateRestButton(() => items) : null })));
+  if (!groups.length) disco.append(el('div', { class: 'empty' }, 'Discogs lists no releases for this artist yet.'));
+  autoRate(items);
 }
 async function LabelViewDG(rawId, rid) {
   const num = rawId.slice(2);
@@ -1460,8 +1689,10 @@ async function LabelViewDG(rawId, rid) {
     const counts = { all: items.length }; for (const it of items) counts[it.type] = (counts[it.type] || 0) + 1;
     for (const [k, lab] of [['all', 'All'], ...FILTERS]) { if (!counts[k]) continue; chips.append(el('button', { class: 'chip' + (filter === k ? ' on' : ''), onclick: () => { filter = k; draw(); } }, `${lab} · ${counts[k]}`)); }
   };
-  status.textContent = items.length ? `${total.toLocaleString()} releases on Discogs · most collected first` : 'Discogs lists nothing for this label.';
+  status.innerHTML = '';
+  status.append(el('div', { class: 'row', style: { justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' } }, el('span', {}, items.length ? `${total.toLocaleString()} releases on Discogs · most collected first` : 'Discogs lists nothing for this label.'), items.length ? rateRestButton(() => items) : null));
   draw();
+  autoRate(items);
 }
 async function ArtistView(id, rid) {
   if (/^da\d/.test(id)) return ArtistViewDG(id, rid);
@@ -1510,15 +1741,10 @@ async function ArtistView(id, rid) {
   groups.sort((a, b) => (b['first-release-date'] || '0000').localeCompare(a['first-release-date'] || '0000'));
   disco.innerHTML = '';
   if (!groups.length) { disco.append(el('div', { class: 'empty' }, 'MusicBrainz has no releases for this artist yet.')); return; }
-  for (const [k, label] of Object.entries(BUCKET_LABELS)) {
-    const items = groups.filter(g => g._b === k);
-    if (!items.length) continue;
-    const sec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, label), el('div', { class: 'mono', text: String(items.length) })));
-    const strip = el('div', { class: 'strip' });
-    for (const g of items) strip.append(albumTile({ id: g.id, title: g.title, artist: credit(g['artist-credit']) || artist.name, artistId: artist.id, year: year(g['first-release-date']), type: rgType(g) }, { primary: 'title', twoLine: true }));
-    sec.append(strip);
-    disco.append(sec);
-  }
+  const toItem = (g) => ({ id: g.id, title: g.title, artist: credit(g['artist-credit']) || artist.name, artistId: artist.id, year: year(g['first-release-date']), kind: g._b, type: rgType(g) });
+  const all = groups.map(toItem);
+  groupDisco(all).forEach((grp, i) => disco.append(stripSection(grp.label, grp.items, { primary: 'title', twoLine: true, tools: i === 0 ? rateRestButton(() => all) : null })));
+  autoRate(all);
 }
 
 // ============================================================
@@ -1528,7 +1754,7 @@ async function GenreView(name, rid) {
   const genre = (name || '').trim(); if (!genre) { location.hash = '#/'; return; }
   setTop({ back: true, title: titleCase(genre) });
   view.append(el('div', { class: 'stack', style: { gap: '6px' } }, el('div', { class: 'eyebrow' }, 'Genre'), el('h1', { text: titleCase(genre) }),
-    el('div', { class: 'wrap' }, el('a', { class: 'tag soft', href: '#/search', onclick: (e) => { e.preventDefault(); searchState.mode = 'describe'; searchState.describe = `${genre}: deeper cuts beyond the obvious classics`; store.set('hear.search', { mode: 'describe', q: searchState.q, results: searchState.results, describe: searchState.describe, describeOut: null }); location.hash = '#/search'; } }, 'Dig deeper with Describe it →'))));
+    el('div', { class: 'wrap' }, el('a', { class: 'tag soft', href: '#/search', onclick: (e) => { e.preventDefault(); digDeeperInto(genre); } }, settings.anthropicKey ? 'Ask Claude for deeper cuts →' : 'Dig deeper with Describe it →'))));
   const artistsSec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Essential artists'), el('div', { class: 'mono', text: settings.anthropicKey ? 'picked by ' + (settings.model || DEFAULTS.model) : '' })), el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading…'));
   const albumsSec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Essential albums')), el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading…'));
   const moreSec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, DG.on() ? `Most collected ${genre} artists` : `Artists tagged “${genre}”`), el('div', { class: 'mono' }, DG.on() ? 'Discogs' : 'MusicBrainz')), el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading…'));
@@ -1558,10 +1784,10 @@ async function GenreView(name, rid) {
       const r = await genreStrip(genre); if (rid !== routeSeq) return;
       albumsSec.querySelector('.loading').remove();
       if (!r.data.items.length) { albumsSec.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Nothing found.')); return; }
-      albumsSec.querySelector('.sechead').append(el('div', { class: 'mono', text: r.data.source === 'tags' ? 'MusicBrainz tags' : 'picked by ' + r.data.source }));
+      albumsSec.querySelector('.sechead').append(el('div', { class: 'row', style: { gap: '10px' } }, rateRestButton(() => r.data.items), el('div', { class: 'mono', text: r.data.source === 'tags' ? 'MusicBrainz tags' : r.data.source === 'discogs' ? 'most collected' : 'picked by ' + r.data.source })));
       const strip = el('div', { class: 'strip' }); albumsSec.append(strip);
       const tiles = r.data.items.map(it => { const t = albumTile(it); strip.append(t); return t; });
-      (async () => { for (let i = 0; i < r.data.items.length; i++) { const it = r.data.items[i]; if (it.id) continue; const hit = await resolveAlbum(it.artist, it.title); if (rid !== routeSeq) return; if (hit) { it.id = hit.id; it.img = hit.img || it.img; store.set(r.key, r.data); tiles[i].replaceWith(albumTile(it)); } } })();
+      (async () => { for (let i = 0; i < r.data.items.length; i++) { const it = r.data.items[i]; if (it.id) continue; const hit = await resolveAlbum(it.artist, it.title); if (rid !== routeSeq) return; if (hit) { it.id = hit.id; it.img = hit.img || it.img; store.set(r.key, r.data); tiles[i].replaceWith(albumTile(it)); } } if (rid === routeSeq) autoRate(r.data.items); })();
     } catch (e) { if (e.message === 'stale') return; albumsSec.querySelector('.loading').replaceWith(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load albums: " + e.message)); }
   })();
   (async () => {
@@ -1604,7 +1830,7 @@ function coverFlow(items, opts = {}) {
   const flow = el('div', { class: 'flow', tabindex: '0', role: 'listbox', 'aria-label': opts.label || 'Albums', style: { height: STAGE + 'px', padding: `0 calc(50% - ${SLOT / 2}px)` } });
   const covers = [];
   const slots = items.map((g, i) => {
-    const c = coverEl(g.id || null, g.title, COVER > 200 ? 500 : 250, null, g.img); covers[i] = c;
+    const c = coverEl(g.id || null, g.title, 500, null, g.img); covers[i] = c;
     c.style.width = COVER + 'px'; c.style.height = COVER + 'px';
     const btn = el('button', { class: 'fc', role: 'option', 'aria-label': `${g.title}${g.artist ? ' by ' + g.artist : ''}${g.year ? ', ' + g.year : ''}`, style: { width: COVER + 'px', height: COVER + 'px', marginLeft: (-COVER / 2) + 'px' }, onclick: () => { if (i === current) { if (g.id) location.hash = `#/album/${g.id}`; else toast('Still matching this one to the catalog…'); } else goTo(i); } }, c);
     return el('div', { class: 'slot', style: { flex: `0 0 ${SLOT}px`, height: COVER + 'px' } }, btn);
@@ -1649,7 +1875,7 @@ function coverFlow(items, opts = {}) {
   flow.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; layout(); }); clearTimeout(settleT); settleT = setTimeout(settle, 90); }, { passive: true });
   flow.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') { e.preventDefault(); goTo(Math.min(items.length - 1, current + 1)); } if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(Math.max(0, current - 1)); } if (e.key === 'Enter' && current >= 0 && items[current].id) location.hash = `#/album/${items[current].id}`; });
   requestAnimationFrame(() => { layout(); if (opts.start) { flow.scrollLeft = opts.start * SLOT; layout(); } settle(); });
-  root.setId = (i, id, img) => { items[i].id = id; if (img) items[i].img = img; const c = coverEl(id, items[i].title, COVER > 200 ? 500 : 250, null, items[i].img); c.style.width = COVER + 'px'; c.style.height = COVER + 'px'; covers[i].replaceWith(c); covers[i] = c; if (i === current) { current = -1; settle(); } };
+  root.setId = (i, id, img) => { items[i].id = id; if (img) items[i].img = img; const c = coverEl(id, items[i].title, 500, null, items[i].img); c.style.width = COVER + 'px'; c.style.height = COVER + 'px'; covers[i].replaceWith(c); covers[i] = c; if (i === current) { current = -1; settle(); } };
   return root;
 }
 function shelfButton(item, compact) {
@@ -1709,6 +1935,20 @@ async function albumFromDiscogs(rawId) {
     videos: (base.videos || r.videos || []).slice(0, 6).map(v => ({ url: v.uri, title: v.title })), notes: DG.text(base.notes || r.notes || '').slice(0, 700), releaseId: r.id, masterId: m ? m.id : null, releasesCount: 0
   };
 }
+// Collapsible row for the album page: a header with a title, a right-aligned note and a chevron; the body builds on first open.
+function fold(title, opts = {}) {
+  const key = opts.key ? 'hear.fold.' + opts.key : null;
+  let open = key ? !!store.get(key, !!opts.open) : !!opts.open;
+  let built = false;
+  const meta = el('span', { class: 'fmeta', text: opts.meta || '' });
+  const head = el('button', { type: 'button', class: 'fhead', 'aria-expanded': String(open) }, el('span', { class: 'ft', text: title }), meta, icon('chevron'));
+  const body = el('div', { class: 'fbody', hidden: !open });
+  const root = el('section', { class: 'fold' + (open ? ' open' : '') }, head, body);
+  const build = () => { built = true; body.innerHTML = ''; if (opts.build) opts.build(body); };
+  head.addEventListener('click', () => { open = !open; body.hidden = !open; root.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open)); if (key) store.set(key, open); if (open && !built) build(); });
+  if (open) build();
+  return { root, body, setMeta: (t) => { meta.textContent = t || ''; }, refresh: () => { if (built) build(); }, isOpen: () => open };
+}
 async function AlbumView(id, rid) {
   setTop({ back: true, title: '' });
   view.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading album…'));
@@ -1719,12 +1959,20 @@ async function AlbumView(id, rid) {
   view.innerHTML = '';
   setTop({ back: true, title });
   let links = serviceLinks(artistName, title, album.exact);
+  const ry = +album.year || null;
   const cover = coverEl(album.id, title, 500, 'big', album.img);
-  const meta = el('div', { class: 'mono' }, [album.year, album.type].filter(Boolean).join(' · '));
+  const meta = el('div', { class: 'mono' });
+  const drawMeta = () => { meta.textContent = [album.year, album.type, (album.labels[0] || {}).name].filter(Boolean).join(' · '); };
+  drawMeta();
   const ratingLine = el('div', { style: { paddingTop: '2px', minHeight: '20px' } });
   const ratingItem = { id: album.id, title, artist: album.primaryArtist, img: album.img };
-  Ratings.get(album.id, title, album.primaryArtist).then(r => { if (r && r.score != null && !ratingLine.children.length) ratingLine.append(ratingBadge(ratingItem, { now: true, count: true, size: 'lg' })); });
+  const showHeaderBadge = () => { if (!ratingLine.children.length) ratingLine.append(ratingBadge(ratingItem, { now: true, count: true, size: 'lg' })); };
+  Ratings.get(album.id, title, album.primaryArtist).then(r => { if (r && r.score != null) showHeaderBadge(); });
   try { const rv = store.get('hear.recentAlbums', []).filter(x => x.id !== album.id); rv.unshift({ id: album.id, title, artist: artistName, artistId: fa && fa.id, year: album.year, type: album.type, img: album.img || '' }); store.set('hear.recentAlbums', rv.slice(0, 12)); } catch (e) { }
+  // A few style chips up top (the full list lives under About)
+  const styleLine = el('div', { class: 'wrap', style: { paddingTop: '4px' } });
+  const drawStyleLine = (names) => { styleLine.innerHTML = ''; for (const n of names.slice(0, 4)) styleLine.append(el('a', { class: 'tag soft', href: `#/genre/${encodeURIComponent(n)}` }, titleCase(n))); };
+  drawStyleLine(album.styles.length ? album.styles : album.tags);
   const linkRow = el('div', { class: 'stack' });
   const secondary = el('div', { class: 'wrap' });
   const shelfItem = { id: album.id, title, artist: artistName, artistId: fa && fa.id, year: album.year, type: album.type, labels: album.labels.map(l => l.name), img: album.img || '' };
@@ -1739,7 +1987,7 @@ async function AlbumView(id, rid) {
     if (links.deezer) add('Deezer', links.deezer, true);
     if (links.tidal) add('Tidal', links.tidal, true);
     add('Discogs', links.discogs, links.discogsExact);
-    for (const v of album.videos.slice(0, 3)) secondary.append(el('a', { class: 'tag', href: v.url, target: '_blank', rel: 'noopener', title: v.title }, 'YouTube ↗'));
+    for (const v of album.videos.slice(0, 2)) secondary.append(el('a', { class: 'tag', href: v.url, target: '_blank', rel: 'noopener', title: v.title }, 'YouTube ↗'));
     linkRow.append(secondary);
   }
   drawLinks();
@@ -1747,36 +1995,90 @@ async function AlbumView(id, rid) {
   const collBtn = album.source === 'dg' && settings.discogsUser && album.releaseId ? el('button', { class: 'btn quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Adding…'; try { await DG.post(`users/${encodeURIComponent(settings.discogsUser)}/collection/folders/1/releases/${album.releaseId}`); b.textContent = 'In your Discogs collection'; toast('Added to your Discogs collection'); } catch (err) { b.disabled = false; b.textContent = 'Add to Discogs collection'; toast("Discogs wouldn't take it from the browser; use the Discogs link to add it there.", 5000); } } }, 'Add to Discogs collection') : null;
   view.append(el('div', { class: 'stack' },
     el('div', { style: { padding: '4px 12px 0' } }, cover),
-    el('div', { class: 'stack', style: { gap: '4px', paddingTop: '6px' } }, el('h1', { text: title }), artistLine, meta, ratingLine),
+    el('div', { class: 'stack', style: { gap: '4px', paddingTop: '6px' } }, el('h1', { text: title }), artistLine, meta, ratingLine, styleLine),
     linkRow,
     el('div', { class: 'btnrow' }, shelfBtn, collBtn)));
-  if (album.community && (album.community.rating || album.community.have)) view.append(el('div', { class: 'mono', style: { paddingTop: '10px' } }, [album.community.rating ? `Discogs members rate it ${Number(album.community.rating).toFixed(2)}/5 (${album.community.count})` : '', album.community.have ? `in ${album.community.have.toLocaleString()} collections` : '', album.community.want ? `${album.community.want.toLocaleString()} want it` : ''].filter(Boolean).join(' · ')));
 
-  // Coverage: ratings, reviews, interviews & period press
-  const coverage = el('div');
-  view.append(coverage);
-  const ry = +album.year || null;
+  // Tracks: the one thing a streaming view always shows
+  const trackHost = el('div', { class: 'section', style: { paddingTop: '20px' } });
+  view.append(trackHost);
+  function drawTracks() {
+    trackHost.innerHTML = '';
+    if (!album.discs || !album.discs.length) { trackHost.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'No tracklist available.')); return; }
+    const total = album.discs.reduce((n, d) => n + d.tracks.length, 0);
+    trackHost.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Tracks'), el('div', { class: 'mono' }, `${total} track${total === 1 ? '' : 's'}`)));
+    for (const d of album.discs) { if (d.title) trackHost.append(el('div', { class: 'mono', style: { paddingTop: '6px' } }, d.title)); for (const t of d.tracks) trackHost.append(el('div', { class: 'track' }, el('span', { class: 'n', text: t.n }), el('span', { class: 'tt', text: t.title }), el('span', { class: 'len', text: t.len }))); }
+  }
+
+  // Everything else folds away: ratings & reviews, interviews & articles, about, more like this
   let covData = null;
+  const likeKey = 'hear.like.' + album.id;
   const byYear = (a, b) => (a.year || 9999) - (b.year || 9999);
-  function drawCoverage(cov) {
-    coverage.innerHTML = '';
-    const rs = cov.ratings || [];
-    const mean = rs.length ? rs.reduce((s, r) => s + r.norm, 0) / rs.length : (cov.metacritic ? cov.metacritic.norm : null);
-    const ratingSec = el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Ratings'),
-      cov.wikiUrl ? el('a', { class: 'mono', href: cov.wikiUrl, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, 'via Wikipedia ↗') : el('div', { class: 'mono' }, 'no Wikipedia entry found')));
+  const loadingRow = (text) => el('div', { class: 'loading', style: { padding: '6px 0' } }, el('div', { class: 'spinner' }), text);
+  const ratingMeta = (r) => !r ? '' : r.score == null ? (r.est ? 'not enough known' : 'no critic scores') : `${r.score.toFixed(1)} ★${r.est ? ' est.' : r.n ? ` · ${r.n} review${r.n === 1 ? '' : 's'}` : ''}`;
+  const fReviews = fold('Ratings & reviews', { key: 'reviews', build: drawReviews });
+  const fPress = fold('Interviews & articles', { key: 'press', build: drawPress });
+  const fAbout = fold('About', { key: 'about', build: drawAbout });
+  const fLike = fold('More like this', { key: 'like', build: drawLike });
+  view.append(el('div', { class: 'folds' }, fReviews.root, fPress.root, fAbout.root, fLike.root));
+  Ratings.get(album.id, title, album.primaryArtist).then(r => fReviews.setMeta(ratingMeta(r)));
+  Ratings.watch(album.id, (r) => { if (!fReviews.root.isConnected) return false; fReviews.setMeta(ratingMeta(r)); if (r && r.score != null) showHeaderBadge(); return true; });
+
+  // No critic scores anywhere: Claude estimates the consensus rating for this one album (and can check the web for real ones).
+  function estimateBlock() {
+    if (!settings.anthropicKey) return el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' for an estimated rating.');
+    const host = el('div', { class: 'stack', style: { gap: '8px' } });
+    const show = (r) => {
+      host.innerHTML = '';
+      if (!r || r.score == null) host.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, r && r.est ? "Claude doesn't know this record's reception well enough to estimate a rating." : 'No estimate available.'));
+      else {
+        host.append(el('div', { class: 'card' },
+          el('div', { class: 'row', style: { gap: '12px', alignItems: 'baseline', flexWrap: 'wrap' } }, el('div', { class: 'score', text: r.score.toFixed(1) }), el('span', { class: 'rb est' }, starsEl(r.score)), el('div', { class: 'mono' }, `Claude's estimate · ${r.confidence} confidence`)),
+          r.why ? el('div', { class: 'about' }, r.why) : null,
+          el('div', { class: 'mono' }, "Estimated from what Claude knows of the record's reception, not from listening. Not a critic score.")));
+        showHeaderBadge();
+      }
+      const vb = el('button', { type: 'button', class: 'btn sm quiet', onclick: async () => {
+        vb.disabled = true; vb.textContent = 'Searching the web…';
+        try {
+          const items = await digDeeper(album.primaryArtist, title, ry); store.set('hear.dig.' + album.id, { t: Date.now(), items });
+          const web = scoresFromWeb(items);
+          if (web) { Ratings.put(album.id, Object.assign({ title: (r && r.title) || '' }, web)); toast('Found real scores on the web'); fReviews.refresh(); fPress.refresh(); }
+          else vb.textContent = 'No scored reviews found on the web';
+        } catch (err) { vb.disabled = false; vb.innerHTML = ''; vb.append(icon('spark'), 'Check the web for real scores'); toast(err.message, 4000); }
+      } }, icon('spark'), 'Check the web for real scores');
+      host.append(el('div', { class: 'row' }, vb));
+    };
+    const cached = Ratings.cached(album.id);
+    if (cached && cached.est) show(cached);
+    else {
+      host.append(loadingRow('Asking Claude for an estimate…'));
+      estimateRatings([{ id: album.id, title, artist: album.primaryArtist, year: album.year }], { checked: true }).then(out => { if (host.isConnected) show(out[0] || null); }).catch(err => { host.innerHTML = ''; host.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't get an estimate: " + err.message)); });
+    }
+    return host;
+  }
+  function drawReviews(body) {
+    const cov = covData;
+    if (!cov) { body.append(loadingRow('Looking up ratings and reviews…')); return; }
+    let rs = cov.ratings || [];
+    let mean = rs.length ? rs.reduce((s, r) => s + r.norm, 0) / rs.length : (cov.metacritic ? cov.metacritic.norm : null);
+    let caption = cov.wikiUrl ? el('a', { class: 'mono', href: cov.wikiUrl, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, 'via Wikipedia ↗') : el('div', { class: 'mono' }, 'no Wikipedia entry found');
+    // Scores Claude found on the web (from "Check the web for real scores") stand in when Wikipedia has none.
+    const rc = Ratings.cached(album.id);
+    if (mean == null && rc && rc.web && rc.score != null && rc.sources && rc.sources.length) { mean = rc.score; rs = rc.sources.map(s => ({ source: s.source, raw: s.raw, norm: s.norm, url: s.url || null })); caption = el('div', { class: 'mono' }, 'found on the web by Claude'); }
+    body.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Ratings'), caption));
     if (mean != null) {
       const card = el('div', { class: 'card' });
       card.append(el('div', { class: 'row', style: { gap: '12px', alignItems: 'baseline', flexWrap: 'wrap' } }, el('div', { class: 'score', text: mean.toFixed(1) }), starsEl(mean), el('div', { class: 'mono' }, rs.length ? `from ${rs.length} review${rs.length === 1 ? '' : 's'}` : 'Metacritic only')));
-      if (cov.metacritic && rs.length) card.append(cov.metacritic.url ? el('a', { class: 'mono', href: cov.metacritic.url, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, `Metacritic ${cov.metacritic.raw} ↗`) : el('div', { class: 'mono' }, `Metacritic ${cov.metacritic.raw}`));
+      if (cov.metacritic && (cov.ratings || []).length) card.append(cov.metacritic.url ? el('a', { class: 'mono', href: cov.metacritic.url, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, `Metacritic ${cov.metacritic.raw} ↗`) : el('div', { class: 'mono' }, `Metacritic ${cov.metacritic.raw}`));
       const list = el('div');
       for (const r of rs) list.append(el(r.url ? 'a' : 'div', Object.assign({ class: 'srow' }, r.url ? { href: r.url, target: '_blank', rel: 'noopener' } : {}), el('span', { class: 'src', text: r.source }), el('span', { class: 'raw', text: r.raw }), starsEl(r.norm, true), r.url ? el('span', { class: 'arrow' }, icon('ext')) : null));
       card.append(list);
-      ratingSec.append(card);
+      body.append(card);
     } else {
-      ratingSec.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, cov.wikiUrl ? 'This Wikipedia entry has no ratings box.' : 'No critic ratings found for this album.'));
+      body.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, cov.wikiUrl ? 'This Wikipedia entry has no ratings box.' : 'No critic ratings found for this album.'), estimateBlock());
     }
-    coverage.append(ratingSec);
-
+    if (rc && rc.blurb) body.append(el('div', { class: 'stack', style: { gap: '4px', paddingTop: '6px' } }, el('div', { class: 'eyebrow' }, 'What critics said'), el('div', { class: 'about', style: { whiteSpace: 'pre-line' } }, rc.blurb)));
     const reviews = []; const seenUrl = new Set();
     const push = (x) => { if (!x.url || seenUrl.has(x.url)) return; seenUrl.add(x.url); reviews.push(x); };
     for (const r of rs) if (r.url) push({ title: r.source + ' review', work: r.source, url: r.url, year: r.year, score: r.raw });
@@ -1786,50 +2088,98 @@ async function AlbumView(id, rid) {
     if (links.review) push({ title: 'Review', work: hostOf(links.review), url: links.review });
     if (links.rym) push({ title: 'RateYourMusic', work: 'RateYourMusic', url: links.rym });
     reviews.sort(byYear);
-    const revSec = el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Reviews'), el('div', { class: 'mono', text: reviews.length ? String(reviews.length) : '' })));
-    if (reviews.length) revSec.append(el('div', { class: 'list' }, reviews.map(r => el('a', { class: 'crow', href: r.url, target: '_blank', rel: 'noopener' }, el('div', { class: 't', text: r.title }), el('div', { class: 'm', text: [r.work || hostOf(r.url), r.year, r.score].filter(Boolean).join(' · ') })))));
+    body.append(el('div', { class: 'sechead', style: { paddingTop: '8px' } }, el('div', { class: 'eyebrow' }, 'Reviews'), el('div', { class: 'mono', text: reviews.length ? String(reviews.length) : '' })));
+    if (reviews.length) body.append(el('div', { class: 'list' }, reviews.map(r => el('a', { class: 'crow', href: r.url, target: '_blank', rel: 'noopener' }, el('div', { class: 't', text: r.title }), el('div', { class: 'm', text: [r.work || hostOf(r.url), r.year, r.score].filter(Boolean).join(' · ') })))));
     const hasHost = (h) => reviews.some(r => hostOf(r.url).endsWith(h));
-    revSec.append(el('div', { class: 'wrap', style: { paddingTop: '6px' } },
+    body.append(el('div', { class: 'wrap' },
       !hasHost('allmusic.com') ? el('a', { class: 'tag soft', href: links.allmusic, target: '_blank', rel: 'noopener' }, 'Find on AllMusic ↗') : null,
       !hasHost('pitchfork.com') ? el('a', { class: 'tag soft', href: `https://pitchfork.com/search/?query=${enc(artistName + ' ' + title)}`, target: '_blank', rel: 'noopener' }, 'Find on Pitchfork ↗') : null,
       el('a', { class: 'tag soft', href: `https://www.metacritic.com/search/${enc(title)}/?category=2`, target: '_blank', rel: 'noopener' }, 'Metacritic ↗')));
-    coverage.append(revSec);
-
+  }
+  function drawPress(body) {
+    const cov = covData;
+    if (!cov) { body.append(loadingRow('Looking up interviews and articles…')); return; }
     const arts = (cov.entries || []).filter(e => e.kind !== 'review' && e.kind !== 'aggregate');
     const press = cov.press || [];
     const inWindow = (y) => !!(ry && y && y >= ry - 1 && y <= ry + 2);
     const atTime = [...arts.filter(e => inWindow(e.year)), ...press.filter(p => inWindow(p.year))].sort(byYear);
     const later = [...arts.filter(e => !inWindow(e.year)), ...press.filter(p => !inWindow(p.year))].sort(byYear);
-    const artSec = el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Interviews & articles'), el('div', { class: 'mono', text: String(atTime.length + later.length) })));
     const rowFor = (e) => el('a', { class: 'crow', href: e.url, target: '_blank', rel: 'noopener' },
       el('div', { class: 't' }, el('span', { class: 'kind', text: e.kind === 'press' ? 'magazine' : e.kind }), e.kind === 'press' ? e.work : e.title),
       el('div', { class: 'm', text: e.kind === 'press' ? [e.date, 'Google Books'].filter(Boolean).join(' · ') : [e.work || hostOf(e.url), e.year].filter(Boolean).join(' · ') }),
       e.snippet ? el('div', { class: 'snip', text: '…' + e.snippet + '…' }) : null);
-    if (atTime.length) artSec.append(el('div', { class: 'subhead', text: `At the time · ${ry - 1}–${ry + 2}` }), el('div', { class: 'list' }, atTime.map(rowFor)));
-    if (later.length) artSec.append(el('div', { class: 'subhead', text: atTime.length ? 'Later & undated' : 'Found' }), el('div', { class: 'list' }, later.map(rowFor)));
-    if (!atTime.length && !later.length) artSec.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Nothing found automatically. Try the searches below.'));
+    if (atTime.length) body.append(el('div', { class: 'subhead', text: `At the time · ${ry - 1}–${ry + 2}` }), el('div', { class: 'list' }, atTime.map(rowFor)));
+    if (later.length) body.append(el('div', { class: 'subhead', text: atTime.length ? 'Later & undated' : 'Found' }), el('div', { class: 'list' }, later.map(rowFor)));
+    if (!atTime.length && !later.length) body.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Nothing found automatically. Try the searches below.'));
     const q = enc(`"${title}" ${artistName}`);
-    artSec.append(el('div', { class: 'wrap', style: { paddingTop: '8px' } },
+    body.append(el('div', { class: 'wrap', style: { paddingTop: '4px' } },
       el('a', { class: 'tag soft', href: `https://archive.org/search?query=${q}&sin=TXT`, target: '_blank', rel: 'noopener' }, 'Internet Archive magazines ↗'),
       el('a', { class: 'tag soft', href: `https://www.google.com/search?tbm=bks&q=${q}`, target: '_blank', rel: 'noopener' }, 'Google Books ↗')));
     const digKey = 'hear.dig.' + album.id; const dug = store.get(digKey, null);
-    const digHost = el('div', { class: 'stack', style: { paddingTop: '10px' } });
+    const digHost = el('div', { class: 'stack', style: { paddingTop: '6px' } });
     const drawDug = (items) => { digHost.innerHTML = ''; digHost.append(el('div', { class: 'subhead', text: `Found on the web by Claude · ${items.length}` }), el('div', { class: 'list' }, items.map(i => el('a', { class: 'crow', href: i.url, target: '_blank', rel: 'noopener' }, el('div', { class: 't' }, el('span', { class: 'kind', text: i.kind }), i.title), el('div', { class: 'm', text: [i.work || hostOf(i.url), i.date, i.score].filter(Boolean).join(' · ') }))))); };
     if (dug) drawDug(dug.items);
-    else if (settings.anthropicKey) digHost.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Searching the web…'; try { const items = await digDeeper(artistName, title, ry); store.set(digKey, { t: Date.now(), items }); drawDug(items); } catch (err) { b.disabled = false; b.textContent = 'Dig deeper with Claude'; toast(err.message, 4000); } } }, icon('spark'), 'Dig deeper with Claude'));
+    else if (settings.anthropicKey) digHost.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Searching the web…'; try { const items = await digDeeper(artistName, title, ry); store.set(digKey, { t: Date.now(), items }); drawDug(items); const web = scoresFromWeb(items); const rc = Ratings.cached(album.id); if (web && (!rc || rc.score == null || rc.est)) { Ratings.put(album.id, Object.assign({ title: (rc && rc.title) || '' }, web)); fReviews.refresh(); } } catch (err) { b.disabled = false; b.textContent = 'Dig deeper with Claude'; toast(err.message, 4000); } } }, icon('spark'), 'Dig deeper with Claude'));
     else digHost.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to search the web for more reviews and interviews.'));
-    artSec.append(digHost);
-    coverage.append(artSec);
-
-    if (cov.summary) coverage.append(el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'About'), el('a', { class: 'mono', href: cov.wikiUrl, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, 'Wikipedia · CC BY-SA ↗')), el('div', { class: 'about', text: cov.summary.length > 600 ? cov.summary.slice(0, 600).replace(/\s+\S*$/, '') + '…' : cov.summary })));
-    else if (album.notes) coverage.append(el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Notes'), el('div', { class: 'mono' }, 'Discogs')), el('div', { class: 'about', style: { whiteSpace: 'pre-line' } }, album.notes)));
+    body.append(digHost);
   }
+  function drawAbout(body) {
+    const cov = covData;
+    if (cov && cov.summary) body.append(el('div', { class: 'about', text: cov.summary.length > 900 ? cov.summary.slice(0, 900).replace(/\s+\S*$/, '') + '…' : cov.summary }), el('a', { class: 'mono', href: cov.wikiUrl, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, 'Wikipedia · CC BY-SA ↗'));
+    else if (album.notes) body.append(el('div', { class: 'about', style: { whiteSpace: 'pre-line' } }, album.notes), el('div', { class: 'mono' }, 'Notes from Discogs'));
+    else if (!cov) body.append(loadingRow('Looking up the album…'));
+    else body.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'No write-up found for this album.'));
+    // Styles & tags
+    const styleNames = album.styles.length ? album.styles : album.tags;
+    const tagHost = el('div', { class: 'wrap' });
+    if (styleNames.length) for (const n of styleNames) tagHost.append(el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(n)}` }, titleCase(n)));
+    else tagHost.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'No tags yet.'));
+    body.append(el('div', { class: 'sechead', style: { paddingTop: '10px' } }, el('div', { class: 'eyebrow' }, 'Styles & tags'), el('div', { class: 'mono' }, album.tagSource)), tagHost);
+    // Moods (AI-generated, optional)
+    const moodBody = el('div', { class: 'stack' });
+    body.append(el('div', { class: 'sechead', style: { paddingTop: '10px' } }, el('div', { class: 'eyebrow' }, 'Moods'), el('div', { class: 'mono' }, 'AI-generated')), moodBody);
+    const cachedMood = store.get('hear.ai.' + album.id, null);
+    const drawMoods = (m) => {
+      moodBody.innerHTML = '';
+      moodBody.append(el('div', { class: 'wrap' }, (m.moods || []).map(x => el('span', { class: 'tag soft', text: x }))));
+      if (m.blurb) moodBody.append(el('div', { style: { fontSize: '14px', lineHeight: 1.45 } }, m.blurb));
+      moodBody.append(el('div', { class: 'mono' }, `Written by ${settings.model || DEFAULTS.model} — may be wrong.`));
+    };
+    if (cachedMood) drawMoods(cachedMood);
+    else if (settings.anthropicKey) moodBody.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const m = parseJSON(await askClaude(`Album: "${title}" by ${artistName}${album.year ? ' (' + album.year + ')' : ''}.\nGive AllMusic-style mood descriptors for this specific album. Reply with ONLY JSON: {"moods":["six to eight single words or two-word phrases"],"blurb":"two plain sentences describing how it sounds and when to play it; no superlatives; if you are not confident you know this album, say so in the blurb"}`, 600)); store.set('hear.ai.' + album.id, m); drawMoods(m); } catch (err) { b.disabled = false; b.textContent = 'Generate moods'; toast(err.message, 3500); } } }, icon('spark'), 'Generate moods'));
+    else moodBody.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to generate mood tags.'));
+    // Release details
+    const detail = [album.releasesCount ? `${album.releasesCount} release${album.releasesCount === 1 ? '' : 's'}` : '', album.formats.length ? album.formats.slice(0, 3).join(' · ') : '', album.country, album.released].filter(Boolean).join(' · ');
+    body.append(el('div', { class: 'sechead', style: { paddingTop: '10px' } }, el('div', { class: 'eyebrow' }, 'Release'), el('div', { class: 'mono' }, detail || (album.more && !album.labels.length ? 'loading…' : ''))));
+    if (album.labels.length) body.append(el('div', { class: 'wrap' }, album.labels.slice(0, 8).map(l => el('a', { class: 'tag', href: `#/label/${l.id}` }, l.name + (l.catno ? ` · ${l.catno}` : '')))));
+    if (album.community && (album.community.rating || album.community.have)) body.append(el('div', { class: 'mono' }, [album.community.rating ? `Discogs members rate it ${Number(album.community.rating).toFixed(2)}/5 (${album.community.count})` : '', album.community.have ? `in ${album.community.have.toLocaleString()} collections` : '', album.community.want ? `${album.community.want.toLocaleString()} want it` : ''].filter(Boolean).join(' · ')));
+  }
+  // More like this (Claude)
+  function drawLike(body) {
+    const liked = store.get(likeKey, null);
+    const render = (items) => {
+      body.innerHTML = '';
+      const grid = el('div', { class: 'grid' });
+      for (const a of items) {
+        const tile = albumTile(a); grid.append(tile);
+        if (!a.id) resolveAlbum(a.artist, a.title).then(hit => { if (!hit || !tile.isConnected) return; a.id = hit.id; a.img = hit.img || a.img; store.set(likeKey, { t: Date.now(), items }); tile.replaceWith(albumTile(a)); });
+      }
+      body.append(grid);
+      const whys = items.filter(a => a.why);
+      if (whys.length) body.append(el('div', { class: 'list' }, whys.map(a => el('div', { class: 'crow' }, el('div', { class: 't', text: `${a.artist} — ${a.title}` }), el('div', { class: 'snip', text: a.why })))));
+      body.append(el('div', { class: 'mono' }, 'Picked by Claude'));
+    };
+    if (liked) render(liked.items);
+    else if (settings.anthropicKey) body.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const reply = await askClaude(`A listener loves the album "${title}" by ${artistName}${ry ? ' (' + ry + ')' : ''}. Recommend 6 albums to hear next: three close to it in sound and era, three that share its spirit but come from a different scene or decade. No other albums by ${artistName}; real releases only. Reply with ONLY JSON: {"albums":[{"artist":"...","title":"...","year":1999,"why":"one short sentence on the connection"}]}`, 900); const items = (parseJSON(reply).albums || []).slice(0, 8); store.set(likeKey, { t: Date.now(), items }); render(items); } catch (err) { b.disabled = false; b.textContent = 'Find similar albums'; toast(err.message, 4000); } } }, icon('spark'), 'Find similar albums'));
+    else body.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to get recommendations.'));
+  }
+  if (store.get(likeKey, null)) fLike.setMeta('ready');
+
+  // Coverage lookups in the background: Wikipedia (ratings, reviews, press, summary) and Google Books (period magazines)
   (async () => {
     const cacheKey = 'hear.cov.' + album.id;
     let cov = store.get(cacheKey, null);
     if (cov && Date.now() - cov.t > 7 * 864e5) cov = null;
-    const status = el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Looking up ratings, reviews and press…');
-    coverage.append(status);
     if (!cov) {
       cov = { t: Date.now(), wikiUrl: null, wikiTitle: null, summary: null, ratings: [], metacritic: null, entries: [], press: [] };
       const who = album.primaryArtist;
@@ -1842,8 +2192,9 @@ async function AlbumView(id, rid) {
           cov.wikiTitle = p.title; cov.wikiUrl = p.url; cov.ratings = parsed.ratings; cov.metacritic = parsed.metacritic; cov.entries = parsed.entries;
           store.set('hear.wptitle.' + album.id, p.title);
           const rs0 = parsed.ratings; const mean0 = rs0.length ? rs0.reduce((s, r) => s + r.norm, 0) / rs0.length : (parsed.metacritic ? parsed.metacritic.norm : null);
-          Ratings.put(album.id, { score: mean0, n: rs0.length, mc: parsed.metacritic ? parsed.metacritic.raw : null, mcUrl: parsed.metacritic ? parsed.metacritic.url : null, hasBox: !!(rs0.length || parsed.metacritic), title: p.title, sources: rs0.map(r => ({ source: r.source, raw: r.raw, norm: r.norm, url: r.url || null })), blurb: parsed.blurb || (store.get('hear.rating.' + album.id, {}) || {}).blurb || '' });
-          ratingLine.innerHTML = ''; if (mean0 != null) ratingLine.append(ratingBadge(ratingItem, { now: true, count: true, size: 'lg' }));
+          const prevR = Ratings.cached(album.id);
+          // A real aggregate replaces whatever was there; if Wikipedia has no scores, an existing estimate or web result stays (merge keeps it).
+          if (!(mean0 == null && prevR && prevR.web && prevR.score != null)) Ratings.put(album.id, Ratings.merge(prevR, { score: mean0, n: rs0.length, mc: parsed.metacritic ? parsed.metacritic.raw : null, mcUrl: parsed.metacritic ? parsed.metacritic.url : null, hasBox: !!(rs0.length || parsed.metacritic), title: p.title, sources: rs0.map(r => ({ source: r.source, raw: r.raw, norm: r.norm, url: r.url || null })), blurb: parsed.blurb || (prevR || {}).blurb || '', wp: true }));
           cov.summary = await WP.summary(p.title);
         } catch (e) { console.warn('Wikipedia', e); }
       })();
@@ -1852,76 +2203,17 @@ async function AlbumView(id, rid) {
       store.set(cacheKey, cov);
     }
     if (rid !== routeSeq) return;
-    status.remove();
     covData = cov;
-    drawCoverage(cov);
+    const arts = (cov.entries || []).filter(e => e.kind !== 'review' && e.kind !== 'aggregate').length + (cov.press || []).length;
+    fPress.setMeta(arts ? `${arts} found` : 'nothing found');
+    if (cov.summary) fAbout.setMeta('Wikipedia'); else if (album.notes) fAbout.setMeta('Discogs notes');
+    fReviews.refresh(); fPress.refresh(); fAbout.refresh();
   })();
 
-  // More like this (Claude)
-  const likeSec = el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'More like this'), el('div', { class: 'mono' }, 'Claude')));
-  const likeBody = el('div', { class: 'stack' });
-  likeSec.append(likeBody); view.append(likeSec);
-  const likeKey = 'hear.like.' + album.id; const liked = store.get(likeKey, null);
-  function drawLike(items) {
-    likeBody.innerHTML = '';
-    const grid = el('div', { class: 'grid' });
-    for (const a of items) {
-      const tile = albumTile(a); grid.append(tile);
-      if (!a.id) resolveAlbum(a.artist, a.title).then(hit => { if (!hit || !tile.isConnected) return; a.id = hit.id; a.img = hit.img || a.img; store.set(likeKey, { t: Date.now(), items }); tile.replaceWith(albumTile(a)); });
-    }
-    likeBody.append(grid);
-    const whys = items.filter(a => a.why);
-    if (whys.length) likeBody.append(el('div', { class: 'list' }, whys.map(a => el('div', { class: 'crow' }, el('div', { class: 't', text: `${a.artist} — ${a.title}` }), el('div', { class: 'snip', text: a.why })))));
-  }
-  if (liked) drawLike(liked.items);
-  else if (settings.anthropicKey) likeBody.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const reply = await askClaude(`A listener loves the album "${title}" by ${artistName}${ry ? ' (' + ry + ')' : ''}. Recommend 6 albums to hear next: three close to it in sound and era, three that share its spirit but come from a different scene or decade. No other albums by ${artistName}; real releases only. Reply with ONLY JSON: {"albums":[{"artist":"...","title":"...","year":1999,"why":"one short sentence on the connection"}]}`, 900); const items = (parseJSON(reply).albums || []).slice(0, 8); store.set(likeKey, { t: Date.now(), items }); drawLike(items); } catch (err) { b.disabled = false; b.textContent = 'Find similar albums'; toast(err.message, 4000); } } }, icon('spark'), 'Find similar albums'));
-  else likeBody.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to get recommendations.'));
-
-  // Styles & tags
-  const styleNames = album.styles.length ? album.styles : album.tags;
-  const tagHost = el('div', { class: 'wrap', id: 'tags' });
-  const tagSection = el('div', { class: 'section' }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Styles & tags'), el('div', { class: 'mono' }, album.tagSource)), tagHost);
-  const drawTags = (names) => { tagHost.innerHTML = ''; if (!names.length) { tagHost.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'No tags yet.')); return; } for (const n of names) tagHost.append(el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(n)}` }, titleCase(n))); };
-  drawTags(styleNames);
-  view.append(tagSection);
-
-  // Moods: AI-generated (optional)
-  const moodSection = el('div', { class: 'section' });
-  const moodBody = el('div', { class: 'stack' });
-  moodSection.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Moods'), el('div', { class: 'mono' }, 'AI-generated')), moodBody);
-  view.append(moodSection);
-  const cachedMood = store.get('hear.ai.' + album.id, null);
-  function drawMoods(m) {
-    moodBody.innerHTML = '';
-    moodBody.append(el('div', { class: 'wrap' }, (m.moods || []).map(x => el('span', { class: 'tag soft', text: x }))));
-    if (m.blurb) moodBody.append(el('div', { style: { fontSize: '14px', lineHeight: 1.45 } }, m.blurb));
-    moodBody.append(el('div', { class: 'mono' }, `Written by ${settings.model || DEFAULTS.model} — may be wrong; check the links above.`));
-  }
-  if (cachedMood) drawMoods(cachedMood);
-  else if (settings.anthropicKey) moodBody.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const m = parseJSON(await askClaude(`Album: "${title}" by ${artistName}${album.year ? ' (' + album.year + ')' : ''}.\nGive AllMusic-style mood descriptors for this specific album. Reply with ONLY JSON: {"moods":["six to eight single words or two-word phrases"],"blurb":"two plain sentences describing how it sounds and when to play it; no superlatives; if you are not confident you know this album, say so in the blurb"}`, 600)); store.set('hear.ai.' + album.id, m); drawMoods(m); } catch (err) { b.disabled = false; b.textContent = 'Generate moods'; toast(err.message, 3500); } } }, icon('spark'), 'Generate moods'));
-  else moodBody.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to generate mood tags.'));
-
-  // Labels, formats, tracks
-  const relSection = el('div', { class: 'section' });
-  const trackHost = el('div', { class: 'section' });
-  view.append(relSection, trackHost);
-  function drawRelease() {
-    relSection.innerHTML = '';
-    const detail = [album.releasesCount ? `${album.releasesCount} release${album.releasesCount === 1 ? '' : 's'}` : '', album.formats.length ? album.formats.slice(0, 3).join(' · ') : '', album.country, album.released].filter(Boolean).join(' · ');
-    if (album.labels.length || detail) relSection.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, album.labels.length ? 'Labels' : 'Release'), el('div', { class: 'mono' }, detail)));
-    if (album.labels.length) relSection.append(el('div', { class: 'wrap' }, album.labels.slice(0, 8).map(l => el('a', { class: 'tag', href: `#/label/${l.id}` }, l.name + (l.catno ? ` · ${l.catno}` : '')))));
-    trackHost.innerHTML = '';
-    if (album.discs && album.discs.length) {
-      const total = album.discs.reduce((n, d) => n + d.tracks.length, 0);
-      trackHost.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Tracks'), el('div', { class: 'mono' }, `${total} track${total === 1 ? '' : 's'}`)));
-      for (const d of album.discs) { if (d.title) trackHost.append(el('div', { class: 'mono', style: { paddingTop: '6px' } }, d.title)); for (const t of d.tracks) trackHost.append(el('div', { class: 'track' }, el('span', { class: 'n', text: t.n }), el('span', { class: 'tt', text: t.title }), el('span', { class: 'len', text: t.len }))); }
-    }
-    shelfItem.labels = album.labels.map(l => l.name);
-  }
   if (album.more) {
-    relSection.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Loading releases & tracks…'));
-    album.more().then(() => { if (rid !== routeSeq) return; links = serviceLinks(artistName, title, album.exact); drawLinks(); if (covData) drawCoverage(covData); drawRelease(); }).catch(() => { relSection.innerHTML = ''; relSection.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load release details.")); });
-  } else drawRelease();
+    trackHost.append(loadingRow('Loading tracks…'));
+    album.more().then(() => { if (rid !== routeSeq) return; links = serviceLinks(artistName, title, album.exact); drawLinks(); drawMeta(); shelfItem.labels = album.labels.map(l => l.name); drawTracks(); fReviews.refresh(); fAbout.refresh(); }).catch(() => { trackHost.innerHTML = ''; trackHost.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load the tracklist.")); });
+  } else drawTracks();
 
   // Exact streaming links from MusicBrainz, in the background, for Discogs-sourced albums
   if (album.source === 'dg') (async () => {
@@ -1933,7 +2225,7 @@ async function AlbumView(id, rid) {
       const rd = await MB.get('release', { 'release-group': g.id, inc: 'url-rels', limit: 50 }, { bg: true });
       for (const r of rd.releases || []) collectLinks(r.relations, album.exact);
       if (rid !== routeSeq) return;
-      links = serviceLinks(artistName, title, album.exact); drawLinks(); if (covData) drawCoverage(covData);
+      links = serviceLinks(artistName, title, album.exact); drawLinks(); fReviews.refresh();
     } catch (e) { }
   })();
 
@@ -1946,7 +2238,7 @@ async function AlbumView(id, rid) {
       else { const s = await DG.get('database/search', { type: 'master', artist: artistName, release_title: title, per_page: 1 }); const hit = s && s.results && s.results[0]; if (hit && hit.master_id) master = await DG.get(`masters/${hit.master_id}`); }
       if (!master || rid !== routeSeq) return;
       const styles = [...(master.genres || []), ...(master.styles || [])];
-      if (styles.length) { drawTags(styles); tagSection.querySelector('.mono').textContent = 'Discogs'; }
+      if (styles.length) { album.styles = styles; album.tagSource = 'Discogs'; drawStyleLine(styles); fAbout.refresh(); }
       if (!cover.classList.contains('has-img') && master.images && master.images[0]) cover.setImage(master.images[0].uri);
       if (!links.discogsExact) { album.exact.discogs = master.uri; links = serviceLinks(artistName, title, album.exact); drawLinks(); }
     } catch (e) { console.warn('Discogs', e); }
@@ -1997,7 +2289,10 @@ async function LabelView(id, rid) {
     draw();
   }
   if (total > 500) status.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, `Showing the first 500 of ${total} catalog entries.`));
-  if (!groups.size) { status.innerHTML = ''; status.append(el('div', { class: 'empty' }, 'MusicBrainz lists no releases for this label.')); }
+  if (!groups.size) { status.innerHTML = ''; status.append(el('div', { class: 'empty' }, 'MusicBrainz lists no releases for this label.')); return; }
+  const labelItems = () => [...groups.values()].map(g => ({ id: g.id, title: g.title, artist: g.artist, year: year(g.date) }));
+  const rb = rateRestButton(labelItems); if (rb) status.append(el('div', { class: 'row', style: { paddingTop: '8px' } }, rb));
+  autoRate(labelItems());
 }
 
 // ============================================================
@@ -2039,8 +2334,9 @@ function ShelfView() {
     const tools = el('div', { class: 'row', style: { paddingTop: '20px', gap: '8px', flexWrap: 'wrap' } });
     tools.append(el('button', { class: 'btn sm quiet', onclick: () => { const blob = new Blob([JSON.stringify({ app: 'Hear', exported: new Date().toISOString(), shelf: Shelf.all(), crates: Crates.all() }, null, 2)], { type: 'application/json' }); const a = el('a', { href: URL.createObjectURL(blob), download: 'hear-shelf.json' }); document.body.append(a); a.click(); a.remove(); } }, 'Export shelf'));
     const fileIn = el('input', { type: 'file', accept: 'application/json,.json', hidden: true, onchange: async (e) => { const f = e.target.files[0]; if (!f) return; try { const data = JSON.parse(await f.text()); const list = Array.isArray(data) ? data : data.shelf; if (!Array.isArray(list)) throw new Error('Not a shelf file'); const cur = Shelf.all(); const ids = new Set(cur.map(x => x.id)); let n = 0; for (const it of list) if (it && it.id && !ids.has(it.id)) { cur.push(it); ids.add(it.id); n++; } Shelf.replace(cur); if (Array.isArray(data.crates)) { const cc = Crates.all(); const cids = new Set(cc.map(c => c.id)); for (const c of data.crates) if (c && c.id && !cids.has(c.id)) cc.push(c); store.set(Crates.key, cc); } toast(`Imported ${n} album${n === 1 ? '' : 's'}`); route(); } catch (err) { toast('Import failed: ' + err.message, 3000); } } });
-    tools.append(el('button', { class: 'btn sm quiet', onclick: () => fileIn.click() }, 'Import'), fileIn);
+    tools.append(el('button', { class: 'btn sm quiet', onclick: () => fileIn.click() }, 'Import'), fileIn, rateRestButton(() => items));
     body.append(tools);
+    autoRate(items);
   }
   function drawCrates() {
     chips.hidden = true;
@@ -2082,9 +2378,13 @@ function CrateView(id) {
 // ============================================================
 // Moods
 // ============================================================
-function MoodsView() {
+function MoodsView(pre) {
   setTop({ brand: true });
-  let picked = store.get('hear.moodPick', []).filter(w => MOODS.some(([, ws]) => ws.includes(w)));
+  const valid = (w) => MOODS.some(([, ws]) => ws.includes(w));
+  let picked = store.get('hear.moodPick', []).filter(valid);
+  // #/moods/<mood> (from the Home browse table) starts a fresh search for that one mood
+  const preset = pre && valid(pre) ? pre : (pre ? MOODS.flatMap(([, ws]) => ws).find(w => w.toLowerCase() === pre.toLowerCase()) : null);
+  if (preset) { picked = [preset]; store.set('hear.moodPick', picked); }
   const keyFor = (p) => 'hear.mood.' + p.slice().sort().join('|').toLowerCase();
   const head = el('div', { class: 'stack', style: { gap: '4px' } }, el('h1', { text: 'Moods' }), el('div', { class: 'muted', style: { fontSize: '14px', lineHeight: 1.4 } }, 'Pick up to three. Claude finds records that feel like that, across genres and decades.'));
   const groups = el('div', { class: 'stack', style: { gap: '14px', paddingTop: '14px' } });
@@ -2132,7 +2432,118 @@ function MoodsView() {
   }
   drawChips();
   const cachedNow = picked.length ? store.get(keyFor(picked), null) : null;
-  if (cachedNow) draw(cachedNow); else drawBar();
+  if (cachedNow) draw(cachedNow); else if (preset) { drawBar(); run(); } else drawBar();
+}
+
+// ============================================================
+// Ask Claude — ten records for any request, as a vertical cover flow
+// ============================================================
+function hashKey(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36); }
+async function AIView(text, rid) {
+  const q = (text || '').trim();
+  setTop({ back: true, title: 'Ask Claude' });
+  if (!q) {
+    view.append(el('div', { class: 'stack', style: { gap: '6px' } }, el('div', { class: 'eyebrow' }, 'Ask Claude'), el('h1', { text: 'What do you want to hear?' })), el('div', { style: { paddingTop: '14px' } }, browseAsk()));
+    setTimeout(() => { const i = $('#aiq'); if (i) i.focus(); }, 50);
+    return;
+  }
+  const key = 'hear.aiq.' + hashKey(q.toLowerCase());
+  view.append(el('div', { class: 'stack', style: { gap: '6px' } }, el('div', { class: 'eyebrow' }, 'Ask Claude'), el('h1', { class: 'aiq', text: q })),
+    el('div', { style: { paddingTop: '12px' } }, aiBar('', { placeholder: 'Ask for something else…' })));
+  const out = el('div', { class: 'stack', style: { paddingTop: '14px' } });
+  view.append(out);
+  if (!settings.anthropicKey) {
+    out.append(el('div', { class: 'notice' }, 'Ask Claude needs a Claude API key. Add one in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), '. Without one, ', el('a', { class: 'link', href: '#/search', onclick: () => { searchState.mode = 'describe'; searchState.describe = q; store.set('hear.search', { mode: 'describe', q: searchState.q, results: searchState.results, describe: q, describeOut: null }); } }, 'Describe it'), ' in Search hands the request to claude.ai and shows the list you paste back.'));
+    return;
+  }
+  let res = store.get(key, null);
+  if (!res || !Array.isArray(res.albums)) {
+    out.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Asking Claude…'));
+    try { res = await askPicks(q, { rich: true }); res.t = Date.now(); store.set(key, res); pruneKeys('hear.aiq.', 30); }
+    catch (err) { if (rid !== routeSeq) return; out.innerHTML = ''; out.append(el('div', { class: 'notice warn' }, err.message)); return; }
+    if (rid !== routeSeq) return;
+  }
+  rememberAsk(q);
+  let stopFx = null;
+  currentCleanup = () => { if (stopFx) stopFx(); document.documentElement.classList.remove('snapy'); };
+  const draw = (r) => {
+    res = r; store.set(key, res);
+    if (stopFx) { stopFx(); stopFx = null; }
+    out.innerHTML = '';
+    if (!res.albums.length) { out.append(el('div', { class: 'empty' }, 'Nothing came back. Try different words.')); return; }
+    const tools = el('div', { class: 'row', style: { gap: '12px', flexShrink: 0 } });
+    tools.append(crateSaver(tools, res, q));
+    out.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, `${res.albums.length} records`), tools),
+      el('div', { class: 'mono', text: [`picked by ${res.source}`, res.refined ? 'refined: ' + res.refined : ''].filter(Boolean).join(' · ') }));
+    const doRefine = async (t) => {
+      out.innerHTML = ''; out.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), t ? 'Refining…' : 'Finding a different set…'));
+      try { const r2 = await refinePicks(res, t || 'Give me 10 different albums than any you have listed so far, same brief.'); if (rid !== routeSeq) return; if (!t) r2.refined = res.refined || ''; draw(r2); }
+      catch (err) { if (rid !== routeSeq) return; draw(res); toast(err.message, 4000); }
+    };
+    const refine = el('input', { id: 'refine', type: 'text', placeholder: 'Refine: less jazzy, more 70s, no strings…', enterkeyhint: 'send', style: { flex: 1, minWidth: 0, border: 0, outline: 0, background: 'transparent', fontSize: '15px' } });
+    refine.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const t = refine.value.trim(); if (t) doRefine(t); } });
+    out.append(el('div', { class: 'field', style: { height: '48px' } }, icon('spark'), refine, el('button', { type: 'button', class: 'btn sm primary', onclick: () => { const t = refine.value.trim(); if (t) doRefine(t); } }, 'Refine')));
+    const flow = el('div', { class: 'vflow' });
+    const pending = [];
+    res.albums.forEach((a, i) => { const { card, ready } = aiCard(a, i, res.albums.length, () => store.set(key, res)); flow.append(card); pending.push(ready); });
+    out.append(flow, el('div', { class: 'row', style: { justifyContent: 'center', paddingTop: '12px' } }, el('button', { type: 'button', class: 'btn sm quiet', onclick: () => doRefine('') }, 'Ten different records')));
+    document.documentElement.classList.add('snapy');
+    stopFx = vflowFx(flow);
+    // Stars under every pick: real scores where Wikipedia has them, Claude's estimate for the rest.
+    Promise.all(pending).then(() => { if (rid !== routeSeq) return; rateAll(res.albums.filter(a => a.id)).catch(() => { }); });
+  };
+  draw(res);
+}
+function aiCard(a, i, n, onChange) {
+  const cov = el('div', { class: 'vcov' }, coverEl(a.id || null, a.title, 500, null, a.img));
+  const artistEl = () => a.artistId
+    ? el('a', { class: 'vartist', href: `#/artist/${a.artistId}` }, a.artist)
+    : el('button', { type: 'button', class: 'vartist', onclick: async (e) => { const b = e.currentTarget; b.style.opacity = '0.5'; const hit = await resolveArtist(a.artist); if (hit) { a.artistId = hit.id; onChange(); location.hash = `#/artist/${hit.id}`; } else { b.style.opacity = '1'; toast('Not found in the catalog'); } } }, a.artist);
+  const metaText = () => [a.year ? String(a.year) : '', a.label || ''].filter(Boolean).join(' · ');
+  const meta = el('div', { class: 'mono vmeta', text: metaText() });
+  const rb = el('div', { class: 'rbslot' }, ratingBadge(a, { count: true }));
+  const links = serviceLinks(a.artist, a.title);
+  let notFound = false;
+  const qobuzFirst = settings.primary === 'qobuz';
+  const btns = () => el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap', paddingTop: '4px' } },
+    el('a', { class: 'btn sm primary', href: qobuzFirst ? links.qobuz : links.spotify, target: '_blank', rel: 'noopener' }, icon('play'), qobuzFirst ? 'Hear on Qobuz' : 'Hear on Spotify'),
+    el('a', { class: 'btn sm', href: qobuzFirst ? links.spotify : links.qobuz, target: '_blank', rel: 'noopener' }, icon('play'), qobuzFirst ? 'Spotify' : 'Qobuz'),
+    a.id ? el('a', { class: 'btn sm quiet', href: `#/album/${a.id}` }, 'Details') : el('span', { class: 'mono', text: notFound ? 'not in the catalog' : 'matching…' }));
+  const btnHost = el('div', {}, btns());
+  const card = el('article', { class: 'vcard' }, cov, el('div', { class: 'vn', text: `${i + 1} of ${n}` }),
+    el('div', { class: 'stack', style: { gap: '4px' } }, el('h2', { text: a.title }), artistEl(), meta, rb),
+    a.why ? el('div', { class: 'vwhy', text: a.why }) : null, btnHost);
+  const ready = a.id ? Promise.resolve() : resolveAlbum(a.artist, a.title).then(hit => {
+    if (!card.isConnected) return;
+    if (!hit) { notFound = true; btnHost.innerHTML = ''; btnHost.append(btns()); return; }
+    a.id = hit.id; a.img = hit.img || a.img; if (!a.label && hit.label) a.label = hit.label; if (!a.year && hit.year) a.year = hit.year; onChange();
+    cov.innerHTML = ''; cov.append(coverEl(a.id, a.title, 500, null, a.img));
+    meta.textContent = metaText();
+    rb.innerHTML = ''; rb.append(ratingBadge(a, { count: true }));
+    btnHost.innerHTML = ''; btnHost.append(btns());
+  });
+  return { card, ready };
+}
+// The "cover flow" feel: covers tilt and shrink as they leave the focus line, with the document snapping card to card.
+function vflowFx(container) {
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return () => { };
+  let ticking = false;
+  const update = () => {
+    ticking = false;
+    const vh = window.innerHeight || 800; const mid = vh * 0.45;
+    for (const c of container.querySelectorAll('.vcov')) {
+      const r = c.getBoundingClientRect();
+      if (r.bottom < -vh || r.top > vh * 2) continue;
+      const off = (r.top + r.height / 2 - mid) / vh; // negative above the focus line, positive below
+      const d = Math.min(1, Math.abs(off));
+      c.style.transform = `perspective(900px) rotateX(${(-off * 16).toFixed(1)}deg) scale(${(1 - 0.1 * d).toFixed(3)})`;
+      c.style.opacity = (1 - 0.35 * d).toFixed(2);
+    }
+  };
+  const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
+  window.addEventListener('scroll', onScroll, { passive: true }); window.addEventListener('resize', onScroll);
+  requestAnimationFrame(update); setTimeout(update, 300);
+  return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); };
 }
 
 // ============================================================
@@ -2148,12 +2559,12 @@ function SettingsView() {
       el('button', { type: 'button', class: 'btn sm quiet', onclick: async () => { const v = inp.value.trim(); if (!v) { toast('Nothing to copy'); return; } try { await navigator.clipboard.writeText(v); toast('Copied'); } catch (err) { inp.type = 'text'; inp.focus(); inp.select(); toast('Select and copy it from the field'); } } }, 'Copy')) : null;
     return el('div', { class: 'setting' }, el('label', { for: 's-' + key, text: label }), inp, tools, help ? el('div', { class: 'help' }, help) : null);
   }
-  function select(key, label, options, help) { const s = el('select', { id: 's-' + key }, options.map(([v, l]) => el('option', { value: v, selected: settings[key] === v ? true : null }, l))); f[key] = s; return el('div', { class: 'setting' }, el('label', { for: 's-' + key, text: label }), s, help ? el('div', { class: 'help' }, help) : null); }
+  function select(key, label, options, help) { const cur = typeof settings[key] === 'boolean' ? (settings[key] ? 'yes' : 'no') : settings[key]; const s = el('select', { id: 's-' + key }, options.map(([v, l]) => el('option', { value: v, selected: cur === v ? true : null }, l))); f[key] = s; return el('div', { class: 'setting' }, el('label', { for: 's-' + key, text: label }), s, help ? el('div', { class: 'help' }, help) : null); }
   const statusRow = el('div', { class: 'stack', style: { gap: '6px' } },
     el('div', { class: 'status' }, el('span', { class: 'dot ok' }), 'MusicBrainz & Cover Art Archive — always on, no key'),
     el('div', { class: 'status' }, el('span', { class: 'dot' + (DG.on() ? ' ok' : '') }), DG.on() ? `Discogs — connected as ${settings.discogsUser || '?'} · main catalog` : settings.discogsToken ? (settings.discogsOk === false ? 'Discogs — token set but the connection test failed' : 'Discogs — token set, not connected yet') : 'Discogs — not connected (MusicBrainz is the catalog)'),
     el('div', { class: 'status' }, el('span', { class: 'dot' + (settings.anthropicKey ? ' ok' : '') }), settings.anthropicKey ? 'Claude — key set' : 'Claude — optional, not set'));
-  const form = el('form', { class: 'stack', style: { gap: '18px', paddingTop: '18px' }, onsubmit: (e) => { e.preventDefault(); const tok = f.discogsToken.value.trim(); saveSettings({ discogsToken: tok, discogsOk: tok ? settings.discogsOk : null, discogsUser: tok ? settings.discogsUser : '', source: f.source.value, anthropicKey: f.anthropicKey.value.trim(), model: f.model.value.trim() || DEFAULTS.model, qobuzRegion: f.qobuzRegion.value.trim() || 'us-en', primary: f.primary.value, theme: f.theme.value, showApple: f.showApple.value === 'yes' }); toast('Settings saved'); route(); } },
+  const form = el('form', { class: 'stack', style: { gap: '18px', paddingTop: '18px' }, onsubmit: (e) => { e.preventDefault(); const tok = f.discogsToken.value.trim(); saveSettings({ discogsToken: tok, discogsOk: tok ? settings.discogsOk : null, discogsUser: tok ? settings.discogsUser : '', source: f.source.value, anthropicKey: f.anthropicKey.value.trim(), model: f.model.value.trim() || DEFAULTS.model, autoRate: f.autoRate.value === 'yes', qobuzRegion: f.qobuzRegion.value.trim() || 'us-en', primary: f.primary.value, theme: f.theme.value, showApple: f.showApple.value === 'yes' }); toast('Settings saved'); route(); } },
     el('div', { class: 'eyebrow' }, 'Listening'),
     select('primary', 'Main service', [['spotify', 'Spotify first'], ['qobuz', 'Qobuz first']], 'Which “Hear on…” button is the big one.'),
     field('qobuzRegion', 'Qobuz store region', 'Used for Qobuz search links, e.g. us-en, gb-en, fr-fr.'),
@@ -2163,8 +2574,9 @@ function SettingsView() {
     field('discogsToken', 'Discogs personal access token', el('span', {}, 'Makes Discogs the catalog: fast artwork, genres and styles on everything, most-collected ordering, your collection. Create one at ', el('a', { class: 'link', href: 'https://www.discogs.com/settings/developers', target: '_blank', rel: 'noopener' }, 'discogs.com/settings/developers'), ', paste it, then tap Connect.'), 'password'),
     el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap' } }, el('button', { type: 'button', class: 'btn sm primary', onclick: async (e) => { const b = e.currentTarget; const tok = f.discogsToken.value.trim(); if (!tok) { toast('Paste your Discogs token first'); return; } b.disabled = true; b.textContent = 'Connecting…'; saveSettings({ discogsToken: tok }); try { const me = await DG.identity(); saveSettings({ discogsUser: me.username || '', discogsOk: true }); toast(`Connected to Discogs as ${me.username}`); route(); } catch (err) { saveSettings({ discogsOk: false }); b.disabled = false; b.textContent = 'Connect'; toast(/TypeError|Failed to fetch/i.test(String(err)) ? "Discogs refused the request from this browser. The app will keep using MusicBrainz." : 'Discogs said: ' + err.message, 6000); } } }, 'Connect'), el('div', { class: 'help', style: { flex: 1, minWidth: '160px' } }, 'Tests the token and switches the catalog to Discogs.')),
     select('source', 'Catalog', [['auto', 'Discogs when connected (recommended)'], ['musicbrainz', 'MusicBrainz']], 'Where artists, albums and labels come from. Links, ratings and reviews work either way.'),
-    field('anthropicKey', 'Claude API key (optional)', el('span', {}, 'Powers “Describe it” recommendations and mood tags. Keys stay in this browser only. Get one at ', el('a', { class: 'link', href: 'https://console.anthropic.com/', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), '.'), 'password'),
+    field('anthropicKey', 'Claude API key (optional)', el('span', {}, 'Powers Ask Claude, Moods, “more like this”, estimated ratings and web checks. Keys stay in this browser only (each address keeps its own settings). Create one at ', el('a', { class: 'link', href: 'https://console.anthropic.com/', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), ' → API Keys; it starts with sk-ant-api03-. Other kinds of key are rejected with a 401.'), 'password'),
     field('model', 'Claude model', 'Model name for recommendations.'),
+    select('autoRate', 'Rate unrated albums automatically', [['no', 'No — use the “Rate the rest” button'], ['yes', 'Yes — on every artist, label, genre and shelf page']], 'Albums without critic scores get Claude\'s estimated star rating (shown muted, marked “est.”). Automatic rating costs about a cent per page of unrated albums; album pages always estimate their one album.'),
     el('div', { class: 'btnrow' }, el('button', { class: 'btn primary', type: 'submit' }, 'Save settings')));
   view.append(el('div', { class: 'stack', style: { gap: '10px' } }, el('h1', { text: 'Settings' }), statusRow), form,
     el('div', { class: 'section' }, el('div', { class: 'eyebrow' }, 'Housekeeping'),

@@ -1,7 +1,7 @@
 /* Hear — service worker. Caches the app shell so the icon on your home screen opens instantly.
    Catalog requests (MusicBrainz, Cover Art Archive, Discogs, Claude) always go to the network.
    Bump VERSION whenever index.html changes so phones pick up the new build. */
-const VERSION = 'hear-v10';
+const VERSION = 'hear-v11';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {

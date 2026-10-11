@@ -31,11 +31,12 @@ Open the Settings tab inside the app.
 - **Main service**: which "Hear on…" button is the big one (Spotify or Qobuz).
 - **Qobuz store region**: used for Qobuz search links, e.g. `us-en`.
 - **Discogs personal access token**: paste it and tap *Connect*; the app checks the token, remembers your username, and switches the catalog to Discogs. Create one at discogs.com/settings/developers (free).
-- **Claude API key**: powers the "Describe it" search ("hazy late-night dub-tinged post-punk…") and the AI mood tags on album pages. Get one at console.anthropic.com; usage is pay-as-you-go and tiny for this. Keys are stored only in your browser.
+- **Claude API key**: powers Ask Claude ("hazy late-night dub-tinged post-punk with a female vocal…"), Moods, "more like this", estimated star ratings and web checks for real scores. Create it at console.anthropic.com → *API Keys*; a Console key starts with `sk-ant-api03-` (other kinds of token are rejected with a 401 "invalid x-api-key"). The Console account also needs a small prepaid balance. Keys are stored only in your browser, and each address (the GitHub Pages site, localhost…) keeps its own settings.
+- **Rate unrated albums automatically**: off by default. When on, artist, label, genre and shelf pages ask Claude for estimated ratings of every album that has no critic score, in the background. Off, the same thing is a "Rate the rest" button on those pages.
 
-Without a Claude key, "Describe it" offers an **Ask Claude** button that opens claude.ai with your description typed in; paste the list it gives you back into the app and the albums appear as cards. (A rough MusicBrainz tag search is also there, but tags can't follow a real description.) With a key, searches run inside the app and you can refine the results in follow-ups ("less jazzy", "more 70s").
+Without a Claude key, "Describe it" in the Search tab offers an **Ask Claude ↗** button that opens claude.ai with your description typed in; paste the list it gives you back into the app and the albums appear as cards. (A rough MusicBrainz tag search is also there, but tags can't follow a real description.)
 
-What the key costs: a "Describe it" search is about a cent with Sonnet, mood tags a fraction of a cent, and a "Dig deeper" web search about ten cents per album (cached). Current prices: https://platform.claude.com/docs/en/about-claude/pricing
+What the key costs with Sonnet: an Ask Claude search about a cent, a page of estimated ratings about a cent, mood tags a fraction of a cent, and a web check ("Dig deeper", "Check the web for real scores") about ten cents per album (cached). Current prices: https://platform.claude.com/docs/en/about-claude/pricing
 
 ## Home
 
@@ -47,27 +48,54 @@ The Home tab shows three cover flows that change every time you open or shuffle 
 
 Plus a search box with type-ahead suggestions (artists, albums and labels appear as you type; things you've already visited come first) and your recently viewed albums. The shuffle button in the corner draws a new set.
 
+Under the search box, three ways to browse (tap one to open it, tap again to close):
+
+- **Genres**: a table of sixteen major genres (Rock, Pop, Electronic, Hip Hop, Jazz, Funk / Soul, Blues, Folk, Country, Reggae, Latin, World, Classical, Metal, Punk, Experimental) with their styles underneath, AllMusic-style. Every name is a link to a genre page.
+- **Moods**: the same table for moods (Feel, Energy, Texture, Voice, Mind, Time & place). Tap one and the Moods tab finds records that feel like it; a link below lets you mix up to three.
+- **Ask Claude**: a search bar for exactly what you want to hear, plus your recent asks and a few examples. See below.
+
+## Ask Claude
+
+Type what you want to hear the way you would say it to a friend behind the counter ("spiritual jazz from the 70s that feels like a sunrise", "like the last two Talk Talk records but made this decade") and the result is its own page: a vertical cover flow of ten records, each with a big cover, the artist, the album, the release year and label, its star rating, and two or three sentences from Claude on why it fits what you asked for and where it only half-fits. Covers tilt and shrink as they leave the middle of the screen and the page snaps from record to record.
+
+Each card has Hear on Spotify / Qobuz buttons and a Details link once the album is matched to the catalog. Below the list: a refine box ("less jazzy", "more 70s", "no strings"), "Ten different records" for a fresh set, and "Save as crate". Results are cached per question, so coming back is free; the last thirty questions are kept.
+
+The Search tab's "Describe it" sends you to the same page when a key is set. Genre pages and the home spotlight have an "Ask Claude for deeper cuts" link that fills the question in for you.
+
 ## Artist and genre pages
 
-An artist page opens with their photo and a short bio (from Wikipedia, with Discogs as a photo fallback when a token is set), their genres as tappable chips, and their releases as horizontal rows: Albums, EPs, Singles, Compilations, Live, Other, newest first, each cover with its star rating underneath.
+An artist page opens with their photo and a short bio (from Wikipedia, with Discogs as a photo fallback when a token is set), their genres as tappable chips, and their releases as horizontal rows, AllMusic-style: **Albums** (studio and live), **Singles & EPs**, **Compilations**, oldest first, each cover with its star rating underneath.
+
+With Discogs as the catalog, the discography is the artist's *most-collected* masters (up to 300), which is what makes the main albums reliable: Discogs lists thousands of entries for a big artist, most of them bootlegs, regional pressings and "appears on" compilations, so asking for "the newest 300" used to miss the classics. Collection counts put the real albums first, and the masters come with full-size covers rather than the 150-pixel thumbnails the release list carries.
 
 A genre page (tap any genre chip) shows Claude's essential artists for that genre, essential albums, and every artist MusicBrainz has tagged with it.
 
 ## Star ratings everywhere
 
-Every album, wherever it appears (cover flows, shelf, label pages, search results, picks), shows its aggregate star rating underneath: the mean of the critic scores in the album's Wikipedia ratings box, normalized to five stars (8/10 → 4★, A− → 4.5★). Badges load only when they scroll into view and are cached for a month, so browsing stays light on Wikipedia. Albums without a Wikipedia ratings box show no badge.
+Every album, wherever it appears (cover flows, shelf, label pages, search results, picks), shows its aggregate star rating underneath: the mean of the critic scores in the album's Wikipedia ratings box, normalized to five stars (8/10 → 4★, A− → 4.5★). Badges load only when they scroll into view and are cached for a month, so browsing stays light on Wikipedia.
 
 **Tap any star rating** to open the review sheet: the aggregate, each critic's score with a link to the review, Metacritic, and "What critics said", the reception paragraph from the album's Wikipedia article (credited and linked).
+
+**Albums with no critic scores** (most of the catalog, outside the famous records) get an estimate from Claude when a key is set, shown in muted stars with an "est." chip so it is never mistaken for a real aggregate. Claude cannot hear the music; the estimate is its reading of the record's reception (AllMusic, Pitchfork, RYM, Metacritic, the press it knows of) on AllMusic's 1–5 scale, with a confidence level, and it says "not enough known" rather than guessing when it doesn't recognize a record. Album pages estimate their own album automatically; artist, label, genre and shelf pages have a "Rate the rest" button (or do it in the background with the auto-rate setting), twenty albums per request. The review sheet and the album page show the one-line reason behind an estimate and a **Check the web for real scores** button, which searches for published reviews and replaces the estimate with their actual scores when it finds any. If Wikipedia later turns out to have a ratings box for an estimated album, the real scores take over.
 
 ## Moods, crates and "more like this" (Claude key)
 
 - **Moods tab**: pick up to three moods ("Dark · Lush · Late night"); Claude finds ten records that feel like that, across genres and decades. Results are cached per combination, can be refined ("more 70s"), swapped for a fresh set, or saved as a crate.
-- **Crates**: any Describe-it or Moods result can be saved with a name. Crates live in the Shelf tab next to your albums and keep their play links and reasons.
+- **Crates**: any Ask Claude or Moods result can be saved with a name. Crates live in the Shelf tab next to your albums and keep their play links and reasons.
 - **More like this**: every album page has a "Find similar albums" button: three records close in sound and era, three kindred spirits from another scene. Cached per album.
+
+## The album page
+
+The album page is deliberately a streaming view: cover, title, artist, year · type · label, the star rating, a few style chips, the Hear on Spotify / Qobuz buttons with secondary links (Bandcamp, Apple Music, Deezer, Tidal, Discogs, YouTube), Add to shelf, and the tracklist. Everything else sits in four collapsed rows you tap to open, and the app remembers which rows you keep open:
+
+- **Ratings & reviews** (the header shows the score, e.g. "4.2 ★ · 5 reviews", or "3.5 ★ est.")
+- **Interviews & articles** (the header shows how many were found)
+- **About**: the Wikipedia summary or Discogs notes, all styles and tags, AI mood tags, and release details (labels, formats, country, date, Discogs collection stats)
+- **More like this**: Claude's six related records
 
 ## Ratings, reviews and press on every album
 
-Each album page looks up what was written about the record:
+Behind those rows, each album page looks up what was written about the record:
 
 - **Ratings**: the "Professional ratings" box from the album's Wikipedia entry (AllMusic, Pitchfork, Rolling Stone, NME, Christgau and so on), each with a link to the review when Wikipedia cites one. Every score is normalized to 5 stars (8/10 → 4★, 85% → 4.25★, A− → 4.5★) and averaged into one aggregate score. Metacritic is shown alongside but not double-counted.
 - **Reviews**: every review Wikipedia cites, plus review links MusicBrainz knows about, sorted by year.
@@ -88,7 +116,7 @@ Wikipedia content is used under CC BY-SA and always linked. Albums without a Wik
 - **MusicBrainz** (musicbrainz.org): catalog, discographies, labels, tags and cross-links. Free, no key, limited to one request per second per user; the app queues and caches requests, so a page can take a few seconds the first time.
 - **Cover Art Archive** (coverartarchive.org): covers. Coverage is good for well-known albums and patchy for obscure ones; missing covers show a colored placeholder (or Discogs art when a token is set).
 - **Discogs** (optional): genres, styles, cover fallback.
-- **Claude** (optional): recommendations and mood tags. AI-written text is labeled as such.
+- **Claude** (optional): recommendations, estimated ratings and web checks. AI-written text and estimated scores are labeled as such.
 - AllMusic reviews are not reproduced; the app links to AllMusic's page for the album.
 
 ## Updating the app
