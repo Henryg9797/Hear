@@ -366,7 +366,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { } }
 };
-const BUILD = 'v16'; // keep in step with VERSION in sw.js
+const BUILD = 'v17'; // keep in step with VERSION in sw.js
 const DEFAULTS = { discogsToken: '', discogsUser: '', discogsOk: null, source: 'auto', anthropicKey: '', model: 'claude-sonnet-5-5', autoRate: false, qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
 let settings = Object.assign({}, DEFAULTS, store.get('hear.settings', {}));
 function saveSettings(patch) { settings = Object.assign({}, settings, patch); store.set('hear.settings', settings); applyTheme(); }
@@ -2784,6 +2784,7 @@ function SettingsView() {
   view.append(el('div', { class: 'stack', style: { gap: '10px' } }, el('h1', { text: 'Settings' }), statusRow), form,
     el('div', { class: 'section' }, el('div', { class: 'eyebrow' }, 'Housekeeping'),
       el('div', { class: 'row', style: { flexWrap: 'wrap', gap: '8px' } },
+        el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Updating…'; try { if (window.caches) for (const k of await caches.keys()) await caches.delete(k); if (navigator.serviceWorker) { const regs = await navigator.serviceWorker.getRegistrations(); for (const r of regs) await r.unregister(); } } catch (err) { } location.reload(); } }, 'Update app'),
         el('button', { class: 'btn sm quiet', onclick: () => { diskCache.clear(); toast('Catalog cache cleared'); } }, 'Clear catalog cache'),
         el('button', { class: 'btn sm quiet', onclick: () => { store.set('hear.recent', []); toast('Recent searches cleared'); } }, 'Clear recent searches'))),
     el('div', { class: 'section' }, el('div', { class: 'eyebrow' }, 'About'),
@@ -2798,7 +2799,11 @@ route();
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   const hadController = !!navigator.serviceWorker.controller; let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (refreshing || !hadController) return; refreshing = true; location.reload(); });
-  navigator.serviceWorker.register('sw.js').then((reg) => { try { reg.update(); } catch (e) { } }).catch(() => { });
+  navigator.serviceWorker.register('sw.js').then((reg) => {
+    try { reg.update(); } catch (e) { }
+    // Check for a new build whenever the app comes back to the foreground (a new one reloads the page once via controllerchange)
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { try { reg.update(); } catch (e) { } } });
+  }).catch(() => { });
 }
 </script>
 </body>
