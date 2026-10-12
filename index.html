@@ -179,8 +179,6 @@ textarea.area { width: 100%; resize: vertical; min-height: 84px; border: 1px sol
 .rb.lg .stars.sm { font-size: 16px; letter-spacing: 1px; }
 .rb.lg .rbn { font-size: 13px; font-weight: 600; }
 .rb.lg .rbc { font-size: 12px; }
-.rb.est .stars .fill { color: var(--muted); }
-.rb .rbe { font-family: var(--mono); font-size: 10px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
 .score { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
 .srow { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; text-decoration: none; color: inherit; }
 .srow:first-of-type { border-top: 0; }
@@ -366,8 +364,8 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { } }
 };
-const BUILD = 'v17'; // keep in step with VERSION in sw.js
-const DEFAULTS = { discogsToken: '', discogsUser: '', discogsOk: null, source: 'auto', anthropicKey: '', model: 'claude-sonnet-5-5', autoRate: false, qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
+const BUILD = 'v18'; // keep in step with VERSION in sw.js
+const DEFAULTS = { discogsToken: '', discogsUser: '', discogsOk: null, source: 'auto', anthropicKey: '', model: 'claude-sonnet-5-5', autoEst: true, qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
 let settings = Object.assign({}, DEFAULTS, store.get('hear.settings', {}));
 function saveSettings(patch) { settings = Object.assign({}, settings, patch); store.set('hear.settings', settings); applyTheme(); }
 function applyTheme() {
@@ -862,22 +860,25 @@ async function estimateRatings(items, opts = {}) {
   }
   return out;
 }
-async function rateAll(items, onProgress = () => { }) {
-  // Real scores first (the normal Wikipedia lookup every badge does), then Claude's estimates for whatever is left, twenty albums per request, at most sixty per call.
-  const seen = new Set(); const list = items.filter(it => it && it.id && it.title && !seen.has(it.id) && seen.add(it.id));
-  const todo = []; let done = 0;
-  await Promise.all(list.map(async (it) => { const r = await Ratings.get(it.id, it.title, it.artist); done++; onProgress('check', done, list.length); if (!r || (r.score == null && !r.est)) todo.push(it); }));
-  const batch = todo.slice(0, 60); let rated = 0;
-  for (let i = 0; i < batch.length; i += 20) { onProgress('rate', rated, batch.length); await estimateRatings(batch.slice(i, i + 20), { checked: true }); rated = Math.min(batch.length, i + 20); }
-  onProgress('done', rated, batch.length);
-  return { checked: list.length, rated, left: todo.length - batch.length };
-}
-function scoresFromWeb(items) {
-  const sources = [];
-  for (const i of items || []) { if (i.kind !== 'review' || !i.score) continue; const sc = parseScore(String(i.score)); if (sc) sources.push({ source: i.work || hostOf(i.url), raw: sc.raw, norm: sc.norm, url: i.url }); }
-  if (!sources.length) return null;
-  return { score: sources.reduce((s, x) => s + x.norm, 0) / sources.length, n: sources.length, sources, web: true, est: false, hasBox: true };
-}
+// Estimate queue: badges that come up without a score drop their album here; batches of up to 20 go to Claude after a
+// short pause, two batches at a time. A real aggregate found later always replaces an estimate (Ratings.merge).
+const EstQueue = {
+  items: [], seen: new Set(), timer: null, active: 0,
+  want(item) {
+    if (!settings.autoEst || !settings.anthropicKey || !item || !item.id || !item.title || this.seen.has(item.id)) return;
+    const c = Ratings.cached(item.id); if (c && (c.score != null || c.est)) return;
+    this.seen.add(item.id); this.items.push(item);
+    clearTimeout(this.timer); this.timer = setTimeout(() => this.flush(), this.items.length >= 20 ? 0 : 600);
+  },
+  async flush() {
+    while (this.items.length && this.active < 2) {
+      const batch = this.items.splice(0, 20); this.active++;
+      try { await estimateRatings(batch); } catch (e) { console.warn('estimate', e); for (const it of batch) this.seen.delete(it.id); }
+      finally { this.active--; }
+    }
+    if (this.items.length) this.timer = setTimeout(() => this.flush(), 300);
+  }
+};
 function starsEl(v, small) {
   const w = Math.max(0, Math.min(5, v)) / 5 * 100;
   return el('span', { class: 'stars' + (small ? ' sm' : ''), role: 'img', 'aria-label': `${v.toFixed(1)} out of 5 stars` }, el('span', { class: 'base', text: '★★★★★', 'aria-hidden': 'true' }), el('span', { class: 'fill', style: { width: w + '%' }, text: '★★★★★', 'aria-hidden': 'true' }));
@@ -1096,29 +1097,20 @@ function ratingBadge(item, opts = {}) {
   const fill = (r) => {
     b.innerHTML = ''; b.classList.toggle('est', !!(r && r.est));
     if (!r || r.score == null) { if (opts.showEmpty) b.append(el('span', { class: 'rbn muted', text: r && r.est ? 'not enough known' : 'no ratings' })); return; }
-    const inner = [starsEl(r.score, true), el('span', { class: 'rbn', text: r.score.toFixed(1) }), r.est ? el('span', { class: 'rbe', text: 'est.' }) : null, opts.count && r.n ? el('span', { class: 'rbc', text: r.web ? `${r.n} review${r.n === 1 ? '' : 's'} · web` : `${r.n} review${r.n === 1 ? '' : 's'}` }) : null];
+    const inner = [starsEl(r.score, true), el('span', { class: 'rbn', text: (r.est ? '~' : '') + r.score.toFixed(1) }), opts.count ? el('span', { class: 'rbc', text: r.est ? 'estimate' : r.n ? (r.web ? `${r.n} review${r.n === 1 ? '' : 's'} · web` : `${r.n} review${r.n === 1 ? '' : 's'}`) : '' }) : null];
     if (opts.sheet === false) b.append(...inner);
     else b.append(el('button', { type: 'button', class: 'rbtn', 'aria-label': `${r.score.toFixed(1)} stars — see the reviews`, onclick: (e) => { e.preventDefault(); e.stopPropagation(); openRatingSheet(item); } }, ...inner));
   };
-  const load = () => { const c = Ratings.cached(item.id); if (c && c.est && c.score != null) fill(c); Ratings.get(item.id, item.title, item.artist).then(fill); };
+  const load = () => {
+    const c = Ratings.cached(item.id);
+    if (c && c.est && c.score != null) fill(c);
+    if (!c) EstQueue.want(item); // no record yet: ask Claude now, in parallel with the Wikipedia lookup
+    Ratings.get(item.id, item.title, item.artist).then(r => { fill(r); if (!r || (r.score == null && !r.est)) EstQueue.want(item); });
+  };
   Ratings.watch(item.id, (r) => { if (!b.isConnected) return false; fill(r); return true; });
   if (opts.now) load(); else whenVisible(b, load);
   return b;
 }
-function rateRestButton(getItems) {
-  if (!settings.anthropicKey) return null;
-  const b = el('button', { class: 'btn sm quiet', title: 'Estimate ratings with Claude for the albums that have none' }, icon('spark'), 'Rate the rest');
-  b.addEventListener('click', async () => {
-    b.disabled = true;
-    try {
-      const r = await rateAll(getItems(), (phase, n, total) => { b.textContent = phase === 'check' ? `Checking ${n}/${total}…` : phase === 'rate' ? `Rating ${n}/${total}…` : total ? `Rated ${n}` : 'All rated'; });
-      if (r.left > 0) { b.textContent = `Rate ${r.left} more`; b.disabled = false; }
-    } catch (err) { b.disabled = false; b.innerHTML = ''; b.append(icon('spark'), 'Rate the rest'); toast(err.message, 4000); }
-  });
-  return b;
-}
-// With "auto-rate" on in Settings, pages rate their unrated albums in the background; badges fill in as estimates land.
-function autoRate(items) { if (settings.autoRate && settings.anthropicKey) rateAll(items).catch(() => { }); }
 function albumTile(item, opts = {}) {
   const tile = el('div', { class: 'tile' });
   const link = el(item.id ? 'a' : 'div', Object.assign({ class: 'tl', title: item.why || '' }, item.id ? { href: `#/album/${item.id}` } : {}), coverEl(item.id || null, item.title, 500, null, item.img), el('div', { class: opts.twoLine ? 'a2' : 'a', text: opts.primary === 'title' ? item.title : (item.artist || item.title) }), el('div', { class: 'b', text: opts.primary === 'title' ? [item.year, item.type && item.type !== 'Album' ? item.type : ''].filter(Boolean).join(' · ') : [item.title, item.year].filter(Boolean).join(' · ') }));
@@ -1829,8 +1821,8 @@ async function ArtistViewDG(rawId, rid) {
     const all = d.rows.flatMap(r => r.items);
     disco.innerHTML = '';
     if (partial) disco.append(el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Albums'), el('div', { class: 'mono' }, 'checking which are studio albums…')), skeletonStrip(4)));
-    d.rows.forEach((r, i) => { if (partial && r.label === 'Albums') return; disco.append(stripSection(r.label, r.items, { primary: 'title', twoLine: true, note: r.note, tools: !partial && i === 0 ? rateRestButton(() => all) : null })); });
-    if (!partial) { if (!d.rows.length) disco.append(el('div', { class: 'empty' }, 'No releases found for this artist.')); autoRate(all); }
+    d.rows.forEach((r) => { if (partial && r.label === 'Albums') return; disco.append(stripSection(r.label, r.items, { primary: 'title', twoLine: true, note: r.note })); });
+    if (!partial && !d.rows.length) disco.append(el('div', { class: 'empty' }, 'No releases found for this artist.'));
   };
   try { const d = await discographyFor({ id: rawId, name, raw: a.name }, (part) => drawRows(part, true)); drawRows(d, false); }
   catch (e) { if (rid === routeSeq) { disco.innerHTML = ''; disco.append(el('div', { class: 'notice warn' }, "Couldn't load the discography: " + e.message)); } }
@@ -1871,9 +1863,8 @@ async function LabelViewDG(rawId, rid) {
     for (const [k, lab] of [['all', 'All'], ...FILTERS]) { if (!counts[k]) continue; chips.append(el('button', { class: 'chip' + (filter === k ? ' on' : ''), onclick: () => { filter = k; draw(); } }, `${lab} · ${counts[k]}`)); }
   };
   status.innerHTML = '';
-  status.append(el('div', { class: 'row', style: { justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' } }, el('span', {}, items.length ? `${total.toLocaleString()} releases on Discogs · most collected first` : 'Discogs lists nothing for this label.'), items.length ? rateRestButton(() => items) : null));
+  status.append(el('span', {}, items.length ? `${total.toLocaleString()} releases on Discogs · most collected first` : 'Discogs lists nothing for this label.'));
   draw();
-  autoRate(items);
 }
 async function ArtistView(id, rid) {
   if (/^da\d/.test(id)) return ArtistViewDG(id, rid);
@@ -1924,8 +1915,7 @@ async function ArtistView(id, rid) {
   if (!groups.length) { disco.append(el('div', { class: 'empty' }, 'MusicBrainz has no releases for this artist yet.')); return; }
   const toItem = (g) => ({ id: g.id, title: g.title, artist: credit(g['artist-credit']) || artist.name, artistId: artist.id, year: year(g['first-release-date']), kind: g._b, type: rgType(g) });
   const all = groups.map(toItem);
-  groupDisco(all).forEach((grp, i) => disco.append(stripSection(grp.label, grp.items, { primary: 'title', twoLine: true, tools: i === 0 ? rateRestButton(() => all) : null })));
-  autoRate(all);
+  groupDisco(all).forEach((grp) => disco.append(stripSection(grp.label, grp.items, { primary: 'title', twoLine: true })));
 }
 
 // ============================================================
@@ -1965,10 +1955,10 @@ async function GenreView(name, rid) {
       const r = await genreStrip(genre); if (rid !== routeSeq) return;
       albumsSec.querySelector('.loading').remove();
       if (!r.data.items.length) { albumsSec.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Nothing found.')); return; }
-      albumsSec.querySelector('.sechead').append(el('div', { class: 'row', style: { gap: '10px' } }, rateRestButton(() => r.data.items), el('div', { class: 'mono', text: r.data.source === 'tags' ? 'MusicBrainz tags' : r.data.source === 'discogs' ? 'most collected' : 'picked by ' + r.data.source })));
+      albumsSec.querySelector('.sechead').append(el('div', { class: 'mono', text: r.data.source === 'tags' ? 'MusicBrainz tags' : r.data.source === 'discogs' ? 'most collected' : 'picked by ' + r.data.source }));
       const strip = el('div', { class: 'strip' }); albumsSec.append(strip);
       const tiles = r.data.items.map(it => { const t = albumTile(it); strip.append(t); return t; });
-      (async () => { for (let i = 0; i < r.data.items.length; i++) { const it = r.data.items[i]; if (it.id) continue; const hit = await resolveAlbum(it.artist, it.title); if (rid !== routeSeq) return; if (hit) { it.id = hit.id; it.img = hit.img || it.img; store.set(r.key, r.data); tiles[i].replaceWith(albumTile(it)); } } if (rid === routeSeq) autoRate(r.data.items); })();
+      (async () => { for (let i = 0; i < r.data.items.length; i++) { const it = r.data.items[i]; if (it.id) continue; const hit = await resolveAlbum(it.artist, it.title); if (rid !== routeSeq) return; if (hit) { it.id = hit.id; it.img = hit.img || it.img; store.set(r.key, r.data); tiles[i].replaceWith(albumTile(it)); } } })();
     } catch (e) { if (e.message === 'stale') return; albumsSec.querySelector('.loading').replaceWith(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load albums: " + e.message)); }
   })();
   (async () => {
@@ -2196,7 +2186,7 @@ async function AlbumView(id, rid) {
   const likeKey = 'hear.like.' + album.id;
   const byYear = (a, b) => (a.year || 9999) - (b.year || 9999);
   const loadingRow = (text) => el('div', { class: 'loading', style: { padding: '6px 0' } }, el('div', { class: 'spinner' }), text);
-  const ratingMeta = (r) => !r ? '' : r.score == null ? (r.est ? 'not enough known' : 'no critic scores') : `${r.score.toFixed(1)} ★${r.est ? ' est.' : r.n ? ` · ${r.n} review${r.n === 1 ? '' : 's'}` : ''}`;
+  const ratingMeta = (r) => !r ? '' : r.score == null ? (r.est ? 'not enough known' : 'no critic scores') : `${r.est ? '~' : ''}${r.score.toFixed(1)} ★${r.est ? ' estimate' : r.n ? ` · ${r.n} review${r.n === 1 ? '' : 's'}` : ''}`;
   const fReviews = fold('Ratings & reviews', { key: 'reviews', build: drawReviews });
   const fPress = fold('Interviews & articles', { key: 'press', build: drawPress });
   const fAbout = fold('About', { key: 'about', build: drawAbout });
@@ -2472,8 +2462,6 @@ async function LabelView(id, rid) {
   if (total > 500) status.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, `Showing the first 500 of ${total} catalog entries.`));
   if (!groups.size) { status.innerHTML = ''; status.append(el('div', { class: 'empty' }, 'MusicBrainz lists no releases for this label.')); return; }
   const labelItems = () => [...groups.values()].map(g => ({ id: g.id, title: g.title, artist: g.artist, year: year(g.date) }));
-  const rb = rateRestButton(labelItems); if (rb) status.append(el('div', { class: 'row', style: { paddingTop: '8px' } }, rb));
-  autoRate(labelItems());
 }
 
 // ============================================================
@@ -2515,9 +2503,8 @@ function ShelfView() {
     const tools = el('div', { class: 'row', style: { paddingTop: '20px', gap: '8px', flexWrap: 'wrap' } });
     tools.append(el('button', { class: 'btn sm quiet', onclick: () => { const blob = new Blob([JSON.stringify({ app: 'Hear', exported: new Date().toISOString(), shelf: Shelf.all(), crates: Crates.all() }, null, 2)], { type: 'application/json' }); const a = el('a', { href: URL.createObjectURL(blob), download: 'hear-shelf.json' }); document.body.append(a); a.click(); a.remove(); } }, 'Export shelf'));
     const fileIn = el('input', { type: 'file', accept: 'application/json,.json', hidden: true, onchange: async (e) => { const f = e.target.files[0]; if (!f) return; try { const data = JSON.parse(await f.text()); const list = Array.isArray(data) ? data : data.shelf; if (!Array.isArray(list)) throw new Error('Not a shelf file'); const cur = Shelf.all(); const ids = new Set(cur.map(x => x.id)); let n = 0; for (const it of list) if (it && it.id && !ids.has(it.id)) { cur.push(it); ids.add(it.id); n++; } Shelf.replace(cur); if (Array.isArray(data.crates)) { const cc = Crates.all(); const cids = new Set(cc.map(c => c.id)); for (const c of data.crates) if (c && c.id && !cids.has(c.id)) cc.push(c); store.set(Crates.key, cc); } toast(`Imported ${n} album${n === 1 ? '' : 's'}`); route(); } catch (err) { toast('Import failed: ' + err.message, 3000); } } });
-    tools.append(el('button', { class: 'btn sm quiet', onclick: () => fileIn.click() }, 'Import'), fileIn, rateRestButton(() => items));
+    tools.append(el('button', { class: 'btn sm quiet', onclick: () => fileIn.click() }, 'Import'), fileIn);
     body.append(tools);
-    autoRate(items);
   }
   function drawCrates() {
     chips.hidden = true;
@@ -2669,8 +2656,6 @@ async function AIView(text, rid) {
       count.textContent = res.albums.length ? `${res.albums.length} records` : 'Nothing came back. Try different words.';
       flow.querySelectorAll('.vn').forEach((n, i) => { n.textContent = `${i + 1} of ${res.albums.length}`; });
       store.set(key, res); pruneKeys('hear.aiq.', 30);
-      // Stars under every pick: real scores where Wikipedia has them, Claude's estimate for the rest.
-      Promise.all(pending).then(() => { if (rid !== routeSeq) return; rateAll(res.albums.filter(a => a.id)).catch(() => { }); });
     };
     if (!live) finish();
     return { addCard, finish };
@@ -2766,7 +2751,7 @@ function SettingsView() {
     el('div', { class: 'status' }, el('span', { class: 'dot' + (DG.on() ? ' ok' : '') }), DG.on() ? `Discogs — connected as ${settings.discogsUser || '?'} · main catalog` : settings.discogsToken ? (settings.discogsOk === false ? 'Discogs — token set but the connection test failed' : 'Discogs — token set, not connected yet') : 'Discogs — not connected (MusicBrainz is the catalog)'),
     el('div', { class: 'status' }, el('span', { class: 'dot' + (settings.anthropicKey ? ' ok' : '') }), settings.anthropicKey ? 'Claude — key set' : 'Claude — optional, not set'),
     el('div', { class: 'status' }, el('span', { class: 'dot ok' }), `Hear build ${BUILD}`));
-  const form = el('form', { class: 'stack', style: { gap: '18px', paddingTop: '18px' }, onsubmit: (e) => { e.preventDefault(); const tok = f.discogsToken.value.trim(); saveSettings({ discogsToken: tok, discogsOk: tok ? settings.discogsOk : null, discogsUser: tok ? settings.discogsUser : '', source: f.source.value, anthropicKey: f.anthropicKey.value.trim(), model: f.model.value.trim() || DEFAULTS.model, autoRate: f.autoRate.value === 'yes', qobuzRegion: f.qobuzRegion.value.trim() || 'us-en', primary: f.primary.value, theme: f.theme.value, showApple: f.showApple.value === 'yes' }); toast('Settings saved'); route(); } },
+  const form = el('form', { class: 'stack', style: { gap: '18px', paddingTop: '18px' }, onsubmit: (e) => { e.preventDefault(); const tok = f.discogsToken.value.trim(); saveSettings({ discogsToken: tok, discogsOk: tok ? settings.discogsOk : null, discogsUser: tok ? settings.discogsUser : '', source: f.source.value, anthropicKey: f.anthropicKey.value.trim(), model: f.model.value.trim() || DEFAULTS.model, autoEst: f.autoEst.value === 'yes', qobuzRegion: f.qobuzRegion.value.trim() || 'us-en', primary: f.primary.value, theme: f.theme.value, showApple: f.showApple.value === 'yes' }); toast('Settings saved'); route(); } },
     el('div', { class: 'eyebrow' }, 'Listening'),
     select('primary', 'Main service', [['spotify', 'Spotify first'], ['qobuz', 'Qobuz first']], 'Which “Hear on…” button is the big one.'),
     field('qobuzRegion', 'Qobuz store region', 'Used for Qobuz search links, e.g. us-en, gb-en, fr-fr.'),
@@ -2779,7 +2764,7 @@ function SettingsView() {
     field('anthropicKey', 'Claude API key (optional)', el('span', {}, 'Powers Ask Claude, Moods, “more like this”, estimated ratings and web checks. Keys stay in this browser only (each address keeps its own settings). Create one at ', el('a', { class: 'link', href: 'https://console.anthropic.com/', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), ' (Get API key). Keys can carry an expiry date; if Claude features stop with a 401, create a new key and paste it here.'), 'password'),
     el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap' } }, el('button', { type: 'button', class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; const k = f.anthropicKey.value.trim(); if (!k) { toast('Paste a Claude API key first'); return; } b.disabled = true; b.textContent = 'Testing…'; saveSettings({ anthropicKey: k, model: f.model.value.trim() || DEFAULTS.model }); const t0 = Date.now(); try { const r = await askJSON('Reply with ok set to "yes".', SCHEMA.ok, 2000, { effort: 'low' }); b.textContent = `Works · ${settings.model} answered in ${((Date.now() - t0) / 1000).toFixed(1)} s`; } catch (err) { b.textContent = 'Test key'; b.disabled = false; toast(err.message, 8000); } } }, 'Test key'), el('div', { class: 'help', style: { flex: 1, minWidth: '160px' } }, 'Sends one tiny request and reports what came back.')),
     field('model', 'Claude model', 'Model name for recommendations.'),
-    select('autoRate', 'Rate unrated albums automatically', [['no', 'No — use the “Rate the rest” button'], ['yes', 'Yes — on every artist, label, genre and shelf page']], 'Albums without critic scores get Claude\'s estimated star rating (shown muted, marked “est.”). Automatic rating costs about a cent per page of unrated albums; album pages always estimate their one album.'),
+    select('autoEst', 'Estimate missing ratings with Claude', [['yes', 'Yes — every album you see gets a rating'], ['no', 'No — only real critic aggregates']], 'Most albums have no critic aggregate on record, so Claude estimates the consensus rating for whatever is on screen (shown with a ~). A real aggregate replaces it whenever one exists. About a cent per twenty albums.'),
     el('div', { class: 'btnrow' }, el('button', { class: 'btn primary', type: 'submit' }, 'Save settings')));
   view.append(el('div', { class: 'stack', style: { gap: '10px' } }, el('h1', { text: 'Settings' }), statusRow), form,
     el('div', { class: 'section' }, el('div', { class: 'eyebrow' }, 'Housekeeping'),
