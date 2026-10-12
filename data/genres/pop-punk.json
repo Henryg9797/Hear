@@ -1,0 +1,239 @@
+{
+  "kind": "genre",
+  "name": "Pop Punk",
+  "path": [
+    "Rock",
+    "Punk"
+  ],
+  "about": "Pop punk keeps punk's speed and buzzsaw guitars but writes the choruses rock radio would want, a line that runs from the Ramones and Buzzcocks through the Descendents, whose 1982 debut about girls, food and growing up fixed the template. Berkeley's Lookout! label and the Gilman Street club bred Green Day, Screeching Weasel and Mr. T Experience in the late 1980s, and in 1994 Dookie and The Offspring's Smash took the sound to the stadiums. Blink-182 added toilet humor and glossy production at the end of the decade, New Found Glory and Sum 41 followed, and by the mid-2000s Fall Out Boy and Paramore had merged it with emo. The 2010s revival around The Wonder Years and Joyce Manor returned it to small rooms and plain feeling.",
+  "related": [
+    "Punk Rock",
+    "Skate Punk",
+    "Emo Pop",
+    "Power Pop",
+    "Emo",
+    "Alternative Rock"
+  ],
+  "artists": [
+    {
+      "name": "Buzzcocks",
+      "why": "wrote the punk love song's rulebook"
+    },
+    {
+      "name": "Descendents",
+      "why": "Milo, coffee and the 1982 template"
+    },
+    {
+      "name": "Screeching Weasel",
+      "why": "Ben Weasel's Chicago Ramones devotion"
+    },
+    {
+      "name": "Green Day",
+      "why": "Gilman Street to twenty million copies"
+    },
+    {
+      "name": "The Offspring",
+      "why": "Orange County's 1994 breakout partner"
+    },
+    {
+      "name": "blink-182",
+      "why": "glossy San Diego juvenilia, hugely influential"
+    },
+    {
+      "name": "New Found Glory",
+      "why": "the 2000s' Florida standard-bearers"
+    },
+    {
+      "name": "Sum 41",
+      "why": "Canadian mall-punk with metal chops"
+    },
+    {
+      "name": "Fall Out Boy",
+      "why": "merged the sound with emo and pop"
+    },
+    {
+      "name": "Paramore",
+      "why": "Hayley Williams's Warped Tour powerhouse"
+    },
+    {
+      "name": "The Wonder Years",
+      "why": "led the earnest 2010s revival"
+    },
+    {
+      "name": "Joyce Manor",
+      "why": "two-minute songs, Torrance, perfect ratio"
+    }
+  ],
+  "albums": [
+    {
+      "artist": "Ramones",
+      "title": "Rocket to Russia",
+      "year": 1977,
+      "rating": 4.5,
+      "why": "Sheena Is a Punk Rocker and Rockaway Beach made the third album the Ramones' most tuneful and best-produced, their bubblegum side at full strength."
+    },
+    {
+      "artist": "Buzzcocks",
+      "title": "Singles Going Steady",
+      "year": 1979,
+      "rating": 4,
+      "why": "The American compilation of the Manchester band's singles is where the canon lives, with Ever Fallen in Love and What Do I Get? as the pop-punk standard."
+    },
+    {
+      "artist": "The Undertones",
+      "title": "The Undertones",
+      "year": 1979,
+      "rating": 4,
+      "why": "Teenage Kicks and a dozen songs about girls and chocolate, sung in Feargal Sharkey's quaver, made the most innocent and tuneful record of British punk."
+    },
+    {
+      "artist": "Descendents",
+      "title": "Milo Goes to College",
+      "year": 1982,
+      "rating": 4.5,
+      "why": "Fifteen songs in twenty-two minutes about girls, parents and suburban boredom, with Bill Stevenson's drumming, set the pop-punk template for forty years."
+    },
+    {
+      "artist": "Screeching Weasel",
+      "title": "My Brain Hurts",
+      "year": 1991,
+      "rating": 4,
+      "why": "Ben Weasel's Ramones worship found its own voice on the Chicago band's third album, the Lookout! era's sharpest and most quotable record."
+    },
+    {
+      "artist": "Green Day",
+      "title": "Dookie",
+      "year": 1994,
+      "rating": 4.5,
+      "why": "Basket Case and Longview, played with Berkeley sloppiness and Beatles hooks, sold twenty million copies and put punk on MTV for a decade."
+    },
+    {
+      "artist": "The Offspring",
+      "title": "Smash",
+      "year": 1994,
+      "rating": 4,
+      "why": "Come Out and Play and Self Esteem made the best-selling independent album of its time and carried Epitaph's melodic punk to the suburbs."
+    },
+    {
+      "artist": "Descendents",
+      "title": "Everything Sucks",
+      "year": 1996,
+      "rating": 4,
+      "why": "Milo Aukerman's return after nine years delivered the band's most consistent set of fast, funny, sad songs, with I'm the One and the title track up front."
+    },
+    {
+      "artist": "Mr. T Experience",
+      "title": "Love Is Dead",
+      "year": 1996,
+      "rating": 3.5,
+      "why": "Dr. Frank's wordy, self-deprecating love songs on the Berkeley band's best album made pop punk literate without making it less catchy."
+    },
+    {
+      "artist": "The Queers",
+      "title": "Don't Back Down",
+      "year": 1996,
+      "rating": 3.5,
+      "why": "Joe Queer's Beach Boys fixation and Ramones chords on the band's cleanest-sounding record made the New Hampshire trio's most enduring album."
+    },
+    {
+      "artist": "Lifetime",
+      "title": "Jersey's Best Dancers",
+      "year": 1997,
+      "rating": 4,
+      "why": "Ari Katz's pleading vocals over hardcore-speed melody on the New Jersey band's final 1990s album became the model for the next decade's scene."
+    },
+    {
+      "artist": "Dillinger Four",
+      "title": "Midwestern Songs of the Americas",
+      "year": 1998,
+      "rating": 4,
+      "why": "Minneapolis's gruff, political pop punk at its tightest, with Doublewhiskeycokenoice setting the standard for the Fest-era bands that followed."
+    },
+    {
+      "artist": "Alkaline Trio",
+      "title": "Goddamnit",
+      "year": 1998,
+      "rating": 4,
+      "why": "Matt Skiba and Dan Andriano's Chicago debut mixed morbid romance and drinking songs into pop punk's darkest and most durable early record."
+    },
+    {
+      "artist": "blink-182",
+      "title": "Enema of the State",
+      "year": 1999,
+      "rating": 4,
+      "why": "Jerry Finn's glossy production and Travis Barker's drums turned the trio's dirty jokes into All the Small Things and the sound of 2000s radio."
+    },
+    {
+      "artist": "Saves the Day",
+      "title": "Through Being Cool",
+      "year": 1999,
+      "rating": 4,
+      "why": "Chris Conley's teenage lyrics about leaving town, delivered at Lifetime speed, made the New Jersey record that bridged pop punk and emo."
+    },
+    {
+      "artist": "Jimmy Eat World",
+      "title": "Bleed American",
+      "year": 2001,
+      "rating": 4,
+      "why": "The Middle and Sweetness made the Arizona band's self-financed fourth album the moment emo-leaning pop punk became unavoidable on the radio."
+    },
+    {
+      "artist": "Sum 41",
+      "title": "All Killer No Filler",
+      "year": 2001,
+      "rating": 3.5,
+      "why": "Fat Lip and In Too Deep made the Ontario band's debut the sharpest of the post-blink wave, with metal riffs and rap verses thrown in for fun."
+    },
+    {
+      "artist": "New Found Glory",
+      "title": "Sticks and Stones",
+      "year": 2002,
+      "rating": 3.5,
+      "why": "My Friends Over You and Jordan Pundik's nasal yearning defined the Warped Tour's early-2000s sound more completely than any other record."
+    },
+    {
+      "artist": "Green Day",
+      "title": "American Idiot",
+      "year": 2004,
+      "rating": 4,
+      "why": "A punk rock opera about the Bush years with nine-minute suites, it revived the band's career, won a Grammy and became a Broadway musical."
+    },
+    {
+      "artist": "Fall Out Boy",
+      "title": "From Under the Cork Tree",
+      "year": 2005,
+      "rating": 3.5,
+      "why": "Pete Wentz's run-on titles and Patrick Stump's soul-trained voice on Sugar, We're Goin Down made emo-pop punk the sound of the mid-2000s charts."
+    },
+    {
+      "artist": "Paramore",
+      "title": "Riot!",
+      "year": 2007,
+      "rating": 3.5,
+      "why": "Misery Business and Hayley Williams's voice made the Franklin, Tennessee band the Warped Tour's biggest act and the genre's most durable 2000s export."
+    },
+    {
+      "artist": "Joyce Manor",
+      "title": "Joyce Manor",
+      "year": 2011,
+      "rating": 4,
+      "why": "Ten songs in under nineteen minutes, with Constant Headache the anthem, made the Torrance band's debut the 2010s revival's most economical classic."
+    },
+    {
+      "artist": "The Wonder Years",
+      "title": "The Greatest Generation",
+      "year": 2013,
+      "rating": 4,
+      "why": "Dan Campbell's suburban Philadelphia grief and ambition, with a seven-minute closer, made the earnest 2010s pop punk revival's most complete album."
+    },
+    {
+      "artist": "PUP",
+      "title": "The Dream Is Over",
+      "year": 2016,
+      "rating": 4,
+      "why": "Stefan Babcock's shredded vocal cords and the Toronto band's gang choruses on If This Tour Doesn't Kill You, I Will made the decade's most cathartic pop punk record."
+    }
+  ],
+  "confidence": "high",
+  "note": ""
+}

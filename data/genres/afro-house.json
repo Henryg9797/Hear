@@ -1,0 +1,43 @@
+{
+  "kind": "genre",
+  "name": "Afro House",
+  "path": ["Electronic", "House"],
+  "about": "Afro house is the family of house styles built on African rhythm: the South African deep house that grew out of kwaito in the 2000s, the Angolan and Lusophone strain that fed kuduro and later amapiano, and the diaspora sound of Paris, Lisbon and New York producers such as Boddhi Satva and Osunlade. Its signature is percussion, congas, shakers and log drums layered over a four-to-the-floor kick at around 120 beats per minute, with chants, Zulu and Xhosa vocals and long, patient builds. Black Coffee is its global face, and Culoe De Song, Black Motion, Da Capo and Themba carried the Johannesburg sound through the 2010s. Today it runs from Ibiza's Keinemusik parties to the townships that still produce its best records.",
+  "related": ["Kwaito", "House", "Deep House", "Tech House", "Afrobeat", "Tribal House"],
+  "artists": [
+    { "name": "Black Coffee", "why": "Soulistic founder, the global ambassador" },
+    { "name": "Culoe De Song", "why": "A Giant Leap and Innervisions" },
+    { "name": "Osunlade", "why": "Yoruba Records, the diaspora root" },
+    { "name": "Boddhi Satva", "why": "ancestral soul from Bangui to Paris" },
+    { "name": "Black Motion", "why": "drums and chants, Johannesburg's live act" },
+    { "name": "Da Capo", "why": "Soulistic's second generation" },
+    { "name": "Themba", "why": "the Afro-tech crossover" },
+    { "name": "Oskido", "why": "Kalawa Jazmee, from kwaito to house" },
+    { "name": "Zakes Bantwini", "why": "Ghetto King's singer-producer" },
+    { "name": "Sun-El Musician", "why": "Akanamali, the melodic strain" },
+    { "name": "Shimza", "why": "Afro-tech and the Kunye parties" },
+    { "name": "Louie Vega", "why": "Elements of Life, the New York root" }
+  ],
+  "albums": [
+    { "artist": "Osunlade", "title": "Paradigm", "year": 2001, "rating": 4, "why": "The Yoruba Records founder's debut set Yoruba chant and percussion over deep house, and it is the diaspora root of everything on this page." },
+    { "artist": "Louie Vega", "title": "Elements of Life", "year": 2004, "rating": 3.5, "why": "Vega's live-band house project draws on Afro-Cuban and West African rhythm; the New York precedent for Afro house's percussive approach." },
+    { "artist": "Black Coffee", "title": "Home Brewed", "year": 2009, "rating": 4, "why": "Juju, with Bucie, and Superman made this the album that defined South African Afro house, deep, patient and sung in Zulu." },
+    { "artist": "Culoe De Song", "title": "A Giant Leap", "year": 2009, "rating": 4, "why": "Released through Innervisions, the Durban producer's debut put the Johannesburg sound in European clubs; Webaba is the one everyone played." },
+    { "artist": "Black Motion", "title": "Talking to the Drums", "year": 2010, "rating": 3.5, "why": "The percussionist-and-DJ duo's debut is Afro house with live drums and chants, and Banane Mavoko became a township anthem." },
+    { "artist": "Liquideep", "title": "Fabrics of the Heart", "year": 2010, "rating": 3.5, "why": "The soulful side of South African house, with Fairytale as the hit; Afro house at its most radio-friendly and least percussive." },
+    { "artist": "Culoe De Song", "title": "Elevation", "year": 2011, "rating": 3.5, "why": "The second album is darker and more techno-leaning, trading the debut's warmth for the long hypnotic builds of his DJ sets." },
+    { "artist": "Mi Casa", "title": "Mi Casa", "year": 2011, "rating": 3, "why": "The Johannesburg trio's debut is Afro house as pop, with trumpet and J'Something's vocals; These Streets made them household names." },
+    { "artist": "Boddhi Satva", "title": "Invocation", "year": 2012, "rating": 4, "why": "The Central African producer's BBE debut defined what he calls ancestral soul: Afro house with Lusophone and Congolese guests and real songs." },
+    { "artist": "Da Capo", "title": "Touched", "year": 2014, "rating": 3.5, "why": "Soulistic's second-generation producer made a deep, atmospheric Afro house album whose influence on the Afro-tech sound is clear." },
+    { "artist": "Black Motion", "title": "Fortune Teller", "year": 2014, "rating": 3.5, "why": "Rainbow and Imali made the second Black Motion album a South African radio fixture; the drums are the point and the songs mostly hold." },
+    { "artist": "Boddhi Satva", "title": "Transition", "year": 2015, "rating": 3.5, "why": "The second album moves between Afro house and Angolan and Cape Verdean pop; less consistent than Invocation but broader in reach." },
+    { "artist": "Prince Kaybee", "title": "I Am Music", "year": 2017, "rating": 3, "why": "Charlotte and Wajellwa made the Free State producer a chart force, and the album is Afro house at its most polished and mainstream." },
+    { "artist": "Sun-El Musician", "title": "Africa to the World", "year": 2018, "rating": 3.5, "why": "Akanamali, with Samthing Soweto, opened the way for a melodic, vocal-led Afro house that became the bridge to amapiano." },
+    { "artist": "Themba", "title": "Modern Africa Part I: Ekhaya", "year": 2019, "rating": 3.5, "why": "Euphonik's new alias made the Afro-tech album, melodic Afro house with techno drums that Black Coffee's Ibiza residency had been missing." },
+    { "artist": "Kabza De Small", "title": "I Am the King of Amapiano: Sweet & Dust", "year": 2020, "rating": 3.5, "why": "Amapiano is Afro house's slower, log-drum successor, and Kabza's double album is the genre's defining document, sprawling and joyous." },
+    { "artist": "Black Coffee", "title": "Subconsciously", "year": 2021, "rating": 4, "why": "The first African album to win the dance Grammy, with Usher, Pharrell and Diplo; glossier than Home Brewed, but the deep groove survives." },
+    { "artist": "Zakes Bantwini", "title": "Ghetto King", "year": 2021, "rating": 3.5, "why": "Osama, with Kasango, was South Africa's song of 2021, and the album around it is Afro house with a singer's sense of melody." }
+  ],
+  "confidence": "medium",
+  "note": "South African and Lusophone Afro house are documented unevenly outside the region, so this shelf stops at eighteen records the critic can vouch for."
+}

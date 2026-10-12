@@ -1,0 +1,238 @@
+{
+  "kind": "genre",
+  "name": "Punk",
+  "path": [
+    "Rock"
+  ],
+  "about": "Punk is the family of music that decided rock had become too big, too slow and too professional, and that anyone could do better with three chords and something to say. It arrived in New York and London in 1976 with the Ramones, Sex Pistols and The Clash, drawing on the Stooges, the New York Dolls and garage bands, and within five years had split into branches: hardcore in Washington and Los Angeles, anarcho-punk around Crass, Oi! and street punk, Wire's art-school strand, and the pop punk Buzzcocks began and Green Day took to the charts. Later came post-hardcore and emo, ska punk, folk punk and DIY scenes that still run on singles and basement shows. What unites it is speed, directness, a distrust of virtuosity and the do-it-yourself ethic.",
+  "related": [
+    "Punk Rock",
+    "Hardcore Punk",
+    "Post-Punk",
+    "Proto-Punk",
+    "Pop Punk",
+    "Emo"
+  ],
+  "artists": [
+    {
+      "name": "Ramones",
+      "why": "invented the form in Queens, 1974"
+    },
+    {
+      "name": "Sex Pistols",
+      "why": "Britain's year-zero provocation"
+    },
+    {
+      "name": "The Clash",
+      "why": "the only band that mattered, allegedly"
+    },
+    {
+      "name": "The Stooges",
+      "why": "the Detroit prototype, 1969"
+    },
+    {
+      "name": "Buzzcocks",
+      "why": "wrote the pop-punk single's rulebook"
+    },
+    {
+      "name": "Wire",
+      "why": "art-school minimalism inside punk"
+    },
+    {
+      "name": "Black Flag",
+      "why": "American hardcore's relentless engine"
+    },
+    {
+      "name": "Dead Kennedys",
+      "why": "San Francisco satire at full speed"
+    },
+    {
+      "name": "Minor Threat",
+      "why": "straight edge and the DC sound"
+    },
+    {
+      "name": "Bad Brains",
+      "why": "the fastest, most musical hardcore band"
+    },
+    {
+      "name": "Fugazi",
+      "why": "post-hardcore's conscience and model"
+    },
+    {
+      "name": "Green Day",
+      "why": "took punk to the stadiums in 1994"
+    }
+  ],
+  "albums": [
+    {
+      "artist": "The Stooges",
+      "title": "The Stooges",
+      "year": 1969,
+      "rating": 4,
+      "why": "John Cale produced Iggy's debut, and the dumb, brilliant drone of I Wanna Be Your Dog gave punk its first and simplest blueprint."
+    },
+    {
+      "artist": "New York Dolls",
+      "title": "New York Dolls",
+      "year": 1973,
+      "rating": 4,
+      "why": "Todd Rundgren's production barely contains the trashy glam-Stones racket that taught the Ramones and Sex Pistols how to dress and play."
+    },
+    {
+      "artist": "Ramones",
+      "title": "Ramones",
+      "year": 1976,
+      "rating": 5,
+      "why": "Fourteen songs in twenty-nine minutes, recorded for six thousand dollars: the record that defined punk's speed, brevity and humor before the word stuck."
+    },
+    {
+      "artist": "The Damned",
+      "title": "Damned Damned Damned",
+      "year": 1977,
+      "rating": 3.5,
+      "why": "The first British punk album, slapdash and thrilling, with New Rose and Neat Neat Neat outrunning everything else on it."
+    },
+    {
+      "artist": "The Clash",
+      "title": "The Clash",
+      "year": 1977,
+      "rating": 4.5,
+      "why": "White Riot, Janie Jones and the Police and Thieves cover put politics, reggae and tower-block fury into British punk's most urgent debut."
+    },
+    {
+      "artist": "Sex Pistols",
+      "title": "Never Mind the Bollocks, Here's the Sex Pistols",
+      "year": 1977,
+      "rating": 5,
+      "why": "The one album the Pistols made, thick with Steve Jones's overdubbed guitars and Johnny Rotten's sneer, remains punk's most famous object."
+    },
+    {
+      "artist": "Wire",
+      "title": "Pink Flag",
+      "year": 1977,
+      "rating": 4.5,
+      "why": "Twenty-one songs, some under a minute, that reduced punk to pure shape and foreshadowed post-punk, hardcore and Britpop alike."
+    },
+    {
+      "artist": "Buzzcocks",
+      "title": "Singles Going Steady",
+      "year": 1979,
+      "rating": 4,
+      "why": "The American compilation of the Manchester band's singles is where the canon lives, with Ever Fallen in Love and What Do I Get? as the pop-punk standard."
+    },
+    {
+      "artist": "Stiff Little Fingers",
+      "title": "Inflammable Material",
+      "year": 1979,
+      "rating": 4,
+      "why": "Suspect Device and Alternative Ulster, written from inside the Troubles, made the first independent album to chart in Britain and Belfast's punk statement."
+    },
+    {
+      "artist": "The Clash",
+      "title": "London Calling",
+      "year": 1979,
+      "rating": 5,
+      "why": "A double album of punk, reggae, rockabilly and soul that outgrew the genre's limits without losing its purpose, and the decade's great rock record."
+    },
+    {
+      "artist": "X",
+      "title": "Los Angeles",
+      "year": 1980,
+      "rating": 4,
+      "why": "Ray Manzarek produced the debut where Exene Cervenka and John Doe's clashing harmonies and Billy Zoom's rockabilly guitar defined LA punk's literate wing."
+    },
+    {
+      "artist": "Dead Kennedys",
+      "title": "Fresh Fruit for Rotting Vegetables",
+      "year": 1980,
+      "rating": 4.5,
+      "why": "Jello Biafra's warbling satire over East Bay Ray's surf-twang guitar made the funniest, sharpest and most durable American punk debut."
+    },
+    {
+      "artist": "Black Flag",
+      "title": "Damaged",
+      "year": 1981,
+      "rating": 5,
+      "why": "Henry Rollins's first album with the band, pulled by its label for being anti-parent, is the sound of hardcore's rage becoming an aesthetic."
+    },
+    {
+      "artist": "Bad Brains",
+      "title": "Bad Brains",
+      "year": 1982,
+      "rating": 4.5,
+      "why": "The ROIR cassette caught the Washington quartet at full speed, with Banned in D.C. and Pay to Cum setting a bar for hardcore nobody cleared."
+    },
+    {
+      "artist": "Misfits",
+      "title": "Walk Among Us",
+      "year": 1982,
+      "rating": 4,
+      "why": "Glenn Danzig's crooning horror-movie punk, cheaply recorded and endlessly covered, is the record that spawned horror punk and half of metal's T-shirts."
+    },
+    {
+      "artist": "Minor Threat",
+      "title": "Out of Step",
+      "year": 1983,
+      "rating": 4,
+      "why": "Ian MacKaye's band stretched out slightly on its only twelve-inch, and the title track's straight-edge creed still defines a subculture."
+    },
+    {
+      "artist": "Minutemen",
+      "title": "Double Nickels on the Dime",
+      "year": 1984,
+      "rating": 4.5,
+      "why": "Forty-five short songs of funk, jazz, folk and politics from San Pedro, the record that showed punk could be about anything and played any way."
+    },
+    {
+      "artist": "Hüsker Dü",
+      "title": "Zen Arcade",
+      "year": 1984,
+      "rating": 4,
+      "why": "A hardcore double concept album with piano interludes, acoustic songs and a fourteen-minute closer, it mapped the route from punk to alternative rock."
+    },
+    {
+      "artist": "Bad Religion",
+      "title": "Suffer",
+      "year": 1988,
+      "rating": 4,
+      "why": "Greg Graffin's vocabulary and the three-part harmonies on fifteen fast songs revived Southern California punk and set up the 1990s melodic boom."
+    },
+    {
+      "artist": "Fugazi",
+      "title": "Repeater",
+      "year": 1990,
+      "rating": 4,
+      "why": "Ian MacKaye and Guy Picciotto's first full album turned dub, dissonance and discipline into post-hardcore's defining statement."
+    },
+    {
+      "artist": "Green Day",
+      "title": "Dookie",
+      "year": 1994,
+      "rating": 4.5,
+      "why": "Basket Case and Longview, played with Berkeley sloppiness and Beatles hooks, sold twenty million copies and put punk on MTV for a decade."
+    },
+    {
+      "artist": "Refused",
+      "title": "The Shape of Punk to Come",
+      "year": 1998,
+      "rating": 4,
+      "why": "The Swedish band's farewell mixed hardcore, jazz, techno and manifesto, and its influence on 2000s heavy music outstripped its initial reception."
+    },
+    {
+      "artist": "Against Me!",
+      "title": "Transgender Dysphoria Blues",
+      "year": 2014,
+      "rating": 4,
+      "why": "Laura Jane Grace's coming-out record is lean, loud and plainspoken, and it gave punk its most important lyric sheet of the 2010s."
+    },
+    {
+      "artist": "Turnstile",
+      "title": "Glow On",
+      "year": 2021,
+      "rating": 4,
+      "why": "Baltimore hardcore with dream-pop, funk and Blood Orange cameos, it became the rare punk record to cross over without softening."
+    }
+  ],
+  "confidence": "high",
+  "note": ""
+}

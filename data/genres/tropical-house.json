@@ -1,0 +1,38 @@
+{
+  "kind": "genre",
+  "name": "Tropical House",
+  "path": ["Electronic", "House"],
+  "about": "Tropical house is deep house slowed to around 100 to 115 beats per minute and softened with steel drums, marimba, pan flute, saxophone and acoustic guitar, with a filtered, sun-struck mix and a pop vocal on top. Thomas Jack coined the name half-jokingly around 2013; Kygo's remixes of Ed Sheeran and Marvin Gaye, then his own Firestone, made it the sound of 2014 and 2015, and Robin Schulz, Lost Frequencies, Felix Jaehn and Jonas Blue turned it into a European chart formula. Its roots are in Balearic beat and the Scandinavian deep house of the Anjunadeep school. It faded from radio by 2018, but Kygo's albums and the beach-bar playlists it created have kept it in circulation.",
+  "related": ["Deep House", "Balearic Beat", "House", "Chillout", "Future House", "Chillwave"],
+  "artists": [
+    { "name": "Kygo", "why": "the Norwegian who defined it" },
+    { "name": "Thomas Jack", "why": "coined the name in 2013" },
+    { "name": "Robin Schulz", "why": "Prayer in C, the German chart breakthrough" },
+    { "name": "Lost Frequencies", "why": "Belgium's Are You with Me" },
+    { "name": "Felix Jaehn", "why": "the Cheerleader remix, summer 2015" },
+    { "name": "Jonas Blue", "why": "British radio's tropical house act" },
+    { "name": "Matoma", "why": "Norwegian remixer turned album act" },
+    { "name": "Klingande", "why": "Jubel and the saxophone hook" },
+    { "name": "Bakermat", "why": "Dutch sax-house precursor" },
+    { "name": "Sam Feldt", "why": "Show Me Love, Spinnin's smooth strain" },
+    { "name": "Kungs", "why": "This Girl, the French hit" },
+    { "name": "Alle Farben", "why": "Berlin's pop-house crossover" }
+  ],
+  "albums": [
+    { "artist": "Robin Schulz", "title": "Prayer", "year": 2014, "rating": 3, "why": "Built around the Prayer in C and Waves remixes that made Schulz a star, this is tropical house as a German radio formula; pleasant and thin." },
+    { "artist": "Matoma", "title": "Hakuna Matoma", "year": 2015, "rating": 3, "why": "The Norwegian producer's debut collects his remixes and singles into a sunny set, with Old Thing Back and Feeling Right as the hooks." },
+    { "artist": "Robin Schulz", "title": "Sugar", "year": 2015, "rating": 3, "why": "Headlights and the Francesco Yates-fronted title track kept Schulz on the charts; the album is interchangeable with its predecessor." },
+    { "artist": "Kygo", "title": "Cloud Nine", "year": 2016, "rating": 3.5, "why": "Firestone, Stole the Show and Stay gathered on the debut that defined the sound; melodic, well-crafted and the genre's one essential album." },
+    { "artist": "Lost Frequencies", "title": "Less Is More", "year": 2016, "rating": 3.5, "why": "Are You with Me and Reality give Felix De Laet's debut its hits, and the guitar-led, filtered pop house around them is better than most of the field." },
+    { "artist": "Kungs", "title": "Layers", "year": 2016, "rating": 3, "why": "This Girl, a remix of Cookin' on 3 Burners, is the hit; the album is tidy French pop-house with a tropical gloss." },
+    { "artist": "Alle Farben", "title": "Music Is My Best Friend", "year": 2016, "rating": 3, "why": "Berlin's Frans Zimmer made a pop-house album with a tropical tint, Bad Ideas included; agreeable, not memorable." },
+    { "artist": "Kygo", "title": "Kids in Love", "year": 2017, "rating": 3, "why": "Kygo's second album leans toward pop ballads with guest singers; the tropical signature is still there but the tempo and the hooks drop." },
+    { "artist": "Sam Feldt", "title": "Sunrise", "year": 2017, "rating": 3, "why": "The Spinnin' producer's double album is a smooth, sax-and-steel-drum set built around Show Me Love; a long listen for a short idea." },
+    { "artist": "Felix Jaehn", "title": "I", "year": 2018, "rating": 3, "why": "Ain't Nobody and the Cheerleader remix made Jaehn the German face of the sound; his debut album is clean, poppy and competent." },
+    { "artist": "Jonas Blue", "title": "Blue", "year": 2018, "rating": 3, "why": "Fast Car, Perfect Strangers and Rise are the British chart version of tropical house, and the album is a singles collection in all but name." },
+    { "artist": "Matoma", "title": "One in a Million", "year": 2018, "rating": 3, "why": "Matoma's second album pushes toward pop collaborations; the tropical touches are lighter and the songs are mostly forgettable." },
+    { "artist": "Lost Frequencies", "title": "Alive and Feeling Fine", "year": 2019, "rating": 3, "why": "A gentler, guitar-based second album from the Belgian producer, with the tropical house tempo kept and the dancefloor mostly left behind." }
+  ],
+  "confidence": "medium",
+  "note": "Tropical house was a chart and playlist sound more than an album one, so this shelf stops at thirteen records and rates them as pop."
+}

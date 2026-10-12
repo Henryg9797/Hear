@@ -1,0 +1,36 @@
+{
+  "kind": "genre",
+  "name": "Wave",
+  "path": ["Electronic", "Breakbeat & Bass"],
+  "about": "Wave is a 2010s microgenre of melodic, cinematic bass music: slow trap drums around 70 to 80 BPM under washed-out synth pads, pitched vocal fragments, long reverb tails and a melancholy that owes as much to ambient as to rap. It coalesced on SoundCloud around 2014 to 2016, with London producers Klimeks, Kareful, Skit and Vacant at the core, Plastician's Terrorhythm label and its Wavepool compilations giving it a flag, and Kareful's Liquid Ritual a home. The roots are Clams Casino's cloud rap instrumentals, the WeDidIt crew's hazy Los Angeles trap, witch house's drowned textures and the icy production around Yung Lean and Drain Gang. A harder, darker offshoot, hardwave, followed around 2018 with Skeler, Deadcrow and Øfdream. It remains small, mostly instrumental and almost entirely online.",
+  "related": ["Bass Music", "Dubstep", "Future Garage", "Chillwave", "Vaporwave", "Trip Hop"],
+  "artists": [
+    { "name": "Klimeks", "why": "the sound's first and most melodic voice" },
+    { "name": "Kareful", "why": "Liquid Ritual founder, the scene's organiser" },
+    { "name": "Skit", "why": "early London architect of the style" },
+    { "name": "Vacant", "why": "the ambient-leaning cornerstone" },
+    { "name": "Plastician", "why": "grime veteran who gave wave its label" },
+    { "name": "Sorsari", "why": "Finnish producer of its darkest textures" },
+    { "name": "Enjoii", "why": "the melodic, trap-leaning wing" },
+    { "name": "Brothel", "why": "bridged wave and ambient" },
+    { "name": "Noah B", "why": "the American wing's standard-bearer" },
+    { "name": "Skeler", "why": "hardwave's founder" },
+    { "name": "Deadcrow", "why": "hardwave's heavy hitter" },
+    { "name": "Øfdream", "why": "hardwave's anthem writer" }
+  ],
+  "albums": [
+    { "artist": "Salem", "title": "King Night", "year": 2010, "rating": 3.5, "why": "Witch house's one real album, chopped-and-screwed drums under cathedral synths; wave inherited its drowned, slowed atmosphere wholesale." },
+    { "artist": "Clams Casino", "title": "Instrumentals", "year": 2011, "rating": 4, "why": "The cloud rap beats behind Lil B and A$AP Rocky, released on their own: blurred samples, slow drums and reverb as the root of everything wave does." },
+    { "artist": "Shlohmo", "title": "Bad Vibes", "year": 2011, "rating": 4, "why": "WeDidIt's founder makes a lo-fi, guitar-flecked beat record of real sadness; the Los Angeles source for wave's hazy drums and mood." },
+    { "artist": "Holy Other", "title": "Held", "year": 2012, "rating": 3.5, "why": "Tri Angle's masked producer slows garage and R&B fragments to a crawl; the pitched, submerged vocal that became a wave signature starts here." },
+    { "artist": "Evian Christ", "title": "Kings and Them", "year": 2012, "rating": 3.5, "why": "A short Tri Angle set of trap drums and cold, ringing synths that showed how rap production could be turned into atmosphere." },
+    { "artist": "Yung Lean", "title": "Unknown Memory", "year": 2014, "rating": 3.5, "why": "Yung Gud, Yung Sherman and Whitearmor's glacial production under Lean's drowsy rap; the Sad Boys aesthetic wave's producers absorbed." },
+    { "artist": "Shlohmo", "title": "Dark Red", "year": 2015, "rating": 3.5, "why": "Heavier and more cinematic than the debut, with distorted drums and horror-film synths; the closest thing to a wave template before the term existed." },
+    { "artist": "Various Artists", "title": "Plastician Presents: Wavepool", "year": 2016, "rating": 3.5, "why": "Terrorhythm's compilation that named and gathered the scene, Klimeks, Kareful, Skit and friends in one place for the first time; a document more than a classic." },
+    { "artist": "Various Artists", "title": "Plastician Presents: Wavepool 2", "year": 2017, "rating": 3.5, "why": "The sequel caught wave at its peak reach, deeper and better sequenced than the first, with the melodic and hard wings both represented." },
+    { "artist": "Bladee", "title": "Icedancer", "year": 2018, "rating": 3.5, "why": "Whitearmor's crystalline, weightless beats under Bladee's processed voice; Drain Gang and wave share this exact palette of pads and pitched vocals." },
+    { "artist": "Ecco2k", "title": "E", "year": 2019, "rating": 3.5, "why": "Short, airy and strange, with trap drums dissolving into ambient pop; the record wave's melodic producers most often point to from the era." }
+  ],
+  "confidence": "low",
+  "note": "Wave's own releases are mostly singles and EPs on SoundCloud and Bandcamp; this list is the two compilations that define it and the records its producers built on."
+}

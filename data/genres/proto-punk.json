@@ -1,0 +1,239 @@
+{
+  "kind": "genre",
+  "name": "Proto-Punk",
+  "path": [
+    "Rock",
+    "Punk"
+  ],
+  "about": "Proto-punk is a label applied in hindsight to bands of the mid-1960s and early 1970s whose crudeness, speed and attitude anticipated punk before it had a name. It runs from the garage snarl of The Sonics and The Monks through The Velvet Underground's drone and deadpan to Detroit, where the MC5 and The Stooges turned volume and contempt into a style around 1969, with Iggy Pop as its first frontman. The New York Dolls brought glam trash to Manhattan, the Modern Lovers and Dr. Feelgood stripped rock back to basics, and Death and Rocket from the Tombs recorded punk years before anyone released it. The guitars are overdriven, the drums simple, the singing more a bark than a croon, and the records sold poorly until their disciples made them canon.",
+  "related": [
+    "Garage Rock",
+    "Punk Rock",
+    "Glam Rock",
+    "Pub Rock",
+    "Art Rock",
+    "Hard Rock"
+  ],
+  "artists": [
+    {
+      "name": "The Stooges",
+      "why": "Iggy Pop's band, the essential prototype"
+    },
+    {
+      "name": "MC5",
+      "why": "Detroit's revolutionary high-energy quintet"
+    },
+    {
+      "name": "The Velvet Underground",
+      "why": "noise, drone and deadpan from New York"
+    },
+    {
+      "name": "New York Dolls",
+      "why": "glam trash that taught punk to dress"
+    },
+    {
+      "name": "The Sonics",
+      "why": "Tacoma's screaming 1965 garage pioneers"
+    },
+    {
+      "name": "The Monks",
+      "why": "American GIs in Germany, 1966, banjo included"
+    },
+    {
+      "name": "The Modern Lovers",
+      "why": "Jonathan Richman's two-chord Velvets devotion"
+    },
+    {
+      "name": "Dr. Feelgood",
+      "why": "Canvey Island pub rock at punk tempo"
+    },
+    {
+      "name": "Death",
+      "why": "Detroit's Black punk band, lost until 2009"
+    },
+    {
+      "name": "Rocket from the Tombs",
+      "why": "Cleveland's seedbed for Pere Ubu and Dead Boys"
+    },
+    {
+      "name": "The Dictators",
+      "why": "New York wiseguys who preceded the Ramones"
+    },
+    {
+      "name": "Suicide",
+      "why": "two men, a keyboard and pure confrontation"
+    }
+  ],
+  "albums": [
+    {
+      "artist": "The Sonics",
+      "title": "Here Are the Sonics!!!",
+      "year": 1965,
+      "rating": 4,
+      "why": "Gerry Roslie's screams and the distorted, overloaded recording of The Witch and Psycho made the rawest American rock record of its decade."
+    },
+    {
+      "artist": "The Who",
+      "title": "My Generation",
+      "year": 1965,
+      "rating": 4,
+      "why": "Keith Moon's chaos, Pete Townshend's feedback and the stuttered title song gave British punk a template it never admitted to using."
+    },
+    {
+      "artist": "The Monks",
+      "title": "Black Monk Time",
+      "year": 1966,
+      "rating": 4,
+      "why": "Five American servicemen in tonsures playing distorted banjo and shouting about Vietnam, a record so strange it took decades to find its audience."
+    },
+    {
+      "artist": "The Troggs",
+      "title": "From Nowhere",
+      "year": 1966,
+      "rating": 3.5,
+      "why": "Wild Thing and Reg Presley's leering simplicity made the Andover band an unlikely influence on everyone from the Ramones to the MC5."
+    },
+    {
+      "artist": "The Velvet Underground",
+      "title": "The Velvet Underground & Nico",
+      "year": 1967,
+      "rating": 5,
+      "why": "Lou Reed's songs about heroin and sadomasochism over John Cale's drone sold little and, as the saying goes, started a band in everyone who bought it."
+    },
+    {
+      "artist": "The Velvet Underground",
+      "title": "White Light/White Heat",
+      "year": 1968,
+      "rating": 4.5,
+      "why": "Recorded in the red with Sister Ray's seventeen minutes of distortion, it is the noisiest record a major label released in the 1960s."
+    },
+    {
+      "artist": "MC5",
+      "title": "Kick Out the Jams",
+      "year": 1969,
+      "rating": 4.5,
+      "why": "Recorded live at Detroit's Grande Ballroom, the debut's revolutionary rhetoric and twin-guitar roar made it the loudest political record of its time."
+    },
+    {
+      "artist": "The Stooges",
+      "title": "The Stooges",
+      "year": 1969,
+      "rating": 4.5,
+      "why": "John Cale produced the Ann Arbor band's debut, where 1969 and I Wanna Be Your Dog reduced rock to a drone, a riff and Iggy's boredom."
+    },
+    {
+      "artist": "The Stooges",
+      "title": "Fun House",
+      "year": 1970,
+      "rating": 4.5,
+      "why": "Cut almost live with Steve Mackay's saxophone shrieking through L.A. Blues, it is the heaviest and most feral of the proto-punk records."
+    },
+    {
+      "artist": "MC5",
+      "title": "Back in the USA",
+      "year": 1970,
+      "rating": 4,
+      "why": "Jon Landau's thin, tight production turned the MC5 into a short-song rock and roll band, and the result sounds like the Ramones six years early."
+    },
+    {
+      "artist": "Alice Cooper",
+      "title": "Love It to Death",
+      "year": 1971,
+      "rating": 4,
+      "why": "Bob Ezrin's production and I'm Eighteen made the Detroit band's shock-rock into real songs, a bridge between the Stooges and glam."
+    },
+    {
+      "artist": "The Flamin' Groovies",
+      "title": "Teenage Head",
+      "year": 1971,
+      "rating": 4,
+      "why": "Roy Loney's sleazy San Francisco take on the Stones and rockabilly was reportedly admired by Mick Jagger and ignored by everyone else at the time."
+    },
+    {
+      "artist": "Iggy and The Stooges",
+      "title": "Raw Power",
+      "year": 1973,
+      "rating": 5,
+      "why": "James Williamson's guitar on Search and Destroy and David Bowie's thin, tinny mix made the record punk's immediate blueprint on both sides of the Atlantic."
+    },
+    {
+      "artist": "New York Dolls",
+      "title": "New York Dolls",
+      "year": 1973,
+      "rating": 4.5,
+      "why": "Johnny Thunders's guitar and David Johansen's camp Jagger routine on Personality Crisis gave punk its look, its attitude and half its chord changes."
+    },
+    {
+      "artist": "New York Dolls",
+      "title": "Too Much Too Soon",
+      "year": 1974,
+      "rating": 3.5,
+      "why": "Shadow Morton's production and too many covers blunted the second album, though Human Being and Puss 'n' Boots keep the trash spirit alive."
+    },
+    {
+      "artist": "Dr. Feelgood",
+      "title": "Down by the Jetty",
+      "year": 1975,
+      "rating": 4,
+      "why": "Recorded in mono with Wilko Johnson's stabbing guitar and Lee Brilleaux's menace, the Canvey Island debut is pub rock at punk's speed and intent."
+    },
+    {
+      "artist": "The Dictators",
+      "title": "Go Girl Crazy!",
+      "year": 1975,
+      "rating": 4,
+      "why": "Handsome Dick Manitoba's wrestling-heel persona and Andy Shernoff's songs about TV and fast food made the funniest pre-punk record out of New York."
+    },
+    {
+      "artist": "The Modern Lovers",
+      "title": "The Modern Lovers",
+      "year": 1976,
+      "rating": 4.5,
+      "why": "Recorded in 1972 with John Cale and shelved for four years, Roadrunner and Pablo Picasso turned Velvets worship into something innocent and wholly new."
+    },
+    {
+      "artist": "Suicide",
+      "title": "Suicide",
+      "year": 1977,
+      "rating": 4,
+      "why": "Alan Vega's rockabilly hiccup over Martin Rev's buzzing keyboard on Ghost Rider and Frankie Teardrop was more confrontational than any guitar band of the year."
+    },
+    {
+      "artist": "The Saints",
+      "title": "(I'm) Stranded",
+      "year": 1977,
+      "rating": 4,
+      "why": "Recorded in Brisbane isolation before the band had heard the Ramones, the debut proved punk was arriving independently on three continents."
+    },
+    {
+      "artist": "Rocket from the Tombs",
+      "title": "The Day the Earth Met the Rocket from the Tombs",
+      "year": 2002,
+      "rating": 4,
+      "why": "The 1975 Cleveland recordings that seeded Pere Ubu and Dead Boys, with the first versions of Sonic Reducer and 30 Seconds Over Tokyo, finally issued properly."
+    },
+    {
+      "artist": "Death",
+      "title": "...For the Whole World to See",
+      "year": 2009,
+      "rating": 4,
+      "why": "Three brothers from Detroit recorded these seven punk songs in 1975 and were ignored for refusing to change their name; Drag City's release rewrote the timeline."
+    },
+    {
+      "artist": "Simply Saucer",
+      "title": "Cyborgs Revisited",
+      "year": 1989,
+      "rating": 3.5,
+      "why": "Hamilton, Ontario's lost 1974 recordings mix Stooges riffs with synthesizer squall, a Canadian proto-punk footnote that deserves better than footnote status."
+    },
+    {
+      "artist": "The Seeds",
+      "title": "The Seeds",
+      "year": 1966,
+      "rating": 3.5,
+      "why": "Sky Saxon's whine and the two-chord drive of Pushin' Too Hard made Los Angeles garage rock's most punk-sounding debut."
+    }
+  ],
+  "confidence": "high",
+  "note": ""
+}

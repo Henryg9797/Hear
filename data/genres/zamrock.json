@@ -1,0 +1,39 @@
+{
+  "kind": "genre",
+  "name": "Zamrock",
+  "path": ["Rock", "Psychedelic"],
+  "about": "Zamrock is the fuzz-heavy rock that came out of newly independent Zambia in the first half of the 1970s. President Kaunda's rule that radio play 95 per cent Zambian music, plus a copper boom and cheap Japanese amplifiers, produced a scene in Lusaka and the Copperbelt that absorbed Hendrix, Black Sabbath, James Brown and Osibisa and sang back in English, Bemba and Nyanja. WITCH, fronted by Emmanuel 'Jagari' Chanda, were the stars; Paul Ngozi's various bands were the heaviest; Amanaz and Rikki Ililonga's Musi-O-Tunya the most psychedelic. The copper crash, AIDS and vinyl's disappearance ended it by the early 1980s, and most of the musicians died young. Now-Again and Shadoks reissues since 2010 made the records collectible, and a reformed WITCH tours again.",
+  "related": ["Heavy Psych", "Psychedelic Rock", "Garage Rock", "Acid Rock", "Hard Rock", "Afrobeat"],
+  "artists": [
+    { "name": "WITCH", "why": "the scene's biggest and best band" },
+    { "name": "Jagari Chanda", "why": "WITCH's frontman, still touring" },
+    { "name": "Amanaz", "why": "the genre's most loved one-off" },
+    { "name": "Paul Ngozi", "why": "the heaviest guitarist in Lusaka" },
+    { "name": "Ngozi Family", "why": "Ngozi's fuzz-drenched band" },
+    { "name": "Chrissy Zebby Tembo", "why": "Ngozi's drummer turned bandleader" },
+    { "name": "Rikki Ililonga", "why": "the scene's singer-songwriter" },
+    { "name": "Musi-O-Tunya", "why": "Afro-rock with horns, Ililonga's band" },
+    { "name": "The Peace", "why": "Kitwe's Santana-leaning one-album band" },
+    { "name": "Keith Mlevhu", "why": "singer-guitarist with a political edge" },
+    { "name": "Salty Dog", "why": "one of the scene's second-wave bands" },
+    { "name": "Blackfoot", "why": "another of the scene's hard-rock bands" }
+  ],
+  "albums": [
+    { "artist": "WITCH", "title": "Lazy Bones!!", "year": 1975, "rating": 4.5, "why": "WITCH's fourth album, slowed to a stoned, bass-heavy crawl under Jagari's weary vocals; the Zamrock record most often cited as the genre's best." },
+    { "artist": "Amanaz", "title": "Africa", "year": 1975, "rating": 4.5, "why": "Fuzz, melancholy and the slow burn of 'Khala My Friend'; the Shadoks reissue of this Lusaka one-off made it the genre's most loved record abroad." },
+    { "artist": "WITCH", "title": "Introduction", "year": 1972, "rating": 4, "why": "Generally held to be the first Zamrock LP, a set of garage rock and boogie that announced WITCH as the country's biggest band." },
+    { "artist": "Ngozi Family", "title": "45,000 Volts", "year": 1977, "rating": 4, "why": "Paul Ngozi's band at full distortion, the title a boast about the amplifiers; the heaviest and most Sabbath-like record the scene produced." },
+    { "artist": "Chrissy Zebby Tembo & Ngozi Family", "title": "My Ancestors", "year": 1974, "rating": 4, "why": "Ngozi's drummer Chrissy Tembo stepping to the front for a raw, fuzz-caked set of acid rock and village memory; a Shadoks and Now-Again favourite." },
+    { "artist": "Musi-O-Tunya", "title": "Wings of Africa", "year": 1975, "rating": 4, "why": "Rikki Ililonga's band mixing Afro-rock horns and fuzz guitar on a loose, funky record that sits between Osibisa and the heavier Lusaka bands." },
+    { "artist": "Ngozi Family", "title": "Day of Judgement", "year": 1976, "rating": 3.5, "why": "The Ngozi Family's first album, cruder than what followed but already fixed on moral warnings and Paul Ngozi's needling lead guitar." },
+    { "artist": "Rikki Ililonga", "title": "Zambia", "year": 1975, "rating": 3.5, "why": "Ililonga's first solo record, gentler than Musi-O-Tunya, with acoustic songs and a politics of post-independence hope; a singer-songwriter inside Zamrock." },
+    { "artist": "Rikki Ililonga", "title": "Sunshine Love", "year": 1976, "rating": 3.5, "why": "The follow-up adds funk and a bigger band to Ililonga's songs; warmer and more polished than his debut, if less distinctive." },
+    { "artist": "The Peace", "title": "Black Power", "year": 1975, "rating": 3.5, "why": "A Kitwe band's only album, with a title lifted from the American movement and a sound closer to Santana and Grand Funk; a Shadoks rescue." },
+    { "artist": "Rikki Ililonga & Musi-O-Tunya", "title": "Dark Sunrise", "year": 2010, "rating": 4, "why": "Now-Again's two-disc survey of Ililonga and Musi-O-Tunya's 1970s records, the clearest single document of the scene's most versatile musician." },
+    { "artist": "Mike Nyoni & Born Free", "title": "My Own Thing", "year": 2014, "rating": 3.5, "why": "Now-Again's compilation of the guitarist's late-1970s recordings with Born Free, where Zamrock turns toward disco and reggae." },
+    { "artist": "Various Artists", "title": "Welcome to Zamrock! Vol. 1", "year": 2017, "rating": 4, "why": "Egon's Now-Again anthology spreads the scene's fuzz and funk across two LPs with a book; the starting point for anyone outside Zambia." },
+    { "artist": "Various Artists", "title": "Welcome to Zamrock! Vol. 2", "year": 2017, "rating": 4, "why": "The second volume digs deeper into the Zambia Music Parlour and Zambezi catalogues; as strong as the first, with more of the obscure bands." }
+  ],
+  "confidence": "medium",
+  "note": "Zamrock's original pressings are rare and poorly documented, so this list stops at the records whose credits and dates are certain; the Now-Again anthologies cover the rest."
+}

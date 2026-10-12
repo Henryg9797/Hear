@@ -1,0 +1,37 @@
+{
+  "kind": "genre",
+  "name": "Baltimore Club",
+  "path": ["Electronic", "Breakbeat & Bass"],
+  "about": "Baltimore club took shape in the city's Black clubs in the late 1980s and early 1990s, when DJs such as Scottie B, Frank Ski and DJ Technics stitched Chicago house, Miami bass and hip-hop into something faster and blunter. The template has barely moved: around 130 BPM, a stuttering kick pattern, the \"Sing Sing\" and \"Think\" breaks looped hard, and a chopped vocal, chant or hook hammered until it becomes a command. Rod Lee, K-Swift, DJ Booman and DJ Class carried it through the 2000s on 12-inches and mixtapes from Unruly and Club Kingz; Blaqstarr and Rye Rye took it into M.I.A.'s orbit; Hollertronix and Spank Rock sold it to indie crowds. It seeded Philly and Jersey club, and TT the Artist and Abdu Ali still work in its grammar.",
+  "related": ["Jersey Club", "Miami Bass", "Ghettotech", "Juke", "Chicago House", "Hip House"],
+  "artists": [
+    { "name": "Scottie B", "why": "Unruly co-founder, the sound's first architect" },
+    { "name": "Frank Ski", "why": "cut the 1993 blueprint with Miss Tony" },
+    { "name": "Miss Tony", "why": "the drag queen voice of the early anthems" },
+    { "name": "DJ Technics", "why": "codified the kick pattern on countless 12-inches" },
+    { "name": "Rod Lee", "why": "Club Kingz boss, the scene's one album artist" },
+    { "name": "K-Swift", "why": "the Club Queen of 92Q radio, died 2008" },
+    { "name": "DJ Booman", "why": "Doo Dew Kidz producer behind the mid-period hits" },
+    { "name": "DJ Class", "why": "took it to national radio in 2009" },
+    { "name": "Blaqstarr", "why": "the eerie minimalist who reached M.I.A." },
+    { "name": "Rye Rye", "why": "the scene's breakout rapper" },
+    { "name": "Kw Griff", "why": "relentless producer of the 2000s underground" },
+    { "name": "Debonair Samir", "why": "curated the sound for outsiders" },
+    { "name": "TT the Artist", "why": "the new generation's standard-bearer and documentarian" },
+    { "name": "Abdu Ali", "why": "bent the club beat toward punk and jazz" }
+  ],
+  "albums": [
+    { "artist": "Rod Lee", "title": "Vol. 5: The Official", "year": 2005, "rating": 4, "why": "The scene's one nationally distributed album: Rod Lee's hoarse, pleading anthems, 'Dance My Pain Away' among them, pressed by Morphius and still the entry point." },
+    { "artist": "Hollertronix", "title": "Never Scared", "year": 2003, "rating": 4, "why": "Diplo and Low Budget's mix CD that smuggled Baltimore club breaks into indie parties and set up the mid-2000s boom." },
+    { "artist": "Aaron LaCrate & Debonair Samir", "title": "Bmore Gutter Music", "year": 2005, "rating": 3.5, "why": "Milkcrate's mixtape primer for outsiders, raw club edits stacked end to end; the record most people outside Baltimore heard first." },
+    { "artist": "Spank Rock", "title": "YoYoYoYoYo", "year": 2006, "rating": 4, "why": "Naeem and XXXChange's Big Dada debut, the moment Baltimore club's breaks and filth got an art-rap record and a critical constituency." },
+    { "artist": "Blaqstarr", "title": "Supastarr", "year": 2008, "rating": 4, "why": "A short EP on M.I.A.'s N.E.E.T. that condenses Blaqstarr's spare, ghostly take on club music, the sound's most distinctive producer at his peak." },
+    { "artist": "Tittsworth", "title": "Twelve Steps", "year": 2008, "rating": 3.5, "why": "The DC DJ's album-length tour of Baltimore club with a crowd of rap and electro guests; polished and fun, a little thin on its own ideas." },
+    { "artist": "Blaqstarr", "title": "The Divine", "year": 2011, "rating": 3.5, "why": "A second N.E.E.T. EP that drifts from club tempos toward sung, R&B-shaded hymns; uneven, but the production is as singular as ever." },
+    { "artist": "Spank Rock", "title": "Everything Is Boring and Everyone Is a Fucking Liar", "year": 2011, "rating": 3, "why": "The long-delayed follow-up swaps Baltimore breaks for Boys Noize-style electro; a few bangers, but the club roots are mostly gone." },
+    { "artist": "Rye Rye", "title": "Go! Pop! Bang!", "year": 2012, "rating": 3.5, "why": "Years late but still bright: Rye Rye's Interscope debut keeps the Baltimore tempo and chant under pop hooks and M.I.A. and Robyn cameos." },
+    { "artist": "Abdu Ali", "title": "Fiyah!!!", "year": 2019, "rating": 3.5, "why": "Baltimore's queer, punk-minded poet sets club rhythms under free-jazz horns and shouted verse, the genre's experimental edge on a full-length." }
+  ],
+  "confidence": "medium",
+  "note": "Baltimore club lived on 12-inches, mixtapes and radio rather than albums; this short list is the album-length records that document it."
+}

@@ -1,0 +1,35 @@
+{
+  "kind": "genre",
+  "name": "Jersey Club",
+  "path": ["Electronic", "Breakbeat & Bass"],
+  "about": "Jersey club grew out of Baltimore club in Newark in the late 1990s and early 2000s, after DJ Tameil brought the Baltimore records home and he, Tim Dolla, Mike V and the Brick Bandits crew rebuilt them faster, harder and more chopped. The signatures are fixed: a bed-squeak sample, triplet kick runs, a vocal sliced into a stutter, and tempos around 135 to 140 BPM. The SoundCloud generation of the 2010s, DJ Sliink, Nadus, R3LL and UNIIQU3, turned it into a global remix style and a club format. Cookiee Kawaii's \"Vibe\" went viral in 2020, Mcvertt's beat for Lil Uzi Vert's \"Just Wanna Rock\" topped charts in 2022, Bandmanrill welded it to drill, and Drake and NewJeans borrowed it. Newark still owns it.",
+  "related": ["Baltimore Club", "Juke", "Footwork", "Miami Bass", "Ghettotech", "Bass Music"],
+  "artists": [
+    { "name": "DJ Tameil", "why": "the Newark originator, Brick Bandits founder" },
+    { "name": "Tim Dolla", "why": "Brick Bandits co-founder, early anthems" },
+    { "name": "DJ Jayhood", "why": "the 2000s hitmaker of the Newark clubs" },
+    { "name": "DJ Sliink", "why": "the 2010s ambassador, Cartel Music boss" },
+    { "name": "Nadus", "why": "gave the style melancholy and depth" },
+    { "name": "R3LL", "why": "Brick Bandits producer of the SoundCloud era" },
+    { "name": "UNIIQU3", "why": "the self-styled Jersey club queen" },
+    { "name": "DJ Lilman", "why": "the teen prodigy of the viral years" },
+    { "name": "Cookiee Kawaii", "why": "'Vibe', the 2020 TikTok breakthrough" },
+    { "name": "Mcvertt", "why": "produced 'Just Wanna Rock'" },
+    { "name": "Bandmanrill", "why": "fused Jersey club with drill" },
+    { "name": "DJ Taj", "why": "prolific remixer, the sound's YouTube face" }
+  ],
+  "albums": [
+    { "artist": "DJ Sliink", "title": "Vibrate", "year": 2012, "rating": 3.5, "why": "The Fool's Gold EP that introduced Newark's bed-squeaks and chopped vocals to the wider dance world, Sliink's calling card." },
+    { "artist": "Nadus", "title": "Broke City", "year": 2014, "rating": 4, "why": "A Pelican Fly EP where Jersey club's kicks carry real sadness; 'Nxwxrk' is the scene's most-loved instrumental and its emotional high-water mark." },
+    { "artist": "Jubilee", "title": "After Hours", "year": 2016, "rating": 3.5, "why": "The Mixpak producer's debut runs Miami bass and freestyle through Jersey club's grid; a New York club record with Newark's rhythm in its bones." },
+    { "artist": "Cookiee Kawaii", "title": "Club Soda, Vol. 1", "year": 2020, "rating": 3.5, "why": "The EP around 'Vibe (If I Back It Up)', the TikTok hit that made Jersey club a pop reference point; brisk, flirty and over in minutes." },
+    { "artist": "UNIIQU3", "title": "Heartbeats", "year": 2021, "rating": 3.5, "why": "A Local Action EP that gives the scene's most visible DJ a vocal, pop-leaning showcase without softening the kicks." },
+    { "artist": "Drake", "title": "Honestly, Nevermind", "year": 2022, "rating": 3.5, "why": "A superstar's house detour with Jersey and Baltimore club kick patterns on 'Sticky' and 'Currents'; slight by his standards, huge for the scene's visibility." },
+    { "artist": "Bandmanrill", "title": "Club Godfather", "year": 2022, "rating": 3.5, "why": "The Newark rapper's breakout tape puts drill cadences over Mcvertt's club beats and invents a lane in the process." },
+    { "artist": "Lil Uzi Vert", "title": "Pink Tape", "year": 2023, "rating": 3, "why": "A sprawling, uneven rock-rap album that matters here for 'Just Wanna Rock', the Mcvertt-produced Jersey club beat that reached number one." },
+    { "artist": "NewJeans", "title": "Get Up", "year": 2023, "rating": 3.5, "why": "The K-pop group's EP built 'Super Shy' and 'ETA' on Jersey club rhythms, the style's biggest global crossover and a sleek one." },
+    { "artist": "Bandmanrill, Sha EK & MCVERTT", "title": "Defiant Presents: Jiggy in Jersey", "year": 2023, "rating": 3.5, "why": "The Jersey club drill summit on tape: three of its architects trading verses over squeaks and triplets, rough but definitive of the moment." }
+  ],
+  "confidence": "medium",
+  "note": "Jersey club's canon is singles, SoundCloud edits and EPs; this list is the handful of records that document it and the pop crossovers that carried it."
+}

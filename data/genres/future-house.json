@@ -1,0 +1,37 @@
+{
+  "kind": "genre",
+  "name": "Future House",
+  "path": ["Electronic", "House"],
+  "about": "Future house is the name Tchami gave in 2013 to a slick, bass-heavy strain of deep house: a shuffled four-to-the-floor, a metallic, formant-filtered bassline that talks in the gaps, pitched-down vocal chops and a clean, loud Dutch mix. Oliver Heldens' Gecko and Koala, released through Tiësto's Musical Freedom and Spinnin', made it the sound of 2014, and Don Diablo's Hexagon label, Mesto, Brooks and Mike Williams turned it into a festival staple. Its DNA comes from UK garage and Disclosure's Settle, but it is a producer's and DJ's genre, built around singles and radio shows rather than albums. Fans rightly insist it is better than its reputation; critics rightly note how few full-lengths exist.",
+  "related": ["House", "Deep House", "UK Garage", "Electro House", "Bass Music", "Tropical House"],
+  "artists": [
+    { "name": "Tchami", "why": "named it, runs Confession" },
+    { "name": "Oliver Heldens", "why": "Gecko made it a chart sound" },
+    { "name": "Don Diablo", "why": "Hexagon, the sound's label boss" },
+    { "name": "Mesto", "why": "Dutch second-wave melodist" },
+    { "name": "Mike Williams", "why": "future bounce's pop face" },
+    { "name": "Brooks", "why": "Hexagon's bounce specialist" },
+    { "name": "Curbi", "why": "the British teenage prodigy" },
+    { "name": "Malaa", "why": "Tchami's masked bass house partner" },
+    { "name": "Jauz", "why": "the bass house crossover" },
+    { "name": "AC Slater", "why": "Night Bass, the American wing" },
+    { "name": "Chris Lake", "why": "bass house's biggest DJ" },
+    { "name": "Disclosure", "why": "Settle, the garage-house root" }
+  ],
+  "albums": [
+    { "artist": "Disclosure", "title": "Settle", "year": 2013, "rating": 4.5, "why": "The Lawrence brothers' debut revived UK garage as pop house with Latch and White Noise, and every future house producer learned its bass and vocal tricks." },
+    { "artist": "Gorgon City", "title": "Sirens", "year": 2014, "rating": 3.5, "why": "London's Gorgon City followed Settle with a vocal-led deep house album, Ready for Your Love included, that sits at the pop end of the sound." },
+    { "artist": "Zhu", "title": "Generationwhy", "year": 2016, "rating": 3.5, "why": "Faded's anonymous producer made a moody, song-based deep house album with the bass weight future house borrowed; In the Morning is the keeper." },
+    { "artist": "Don Diablo", "title": "Future", "year": 2018, "rating": 3.5, "why": "The Hexagon boss's first full album is the genre's clearest long-form statement, polished future house with pop vocals and a few real hooks." },
+    { "artist": "Jauz", "title": "The Wise and the Wicked", "year": 2018, "rating": 3, "why": "A concept double album of bass house and future house from the Bite This founder; too long, but the heavier tracks show why he filled festival tents." },
+    { "artist": "AC Slater", "title": "Outsiders", "year": 2018, "rating": 3, "why": "The Night Bass label head's debut album is the American bass house strain, garage-derived, raw and built for the club rather than the radio." },
+    { "artist": "Hayden James", "title": "Between Us", "year": 2019, "rating": 3.5, "why": "The Future Classic producer's debut is sunlit Australian house with the vocal chops and warm bass future house shares; Numb is the standout." },
+    { "artist": "Tchami", "title": "Year Zero", "year": 2020, "rating": 3.5, "why": "Tchami's long-awaited debut treats future house as gospel-tinged pop, with Proud and Ghosts; the genre's inventor finally in album form." },
+    { "artist": "Duke Dumont", "title": "Duality", "year": 2020, "rating": 3.5, "why": "The British producer behind Need U (100%) delivers a sleek, melodic house album, Ocean Drive and Red Light Green Light included." },
+    { "artist": "Disclosure", "title": "Energy", "year": 2020, "rating": 3.5, "why": "Faster and more global than Settle, with Fatoumata Diawara and Aminé, Energy is Disclosure's most club-focused record." },
+    { "artist": "Don Diablo", "title": "FORΞVΞR", "year": 2021, "rating": 3, "why": "The second Hexagon album stretches future house toward pop and orchestral gestures; ambitious, uneven, and best in its club moments." },
+    { "artist": "Gorgon City", "title": "Olympia", "year": 2021, "rating": 3, "why": "A lockdown-era album of melodic house with guest vocalists; well produced and unadventurous, the sound's mature middle age." }
+  ],
+  "confidence": "low",
+  "note": "Future house is a singles genre with few albums; this shelf includes the garage-house roots and bass house neighbours that shaped it."
+}

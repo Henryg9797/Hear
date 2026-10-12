@@ -1,0 +1,40 @@
+{
+  "kind": "genre",
+  "name": "Halftime",
+  "path": ["Electronic", "Breakbeat & Bass"],
+  "about": "Halftime is drum and bass at 170 BPM with the drums landing on half the beats, so the floor feels like 85 while the hi-hats, bass and edits keep full speed. Several threads fed it: the Autonomic experiments of dBridge and Instra:mental around 2009, Om Unit's and Fracture's footwork-speed hybrids, Amon Tobin's Two Fingers project and, decisively, Ivy Lab's switch from liquid funk to slow, sub-heavy beats in 2014, which gave the style a name and a label in 20/20 LDN. Alix Perez's 1985 Music, EPROM's circle and the Critical roster of Sam Binga, Chimpo and Fixate pulled it toward trap and dubstep weight. Halftime stays a producer's genre, strongest on EPs and in DJ sets, and its best albums are few.",
+  "related": ["Drum and Bass", "Neurofunk", "Liquid Funk", "Dubstep", "Footwork", "Bass Music"],
+  "artists": [
+    { "name": "Ivy Lab", "why": "named the style and built its label" },
+    { "name": "Alix Perez", "why": "1985 Music boss, liquid veteran turned halftime leader" },
+    { "name": "Om Unit", "why": "the footwork-to-170 bridge builder" },
+    { "name": "dBridge", "why": "Autonomic's architect, Exit Records" },
+    { "name": "Instra:mental", "why": "Autonomic's other half, 'Resolution 653'" },
+    { "name": "Fracture", "why": "Astrophonica's juke-and-jungle hybridiser" },
+    { "name": "Sam Binga", "why": "Critical's grime-and-dancehall-flavoured halftime" },
+    { "name": "Chimpo", "why": "Manchester's rowdiest halftime producer" },
+    { "name": "Fixate", "why": "Exit's precision drummer" },
+    { "name": "EPROM", "why": "West Coast bass weight, Shades with Perez" },
+    { "name": "Two Fingers", "why": "Amon Tobin's half-speed rap-beat project" },
+    { "name": "Mefjus", "why": "neurofunk engineer who adopted the tempo" },
+    { "name": "Halogenix", "why": "Critical's melodic halftime voice" }
+  ],
+  "albums": [
+    { "artist": "dBridge & Instra:mental", "title": "FabricLive 50", "year": 2010, "rating": 4, "why": "The Autonomic mix: half-speed drum and bass, electro and ambient blended into one grey, beautiful hour; the manifesto halftime grew from." },
+    { "artist": "Consequence", "title": "Live for Never", "year": 2010, "rating": 3.5, "why": "An Exit Records album of slow, synth-led drum and bass from the Autonomic circle, more mood than dancefloor and quietly ahead of its time." },
+    { "artist": "ASC", "title": "Nothing Is Certain", "year": 2010, "rating": 3.5, "why": "NonPlus Records' first album, deep and pulseless where it needs to be; the ambient end of the Autonomic sound on a full-length." },
+    { "artist": "Instra:mental", "title": "Resolution 653", "year": 2011, "rating": 4, "why": "Boddika and Jon Convex's only album, cold electro and halved drum and bass with a sci-fi sheen; a NonPlus landmark." },
+    { "artist": "Various Artists", "title": "Mosaic Vol. 1", "year": 2011, "rating": 4, "why": "Exit Records' compilation of dBridge, Instra:mental, Consequence and friends caught the Autonomic school at its peak and sketched the half-speed future." },
+    { "artist": "Two Fingers", "title": "Stunt Rhythms", "year": 2012, "rating": 3.5, "why": "Amon Tobin's alias strips his sound design down to huge, slow drums and bass; an instrumental rap-beat record that halftime producers quote constantly." },
+    { "artist": "EPROM", "title": "Metahuman", "year": 2012, "rating": 3.5, "why": "Rwina's West Coast producer at his most deranged, bass and glitch at half speed; the American weight that later entered halftime through Alix Perez." },
+    { "artist": "Alix Perez", "title": "Chroma Chords", "year": 2013, "rating": 4, "why": "The liquid funk star's second album slows down, darkens and adds vocal features; the pivot that made 1985 Music a halftime label." },
+    { "artist": "Om Unit", "title": "Threads", "year": 2013, "rating": 4, "why": "Jim Coles's Civil Music debut braids footwork, jungle and halved drum and bass into warm, humane tracks; the style's most musical early album." },
+    { "artist": "Om Unit", "title": "Inversion", "year": 2014, "rating": 3.5, "why": "A Metalheadz album that turns the Threads approach toward the dancefloor, heavier and more direct, with a Goldie-approved edge." },
+    { "artist": "Sam Binga", "title": "Wasted Days", "year": 2015, "rating": 3.5, "why": "Critical Music's first halftime-leaning album, grime and dancehall voices over snapping 170 drums; rough, fun and representative." },
+    { "artist": "Ivy Lab", "title": "Death Don't Always Taste Good", "year": 2018, "rating": 4, "why": "The 20/20 LDN founders' debut album, trap weight and hip-hop swing at 170 with real tunes; the halftime record most people start with." },
+    { "artist": "Mefjus", "title": "Manifest", "year": 2018, "rating": 3.5, "why": "The Austrian neurofunk engineer's second album spends much of its time at half speed, immaculately produced if emotionally cool." },
+    { "artist": "Ivy Lab", "title": "Infinite Falling Ground", "year": 2022, "rating": 4, "why": "A looser, more psychedelic follow-up with chopped vocals and sampled haze; the style's most fully realised album to date." }
+  ],
+  "confidence": "medium",
+  "note": "Halftime's best work is on EPs and singles; these are its album-length records and the Autonomic precursors that frame it."
+}
