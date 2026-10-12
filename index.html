@@ -364,7 +364,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { } }
 };
-const BUILD = 'v18'; // keep in step with VERSION in sw.js
+const BUILD = 'v19'; // keep in step with VERSION in sw.js
 const DEFAULTS = { discogsToken: '', discogsUser: '', discogsOk: null, source: 'auto', anthropicKey: '', model: 'claude-sonnet-5-5', autoEst: true, qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
 let settings = Object.assign({}, DEFAULTS, store.get('hear.settings', {}));
 function saveSettings(patch) { settings = Object.assign({}, settings, patch); store.set('hear.settings', settings); applyTheme(); }
@@ -606,7 +606,11 @@ const SCHEMA = {
   ratings: obj({ ratings: { type: 'array', items: obj({ i: { type: 'integer' }, confidence: { type: 'string', enum: ['high', 'medium', 'low'] }, score: { type: 'number' }, why: { type: 'string' } }, ['i', 'confidence']) } }, ['ratings']),
   artists: obj({ artists: { type: 'array', items: obj({ name: { type: 'string' }, why: { type: 'string' } }, ['name']) } }, ['artists']),
   moods: obj({ moods: { type: 'array', items: { type: 'string' } }, blurb: { type: 'string' } }, ['moods', 'blurb']),
-  ok: obj({ ok: { type: 'string' } }, ['ok'])
+  ok: obj({ ok: { type: 'string' } }, ['ok']),
+  // Editorial page for a genre or mood: prose first, albums last so the text can be shown while the list streams in
+  collection: obj({ about: { type: 'string' }, related: { type: 'array', items: { type: 'string' } }, artists: { type: 'array', items: obj({ name: { type: 'string' }, why: { type: 'string' } }, ['name', 'why']) }, albums: { type: 'array', items: obj({ artist: { type: 'string' }, title: { type: 'string' }, year: { type: 'integer' }, why: { type: 'string' } }, ['artist', 'title', 'year', 'why']) } }, ['about', 'related', 'artists', 'albums']),
+  tags: obj({ genres: { type: 'array', items: { type: 'string' } }, styles: { type: 'array', items: { type: 'string' } } }, ['genres', 'styles']),
+  albumTags: obj({ genres: { type: 'array', items: { type: 'string' } }, styles: { type: 'array', items: { type: 'string' } }, moods: { type: 'array', items: { type: 'string' } }, blurb: { type: 'string' } }, ['genres', 'styles', 'moods', 'blurb'])
 };
 let structuredOK = true; // flipped off for the session if the chosen model rejects output_config.format
 // opts: { effort: 'low'|'medium'|'high', onText(partialText) } — with onText the reply streams.
@@ -634,8 +638,8 @@ async function askJSON(input, schema, maxTokens = 8000, opts = {}) {
   return parseJSON(text);
 }
 // Complete objects inside the "albums" array of a JSON text that is still arriving.
-function partialAlbums(text) {
-  const out = []; const start = text.indexOf('"albums"'); if (start < 0) return out;
+function partialAlbums(text, key = 'albums') {
+  const out = []; const start = text.indexOf('"' + key + '"'); if (start < 0) return out;
   const arr = text.indexOf('[', start); if (arr < 0) return out;
   let depth = 0, inStr = false, esc = false, objStart = -1;
   for (let i = arr + 1; i < text.length; i++) {
@@ -1113,7 +1117,7 @@ function ratingBadge(item, opts = {}) {
 }
 function albumTile(item, opts = {}) {
   const tile = el('div', { class: 'tile' });
-  const link = el(item.id ? 'a' : 'div', Object.assign({ class: 'tl', title: item.why || '' }, item.id ? { href: `#/album/${item.id}` } : {}), coverEl(item.id || null, item.title, 500, null, item.img), el('div', { class: opts.twoLine ? 'a2' : 'a', text: opts.primary === 'title' ? item.title : (item.artist || item.title) }), el('div', { class: 'b', text: opts.primary === 'title' ? [item.year, item.type && item.type !== 'Album' ? item.type : ''].filter(Boolean).join(' · ') : [item.title, item.year].filter(Boolean).join(' · ') }));
+  const link = el(item.id ? 'a' : 'div', Object.assign({ class: 'tl', title: item.why || '' }, item.id ? { href: `#/album/${item.id}` } : {}), coverEl(item.id || null, item.title, 500, null, item.img), el('div', { class: opts.twoLine ? 'a2' : 'a', text: opts.primary === 'title' ? item.title : (item.artist || item.title) }), el('div', { class: 'b', text: opts.primary === 'title' ? (opts.sub === 'artist' ? [item.artist, item.year] : [item.year, item.type && item.type !== 'Album' ? item.type : '']).filter(Boolean).join(' · ') : [item.title, item.year].filter(Boolean).join(' · ') }));
   tile.append(link, ratingBadge(item));
   return tile;
 }
@@ -1198,7 +1202,8 @@ async function route() {
       case 'artist': await ArtistView(parts[1], rid); break;
       case 'album': await AlbumView(parts[1], rid); break;
       case 'label': await LabelView(parts[1], rid); break;
-      case 'genre': await GenreView(parts.slice(1).join('/'), rid); break;
+      case 'genre': await (settings.anthropicKey ? CollectionView('genre', parts.slice(1).join('/'), rid) : GenreView(parts.slice(1).join('/'), rid)); break;
+      case 'mood': await CollectionView('mood', parts.slice(1).join('/'), rid); break;
       case 'search': SearchView(parts[1]); break;
       case 'ai': await AIView(parts.slice(1).join('/'), rid); break;
       case 'shelf': ShelfView(); break;
@@ -1283,7 +1288,7 @@ function browseGenres() {
 }
 function browseMoods() {
   const host = el('div', { class: 'gtable' });
-  for (const [fam, words] of MOODS) host.append(el('div', { class: 'grow' }, el('div', { class: 'ghead', style: { cursor: 'default' } }, el('span', { text: fam }), el('span', { class: 'mono', text: `${words.length} moods` })), el('div', { class: 'wrap' }, words.map(w => el('a', { class: 'tag soft', href: `#/moods/${encodeURIComponent(w)}` }, w)))));
+  for (const [fam, words] of MOODS) host.append(el('div', { class: 'grow' }, el('div', { class: 'ghead', style: { cursor: 'default' } }, el('span', { text: fam }), el('span', { class: 'mono', text: `${words.length} moods` })), el('div', { class: 'wrap' }, words.map(w => el('a', { class: 'tag soft', href: `#/mood/${encodeURIComponent(w)}` }, w)))));
   host.append(el('div', { class: 'row', style: { paddingTop: '12px' } }, el('a', { class: 'link', href: '#/moods', style: { fontSize: '13px' } }, 'Mix up to three moods →')));
   return host;
 }
@@ -1353,6 +1358,15 @@ async function artistStrip(a, onPartial) {
 }
 async function genreStrip(genre) {
   const key = (DG.on() ? 'hear.home.dggenre.' : 'hear.home.genre.') + slug(genre); let data = store.get(key, null);
+  if (settings.anthropicKey) {
+    // The genre page's highlights when they're already cached; otherwise a quick dozen (the full page is written on first visit)
+    const col = store.get(colKey('genre', genre), null);
+    if (col && col.albums && col.albums.length) return { key: colKey('genre', genre), data: { t: col.t, source: col.source, items: col.albums.slice(0, 14) }, shared: true };
+    if (data && Date.now() - data.t < 30 * 864e5 && data.items.length && data.source !== 'discogs' && data.source !== 'tags') return { key, data };
+    const reply = await askJSON(`List 12 essential ${genre} albums: a mix of foundational classics and lesser-known gems that a serious fan would call definitive. No more than one album per artist, real releases only. "why" is one short sentence.`, SCHEMA.albums, 6000, { effort: 'low' });
+    data = { t: Date.now(), source: settings.model || DEFAULTS.model, items: cleanAlbums(reply.albums).map(a => ({ title: a.title, artist: a.artist, year: a.year ? String(a.year) : '', why: a.why })) };
+    store.set(key, data); return { key, data };
+  }
   if (data && Date.now() - data.t < 30 * 864e5 && data.items.length) return { key, data };
   if (DG.on()) {
     let items = [];
@@ -1362,13 +1376,8 @@ async function genreStrip(genre) {
     }
     data = { t: Date.now(), source: 'discogs', items }; store.set(key, data); return { key, data };
   }
-  if (settings.anthropicKey) {
-    const reply = await askJSON(`List 12 essential ${genre} albums: a mix of foundational classics and lesser-known gems that a serious fan would call definitive. No more than one album per artist, real releases only. "why" is one short sentence.`, SCHEMA.albums, 6000, { effort: 'low' });
-    data = { t: Date.now(), source: settings.model || DEFAULTS.model, items: cleanAlbums(reply.albums).map(a => ({ title: a.title, artist: a.artist, year: a.year ? String(a.year) : '', why: a.why })) };
-  } else {
-    const d = await MB.get('release-group', { query: `tag:"${luceneEscape(genre.toLowerCase())}" AND primarytype:album`, limit: 14 });
-    data = { t: Date.now(), source: 'tags', items: (d['release-groups'] || []).map(g => ({ id: g.id, title: g.title, artist: credit(g['artist-credit']), year: year(g['first-release-date']), type: rgType(g) })) };
-  }
+  const d = await MB.get('release-group', { query: `tag:"${luceneEscape(genre.toLowerCase())}" AND primarytype:album`, limit: 14 });
+  data = { t: Date.now(), source: 'tags', items: (d['release-groups'] || []).map(g => ({ id: g.id, title: g.title, artist: credit(g['artist-credit']), year: year(g['first-release-date']), type: rgType(g) })) };
   store.set(key, data); return { key, data };
 }
 async function HomeView(rid) {
@@ -1409,7 +1418,7 @@ async function HomeView(rid) {
       genreSec.body.innerHTML = '';
       const flow = coverFlow(items, { size: 180, years: false, showArtist: true, actions: 'light', label: p.genre + ' essentials' });
       genreSec.body.append(flow);
-      (async () => { for (let i = 0; i < items.length; i++) { if (items[i].id) continue; const hit = await resolveAlbum(items[i].artist, items[i].title); if (rid !== routeSeq) return; if (hit) { flow.setId(i, hit.id, hit.img); store.set(r.key, r.data); } } })();
+      (async () => { for (let i = 0; i < items.length; i++) { if (items[i].id) continue; const hit = await resolveAlbum(items[i].artist, items[i].title); if (rid !== routeSeq) return; if (hit) { flow.setId(i, hit.id, hit.img); if (r.shared) saveCollectionItem(r.key, items[i]); else store.set(r.key, r.data); } } })();
     } catch (e) { if (e.message === 'stale') return; fail(genreSec, "Couldn't load this genre (" + e.message + ')'); }
   })();
   (async () => {
@@ -1799,6 +1808,7 @@ async function ArtistViewDG(rawId, rid) {
   const metaBits = [a.realname && a.realname !== name ? a.realname : '', members.length ? 'Members: ' + members.join(', ') : ''].filter(Boolean);
   if (metaBits.length) textCol.append(el('div', { class: 'mono' }, metaBits.join(' · ')));
   const styleHost = el('div', { class: 'wrap' }); textCol.append(styleHost);
+  claudeArtistTags(rawId, name, styleHost, rid);
   const bioHost = el('div', { class: 'stack', style: { gap: '4px', paddingTop: '12px' } });
   const profile = DG.text(a.profile);
   if (profile) {
@@ -1817,7 +1827,7 @@ async function ArtistViewDG(rawId, rid) {
   let drawnStyles = false;
   const drawRows = (d, partial) => {
     if (rid !== routeSeq) return;
-    if (!drawnStyles && d.styles && d.styles.length) { drawnStyles = true; for (const st of d.styles) styleHost.append(el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(st)}` }, st)); }
+    if (!drawnStyles && d.styles && d.styles.length && !styleHost.children.length) { drawnStyles = true; for (const st of d.styles) styleHost.append(el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(st)}` }, st)); }
     const all = d.rows.flatMap(r => r.items);
     disco.innerHTML = '';
     if (partial) disco.append(el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Albums'), el('div', { class: 'mono' }, 'checking which are studio albums…')), skeletonStrip(4)));
@@ -1882,7 +1892,8 @@ async function ArtistView(id, rid) {
     el('h1', { text: artist.name }),
     el('div', { class: 'mono' }, [artist.disambiguation, artist.type, artist.country || (artist.area && artist.area.name), lifespan(artist['life-span'])].filter(Boolean).join(' · ')));
   const genres = artistGenres(artist);
-  if (genres.length) textCol.append(el('div', { class: 'wrap' }, genres.map(g => el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(g)}` }, titleCase(g)))));
+  const genreHost = el('div', { class: 'wrap' }, genres.map(g => el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(g)}` }, titleCase(g))));
+  textCol.append(genreHost); claudeArtistTags(artist.id, artist.name, genreHost, rid);
   const head = el('div', { class: 'ahead' }, img, textCol);
   const bioHost = el('div', { class: 'stack', style: { gap: '4px', paddingTop: '12px' } });
   const extLinks = el('div', { class: 'wrap', style: { paddingTop: '10px' } });
@@ -1921,6 +1932,89 @@ async function ArtistView(id, rid) {
 // ============================================================
 // Genre — essential artists and albums, plus everyone tagged with it
 // ============================================================
+// ============================================================
+// Genre and mood pages — Claude's editorial page: a short history, related names, key artists, and a grid of highlights
+// ============================================================
+function collectionPrompt(kind, name) {
+  if (kind === 'mood') return `You are writing the "${name}" mood page for a record-collection app, in the spirit of AllMusic's mood pages. Give: "about" — 60 to 100 words of plain, confident prose on what this mood sounds like in music (instrumentation, tempo, production, the voice) and when people reach for it; no lists, no headings. "related" — 6 adjacent moods, names only. "artists" — 12 artists who live in this mood, each with a 3-to-8-word "why". "albums" — 30 albums that embody "${name}" across the whole record, spanning genres and decades, the definitive ones first; real releases only, no more than one per artist, each with its year and a one-sentence "why".`;
+  return `You are writing the "${name}" genre page for a record-collection app, in the spirit of AllMusic's genre pages. Give: "about" — 90 to 130 words of plain, confident prose: where and when the genre emerged, what defines the sound, and how it evolved; no lists, no headings. "related" — 6 closely related genres or styles, names only, as a listener would search them. "artists" — 12 key artists, the originators and defining names first, each with a 3-to-8-word "why". "albums" — 30 highlight albums: the foundational classics and landmark records first, then important later works and a few lesser-known gems a serious fan would insist on; real releases only, no more than two per artist, each with its year and a one-sentence "why".`;
+}
+const colKey = (kind, name) => `hear.col.${kind}.${slug(name)}`;
+function saveCollectionItem(key, item) { const c = store.get(key, null); if (!c) return; const hit = (c.albums || []).find(a => a.artist === item.artist && a.title === item.title); if (hit) { hit.id = item.id; hit.img = item.img || hit.img; store.set(key, c); } }
+// Fetches (or returns cached) page data. onPartial({about, related, artists, albums}) fires as the reply streams.
+async function collectionData(kind, name, onPartial) {
+  const key = colKey(kind, name); const c = store.get(key, null);
+  if (c && Date.now() - c.t < 30 * 864e5 && c.albums && c.albums.length) return Object.assign({ key }, c);
+  let shown = 0; const live = { about: '', related: [], artists: [], albums: [] }; let headDone = false;
+  const onText = (t) => {
+    if (!onPartial) return;
+    let changed = false;
+    if (!live.about) { const m = t.match(/"about"\s*:\s*"((?:[^"\\]|\\.)*)"/); if (m) { try { live.about = JSON.parse('"' + m[1] + '"'); changed = true; } catch (e) { } } }
+    if (!headDone) { const i = t.indexOf('"albums"'); if (i > 0) { try { const head = JSON.parse(t.slice(0, i).replace(/,\s*$/, '') + '}'); live.related = head.related || []; live.artists = head.artists || []; headDone = true; changed = true; } catch (e) { } } }
+    const objs = partialAlbums(t); for (; shown < objs.length; shown++) { const a = cleanAlbums([objs[shown]])[0]; if (a) { live.albums.push(a); changed = true; } }
+    if (changed) onPartial(live);
+  };
+  const r = await askJSON(collectionPrompt(kind, name), SCHEMA.collection, 16000, { effort: 'medium', onText });
+  const data = { t: Date.now(), kind, name, about: String(r.about || ''), related: (r.related || []).map(String).slice(0, 8), artists: (r.artists || []).filter(a => a && a.name).map(a => ({ name: String(a.name), why: a.why ? String(a.why) : '' })).slice(0, 14), albums: cleanAlbums(r.albums).slice(0, 36).map(a => ({ artist: a.artist, title: a.title, year: a.year ? String(a.year) : '', why: a.why })), source: settings.model || DEFAULTS.model };
+  // keep ids already resolved while streaming
+  for (const a of data.albums) { const l = live.albums.find(x => x.artist === a.artist && x.title === a.title); if (l && l.id) { a.id = l.id; a.img = l.img; } }
+  store.set(key, data); pruneKeys('hear.col.', 60);
+  return Object.assign({ key }, data);
+}
+async function CollectionView(kind, name, rid) {
+  const label = (name || '').trim(); if (!label) { location.hash = '#/'; return; }
+  const title = titleCase(label);
+  setTop({ back: true, title });
+  const about = el('div', { class: 'about', style: { fontSize: '15px', lineHeight: 1.55 } });
+  const related = el('div', { class: 'wrap' });
+  const head = el('div', { class: 'stack', style: { gap: '8px' } }, el('div', { class: 'eyebrow' }, kind === 'mood' ? 'Mood' : 'Genre'), el('h1', { text: title }), about, related);
+  const gridSec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '8px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Highlights'), el('div', { class: 'mono', id: 'colcount' }, '')));
+  const grid = el('div', { class: 'grid' }); gridSec.append(grid);
+  const artistsSec = el('div', { class: 'section', style: { paddingTop: '22px', gap: '6px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Key artists')));
+  const artistList = el('div', { class: 'list' }); artistsSec.append(artistList);
+  const foot = el('div', { class: 'wrap', style: { paddingTop: '18px' } },
+    kind === 'mood' ? el('a', { class: 'tag soft', href: '#/moods' }, 'Mix moods →') : el('a', { class: 'tag soft', href: '#/search', onclick: (e) => { e.preventDefault(); digDeeperInto(label); } }, 'Ask Claude for deeper cuts →'),
+    el('a', { class: 'tag soft', href: '#/ai/' + encodeURIComponent(`${label}: records from the last ten years`) }, 'Recent records →'));
+  view.append(head, gridSec, artistsSec, foot);
+  about.append(el('div', { class: 'loading', style: { padding: '2px 0' } }, el('div', { class: 'spinner' }), 'Claude is writing…'));
+  gridSec.hidden = true; artistsSec.hidden = true;
+  const tiles = new Map(); // "artist|title" → tile
+  const TILE_OPTS = { primary: 'title', twoLine: true, sub: 'artist' };
+  const key = colKey(kind, label);
+  const paint = (d, done) => {
+    if (rid !== routeSeq) return;
+    if (d.about) about.textContent = d.about;
+    if (d.related && d.related.length && !related.children.length) for (const r of d.related) related.append(el('a', { class: 'tag soft', href: `#/${kind}/${encodeURIComponent(r)}` }, r));
+    if (d.albums.length) { gridSec.hidden = false; $('#colcount').textContent = done ? `${d.albums.length} albums · Claude` : `${d.albums.length}…`; }
+    for (const a of d.albums) { const k = a.artist + '|' + a.title; if (tiles.has(k)) continue; const t = albumTile(a, TILE_OPTS); tiles.set(k, t); grid.append(t); }
+    if (d.artists && d.artists.length && !artistList.children.length) { artistsSec.hidden = false; for (const a of d.artists) artistList.append(artistRowFor(a, artistList, rid)); }
+    if (done) { if (!d.about) about.textContent = ''; }
+  };
+  let data;
+  try { data = await collectionData(kind, label, (part) => paint(part, false)); }
+  catch (err) { if (rid !== routeSeq) return; about.innerHTML = ''; about.append(el('div', { class: 'notice warn' }, err.message), el('div', { class: 'row', style: { gap: '8px', paddingTop: '8px' } }, el('button', { class: 'btn sm primary', onclick: () => route() }, 'Try again'))); return; }
+  if (rid !== routeSeq) return;
+  paint(data, true);
+  // Covers and album pages: match each highlight to the catalog, a few at a time, saving as we go
+  const todo = data.albums.filter(a => !a.id); let i = 0;
+  const worker = async () => { while (i < todo.length) { const a = todo[i++]; const hit = await resolveAlbum(a.artist, a.title); if (rid !== routeSeq) return; if (!hit) continue; a.id = hit.id; a.img = hit.img || a.img; saveCollectionItem(key, a); const t = tiles.get(a.artist + '|' + a.title); if (t && t.isConnected) { const nt = albumTile(a, TILE_OPTS); t.replaceWith(nt); tiles.set(a.artist + '|' + a.title, nt); } } };
+  await Promise.all([worker(), worker(), worker()]);
+}
+// A tappable artist row that finds the artist in the catalog on first use (and remembers the id in the parent list's data)
+function artistRowFor(a, list, rid) {
+  const row = el(a.id ? 'a' : 'button', Object.assign({ class: 'item' }, a.id ? { href: `#/artist/${a.id}` } : { type: 'button' }), a.img ? el('img', { class: 'ta-img', src: a.img, alt: '', style: { width: '44px', height: '44px', borderRadius: '22px' } }) : el('span', { class: 'ta-ic' }, icon('artist')), el('div', { class: 'main' }, el('div', { class: 't', text: a.name }), el('div', { class: 's', text: a.sub || a.why || '' })), el('span', { class: 'arrow' }, icon('chevron')));
+  if (!a.id) row.addEventListener('click', async () => { row.style.opacity = '0.5'; const hit = await resolveArtist(a.name); if (hit) { a.id = hit.id; location.hash = `#/artist/${hit.id}`; } else { row.style.opacity = '1'; toast('Not found in the catalog'); } });
+  return row;
+}
+// AllMusic-style genre/style chips for an artist, from Claude (cached a month); fills `host` when ready.
+function claudeArtistTags(id, name, host, rid) {
+  if (!settings.anthropicKey) return;
+  const key = 'hear.atags.' + id; const c = store.get(key, null);
+  const paint = (t) => { if (rid !== routeSeq) return; const names = [...(t.genres || []), ...(t.styles || [])]; if (!names.length) return; host.innerHTML = ''; for (const n of names.slice(0, 7)) host.append(el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(n)}` }, n)); };
+  if (c && Date.now() - c.t < 30 * 864e5) { paint(c); return; }
+  askJSON(`Artist: ${name}. Tag them the way AllMusic would: "genres" — 1 or 2 top-level genres; "styles" — 3 to 5 specific styles they are known for, most defining first. If you don't know the artist, return empty lists.`, SCHEMA.tags, 1500, { effort: 'low' })
+    .then(t => { const d = { t: Date.now(), genres: (t.genres || []).map(String).slice(0, 2), styles: (t.styles || []).map(String).slice(0, 5) }; store.set(key, d); paint(d); }).catch(() => { });
+}
 async function GenreView(name, rid) {
   const genre = (name || '').trim(); if (!genre) { location.hash = '#/'; return; }
   setTop({ back: true, title: titleCase(genre) });
@@ -2143,7 +2237,15 @@ async function AlbumView(id, rid) {
   // A few style chips up top (the full list lives under About)
   const styleLine = el('div', { class: 'wrap', style: { paddingTop: '4px' } });
   const drawStyleLine = (names) => { styleLine.innerHTML = ''; for (const n of names.slice(0, 4)) styleLine.append(el('a', { class: 'tag soft', href: `#/genre/${encodeURIComponent(n)}` }, titleCase(n))); };
-  drawStyleLine(album.styles.length ? album.styles : album.tags);
+  // Genre & styles the way AllMusic would tag them, from Claude (automatic, cached); the catalog's own tags fill in until then
+  const tagKey = 'hear.ai.' + album.id;
+  let aiTags = store.get(tagKey, null); if (aiTags && !aiTags.genres) aiTags = null;
+  const claudeTagNames = () => aiTags ? [...(aiTags.genres || []), ...(aiTags.styles || [])] : [];
+  const catalogTagNames = () => album.styles.length ? album.styles : album.tags;
+  drawStyleLine(claudeTagNames().length ? claudeTagNames() : catalogTagNames());
+  if (!aiTags && settings.anthropicKey) askJSON(`Album: "${title}" by ${artistName}${album.year ? ' (' + album.year + ')' : ''}.\nTag it the way AllMusic would. "genres": 1 or 2 top-level genres (Pop/Rock, Jazz, Electronic, R&B, Rap, Country, Folk, Latin, International, Classical, Blues, Reggae, Avant-Garde, Stage & Screen, New Age). "styles": 3 to 6 specific styles (e.g. Dream Pop, Spiritual Jazz, Krautrock, Alternative Country). "moods": 6 to 8 single words or two-word phrases. "blurb": two plain sentences on how it sounds and when to play it, no superlatives. If you don't know this album, say so in the blurb and keep every list short.`, SCHEMA.albumTags, 3000, { effort: 'low' })
+    .then(m => { if (rid !== routeSeq) return; aiTags = { t: Date.now(), genres: (m.genres || []).map(String).slice(0, 2), styles: (m.styles || []).map(String).slice(0, 6), moods: (m.moods || []).map(String).slice(0, 8), blurb: String(m.blurb || '') }; store.set(tagKey, aiTags); drawStyleLine(claudeTagNames()); fAbout.refresh(); })
+    .catch(() => { });
   const linkRow = el('div', { class: 'stack' });
   const secondary = el('div', { class: 'wrap' });
   const shelfItem = { id: album.id, title, artist: artistName, artistId: fa && fa.id, year: album.year, type: album.type, labels: album.labels.map(l => l.name), img: album.img || '' };
@@ -2300,25 +2402,23 @@ async function AlbumView(id, rid) {
     else if (album.notes) body.append(el('div', { class: 'about', style: { whiteSpace: 'pre-line' } }, album.notes), el('div', { class: 'mono' }, 'Notes from Discogs'));
     else if (!cov) body.append(loadingRow('Looking up the album…'));
     else body.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'No write-up found for this album.'));
-    // Styles & tags
-    const styleNames = album.styles.length ? album.styles : album.tags;
+    // Genre & styles (Claude, AllMusic-style), with the catalog's own tags as a footnote
+    const names = claudeTagNames().length ? claudeTagNames() : catalogTagNames();
     const tagHost = el('div', { class: 'wrap' });
-    if (styleNames.length) for (const n of styleNames) tagHost.append(el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(n)}` }, titleCase(n)));
-    else tagHost.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'No tags yet.'));
-    body.append(el('div', { class: 'sechead', style: { paddingTop: '10px' } }, el('div', { class: 'eyebrow' }, 'Styles & tags'), el('div', { class: 'mono' }, album.tagSource)), tagHost);
-    // Moods (AI-generated, optional)
+    if (names.length) for (const n of names) tagHost.append(el('a', { class: 'tag', href: `#/genre/${encodeURIComponent(n)}` }, titleCase(n)));
+    else tagHost.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, settings.anthropicKey ? 'Tagging…' : 'No tags yet.'));
+    body.append(el('div', { class: 'sechead', style: { paddingTop: '10px' } }, el('div', { class: 'eyebrow' }, 'Genre & styles'), el('div', { class: 'mono' }, aiTags ? 'Claude' : album.tagSource)), tagHost);
+    if (aiTags && catalogTagNames().length) body.append(el('div', { class: 'mono' }, `${album.tagSource}: ${catalogTagNames().slice(0, 8).map(titleCase).join(', ')}`));
+    // Moods (Claude)
     const moodBody = el('div', { class: 'stack' });
-    body.append(el('div', { class: 'sechead', style: { paddingTop: '10px' } }, el('div', { class: 'eyebrow' }, 'Moods'), el('div', { class: 'mono' }, 'AI-generated')), moodBody);
-    const cachedMood = store.get('hear.ai.' + album.id, null);
-    const drawMoods = (m) => {
-      moodBody.innerHTML = '';
-      moodBody.append(el('div', { class: 'wrap' }, (m.moods || []).map(x => el('span', { class: 'tag soft', text: x }))));
-      if (m.blurb) moodBody.append(el('div', { style: { fontSize: '14px', lineHeight: 1.45 } }, m.blurb));
+    body.append(el('div', { class: 'sechead', style: { paddingTop: '10px' } }, el('div', { class: 'eyebrow' }, 'Moods'), el('div', { class: 'mono' }, aiTags ? 'Claude' : '')), moodBody);
+    if (aiTags) {
+      moodBody.append(el('div', { class: 'wrap' }, (aiTags.moods || []).map(x => el('a', { class: 'tag soft', href: `#/mood/${encodeURIComponent(x)}` }, x))));
+      if (aiTags.blurb) moodBody.append(el('div', { style: { fontSize: '14px', lineHeight: 1.45 } }, aiTags.blurb));
       moodBody.append(el('div', { class: 'mono' }, `Written by ${settings.model || DEFAULTS.model} — may be wrong.`));
-    };
-    if (cachedMood) drawMoods(cachedMood);
-    else if (settings.anthropicKey) moodBody.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const m = await askJSON(`Album: "${title}" by ${artistName}${album.year ? ' (' + album.year + ')' : ''}.\nGive AllMusic-style mood descriptors for this specific album: six to eight single words or two-word phrases, and a blurb of two plain sentences describing how it sounds and when to play it; no superlatives; if you are not confident you know this album, say so in the blurb.`, SCHEMA.moods, 3000, { effort: 'low' }); store.set('hear.ai.' + album.id, m); drawMoods(m); } catch (err) { b.disabled = false; b.textContent = 'Generate moods'; toast(err.message, 3500); } } }, icon('spark'), 'Generate moods'));
-    else moodBody.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to generate mood tags.'));
+    }
+    else if (settings.anthropicKey) moodBody.append(loadingRow('Tagging with Claude…'));
+    else moodBody.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' for genre, style and mood tags.'));
     // Release details
     const detail = [album.releasesCount ? `${album.releasesCount} release${album.releasesCount === 1 ? '' : 's'}` : '', album.formats.length ? album.formats.slice(0, 3).join(' · ') : '', album.country, album.released].filter(Boolean).join(' · ');
     body.append(el('div', { class: 'sechead', style: { paddingTop: '10px' } }, el('div', { class: 'eyebrow' }, 'Release'), el('div', { class: 'mono' }, detail || (album.more && !album.labels.length ? 'loading…' : ''))));
@@ -2409,7 +2509,7 @@ async function AlbumView(id, rid) {
       else { const s = await DG.get('database/search', { type: 'master', artist: artistName, release_title: title, per_page: 1 }); const hit = s && s.results && s.results[0]; if (hit && hit.master_id) master = await DG.get(`masters/${hit.master_id}`); }
       if (!master || rid !== routeSeq) return;
       const styles = [...(master.genres || []), ...(master.styles || [])];
-      if (styles.length) { album.styles = styles; album.tagSource = 'Discogs'; drawStyleLine(styles); fAbout.refresh(); }
+      if (styles.length) { album.styles = styles; album.tagSource = 'Discogs'; if (!claudeTagNames().length) drawStyleLine(styles); fAbout.refresh(); }
       if (!cover.classList.contains('has-img') && master.images && master.images[0]) cover.setImage(master.images[0].uri);
       if (!links.discogsExact) { album.exact.discogs = master.uri; links = serviceLinks(artistName, title, album.exact); drawLinks(); }
     } catch (e) { console.warn('Discogs', e); }

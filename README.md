@@ -70,7 +70,9 @@ An artist page opens with their photo and a short bio (from Wikipedia, with Disc
 
 Why not just the newest releases: Discogs lists thousands of entries for a big artist, most of them bootlegs, regional pressings and "appears on" compilations, so "the newest 300" used to miss the classics entirely. Collection counts put the real records first, and masters come with full-size covers rather than the 150-pixel thumbnails of the plain release list.
 
-A genre page (tap any genre chip) shows Claude's essential artists for that genre, essential albums, and every artist MusicBrainz has tagged with it.
+**Genre and mood pages** are editorial pages written by Claude, in the spirit of AllMusic's: a short history and explanation under the title, related genres or moods as chips, a grid of about thirty highlight albums (covers with star ratings; the foundational records first, then landmarks and a few lesser-known gems), and the key artists. The text streams in first and the covers fill in behind it; each page is cached for a month, and the home page's genre spotlight draws on the same list. Tap any genre or style chip anywhere in the app to open one; the Home browse table lists sixteen major genres with their styles, and every mood.
+
+**Genre tagging** is Claude's too: album pages get AllMusic-style genre and style chips (plus moods and a two-sentence blurb), and artist pages get genre and style chips, all automatic and cached. The catalog's own tags (Discogs styles, MusicBrainz tags) are kept as a footnote under About; they're community data and too inconsistent to navigate by.
 
 ## Star ratings everywhere
 
@@ -82,6 +84,7 @@ Every album, wherever it appears (cover flows, shelf, label pages, search result
 
 ## Moods, crates and "more like this" (Claude key)
 
+- **Mood pages**: tap a mood on the Home browse table for its page (what the mood sounds like, related moods, thirty albums that embody it, the artists who live there).
 - **Moods tab**: pick up to three moods ("Dark · Lush · Late night"); Claude finds ten records that feel like that, across genres and decades. Results are cached per combination, can be refined ("more 70s"), swapped for a fresh set, or saved as a crate.
 - **Crates**: any Ask Claude or Moods result can be saved with a name. Crates live in the Shelf tab next to your albums and keep their play links and reasons.
 - **More like this**: every album page has a "Find similar albums" button: three records close in sound and era, three kindred spirits from another scene. Cached per album.
