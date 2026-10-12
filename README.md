@@ -40,7 +40,7 @@ What the key costs with Sonnet: an Ask Claude search a cent or two, estimated ra
 
 ## Home
 
-The Home tab shows three cover flows that change every time you open or shuffle the app:
+The Home tab shows three rows of covers (plain horizontal strips, scrollable) that change every time you open or shuffle the app:
 
 - **Genre spotlight**: twelve essential records in one genre (there are about 170 in the rotation), picked by Claude when a key is set, otherwise from MusicBrainz tags.
 - **On the label**: a dozen albums from one label out of ~140 (Blue Note, Warp, Stax, Kranky, Soul Jazz…), with a link to the whole catalog.
@@ -56,7 +56,7 @@ Under the search box, three ways to browse (tap one to open it, tap again to clo
 
 ## Ask Claude
 
-Type what you want to hear the way you would say it to a friend behind the counter ("spiritual jazz from the 70s that feels like a sunrise", "like the last two Talk Talk records but made this decade") and the result is its own page: a vertical cover flow of ten records, each with a big cover, the artist, the album, the release year and label, its star rating, and two or three sentences from Claude on why it fits what you asked for and where it only half-fits. Covers tilt and shrink as they leave the middle of the screen and the page snaps from record to record.
+Type what you want to hear the way you would say it to a friend behind the counter ("spiritual jazz from the 70s that feels like a sunrise", "like the last two Talk Talk records but made this decade") and the result is its own page: a vertical cover flow of ten records, each with a big cover, the artist, the album, the release year and label, its star rating, and two or three sentences from Claude on why it fits what you asked for and where it only half-fits. It's a plain vertical list: big cover, then the text.
 
 Each card has Hear on Spotify / Qobuz buttons and a Details link once the album is matched to the catalog. Below the list: a refine box ("less jazzy", "more 70s", "no strings"), "Ten different records" for a fresh set, and "Save as crate". Results are cached per question, so coming back is free; the last thirty questions are kept.
 
@@ -76,11 +76,14 @@ Why not just the newest releases: Discogs lists thousands of entries for a big a
 
 ## Star ratings everywhere
 
-Every album, wherever it appears (cover flows, shelf, label pages, search results, picks), shows its aggregate star rating underneath: the mean of the critic scores in the album's Wikipedia ratings box, normalized to five stars (8/10 → 4★, A− → 4.5★). Badges load only when they scroll into view and are cached for a month, so browsing stays light on Wikipedia.
+Every album, wherever it appears (home rows, artist rows, label and genre pages, search results, shelf, Ask Claude results), shows one rating underneath: stars and a number, nothing else. The rating is Claude's, on the house scale:
 
-**Tap any star rating** to open the review sheet: the aggregate, each critic's score with a link to the review, Metacritic, and "What critics said", the reception paragraph from the album's Wikipedia article (credited and linked).
+- **5** — a generational landmark: extremely relevant to its genre and its decade, and of the highest artistic integrity. Rare.
+- **4.5** — artistically superb, close to flawless, but not a generational masterpiece. Also rare.
+- **4** — an all-round great album, essential within its artist's catalog.
+- **3.5** — a good, solid album with real highlights; **3** decent, mainly for fans; **2.5 and below** flawed, slight or poor.
 
-**Albums with no critic scores** (most of the catalog outside the famous records) get Claude's estimate automatically: whenever a star badge comes up empty, the album joins a small batch that goes to Claude, so every record you look at gets a rating within a few seconds. Estimates show with a `~` (e.g. `~3.5`) and the review sheet says "Claude's estimate · medium confidence" with the one-line basis; a real aggregate replaces an estimate whenever Wikipedia turns out to have one. Claude cannot hear the music; the estimate is its reading of the record's reception (AllMusic, Pitchfork, RYM, Metacritic, the press it knows of) on AllMusic's 1–5 scale, and it shows nothing rather than guess when it doesn't recognize a record. The review sheet and album page offer **Check the web for real scores**, which searches for published reviews and replaces the estimate with their actual scores. It costs about a cent per twenty albums; Settings → *Estimate missing ratings* turns it off.
+Claude judges each record within its genre and era, using the published reception it knows of (AllMusic, Pitchfork, RYM, Metacritic, Christgau, the major press) as reference rather than as the verdict, and it leaves an album unrated rather than guess when it doesn't know it. Ratings are requested automatically for whatever is on screen, twenty albums per request (about a cent), and kept for a month. **Tap any rating** to read the one-sentence verdict, with the critics' individual scores, Metacritic and the reception paragraph from Wikipedia underneath as reference. Settings → *Star ratings by Claude* turns ratings off.
 
 ## Moods, crates and "more like this" (Claude key)
 
@@ -93,7 +96,7 @@ Every album, wherever it appears (cover flows, shelf, label pages, search result
 
 The album page is deliberately a streaming view: cover, title, artist, year · type · label, the star rating, a few style chips, the Hear on Spotify / Qobuz buttons with secondary links (Bandcamp, Apple Music, Deezer, Tidal, Discogs, YouTube), Add to shelf, and the tracklist. Everything else sits in four collapsed rows you tap to open, and the app remembers which rows you keep open:
 
-- **Ratings & reviews** (the header shows the score, e.g. "4.2 ★ · 5 reviews", or "3.5 ★ est.")
+- **Ratings & reviews** (the header shows the rating, e.g. "4.5 ★")
 - **Interviews & articles** (the header shows how many were found)
 - **About**: the Wikipedia summary or Discogs notes, all styles and tags, AI mood tags, and release details (labels, formats, country, date, Discogs collection stats)
 - **More like this**: Claude's six related records
@@ -102,7 +105,7 @@ The album page is deliberately a streaming view: cover, title, artist, year · t
 
 Behind those rows, each album page looks up what was written about the record:
 
-- **Ratings**: the "Professional ratings" box from the album's Wikipedia entry (AllMusic, Pitchfork, Rolling Stone, NME, Christgau and so on), each with a link to the review when Wikipedia cites one. Every score is normalized to 5 stars (8/10 → 4★, 85% → 4.25★, A− → 4.5★) and averaged into one aggregate score. Metacritic is shown alongside but not double-counted.
+- **Critics**: the "Professional ratings" box from the album's Wikipedia entry (AllMusic, Pitchfork, Rolling Stone, NME, Christgau and so on), each score shown as given and as stars, with a link to the review when Wikipedia cites one, plus Metacritic. These are reference material under the Hear rating, not an aggregate of their own.
 - **Reviews**: every review Wikipedia cites, plus review links MusicBrainz knows about, sorted by year.
 - **Interviews & articles**: the other sources Wikipedia cites, classified as interview or article, and magazine pages from Google Books (SPIN, Billboard, CMJ, Vibe and others are digitized there). Items from the release year (−1 to +2) are grouped as "At the time".
 - **Dig deeper with Claude**: with a Claude API key, searches the web for more reviews, interviews and features and lists what it finds. Results are cached per album.

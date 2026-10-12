@@ -149,18 +149,8 @@ textarea.area { width: 100%; resize: vertical; min-height: 84px; border: 1px sol
 .grouphead { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 4px; margin-top: 8px; }
 .grouphead a { font-weight: 700; text-decoration: none; }
 
-/* Cover flow */
-.flow { position: relative; height: 300px; margin: 4px -16px 0; overflow-x: auto; overflow-y: hidden; display: flex; align-items: center; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding: 0 calc(50% - 60px); }
-.flow::-webkit-scrollbar { display: none; }
-.flow .slot { flex: 0 0 120px; height: 240px; scroll-snap-align: center; position: relative; }
-.flow .fc { position: absolute; left: 50%; top: 0; width: 240px; height: 240px; margin-left: -120px; padding: 0; border: 0; background: transparent; transition: transform 0.18s ease-out; will-change: transform; }
-.flow .fc .cover { width: 240px; height: 240px; box-shadow: var(--shadow); border-radius: 4px; }
-.flow .fc .cover .ph { font-size: 64px; }
-.years { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; padding: 4px 0; }
-.years::-webkit-scrollbar { display: none; }
-.years button { flex-shrink: 0; height: 28px; padding: 0 2px; border: 0; background: transparent; font-family: var(--mono); font-size: 11px; color: var(--muted); border-bottom: 2px solid transparent; }
-.years button.on { color: var(--ink); font-weight: 700; border-bottom-color: var(--accent); }
-.nowplaying { min-height: 64px; display: flex; flex-direction: column; gap: 4px; padding-top: 10px; }
+/* Larger strip for the home page rows */
+.strip.lg .tile { flex: 0 0 168px; }
 
 /* Tracks */
 .track { display: flex; gap: 12px; align-items: baseline; min-height: 40px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
@@ -276,11 +266,10 @@ textarea.area { width: 100%; resize: vertical; min-height: 84px; border: 1px sol
 
 /* Ask Claude: vertical cover flow of recommendations */
 h1.aiq { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; }
-html.snapy { scroll-snap-type: y proximity; }
 .vflow { display: flex; flex-direction: column; padding-top: 6px; }
-.vcard { display: flex; flex-direction: column; gap: 10px; padding: 22px 0 26px; border-top: 1px solid var(--line); scroll-snap-align: start; scroll-margin-top: 10px; }
+.vcard { display: flex; flex-direction: column; gap: 10px; padding: 22px 0 26px; border-top: 1px solid var(--line); }
 .vcard:first-child { border-top: 0; }
-.vcov { width: min(100%, 320px); margin: 0 auto; will-change: transform, opacity; }
+.vcov { width: min(100%, 320px); margin: 0 auto; }
 .vcov .cover { box-shadow: var(--shadow); border-radius: 6px; }
 .vcov .cover .ph { font-size: 72px; }
 .vcard .vn { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: center; padding-top: 6px; }
@@ -364,7 +353,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { } }
 };
-const BUILD = 'v19'; // keep in step with VERSION in sw.js
+const BUILD = 'v20'; // keep in step with VERSION in sw.js
 const DEFAULTS = { discogsToken: '', discogsUser: '', discogsOk: null, source: 'auto', anthropicKey: '', model: 'claude-sonnet-5-5', autoEst: true, qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
 let settings = Object.assign({}, DEFAULTS, store.get('hear.settings', {}));
 function saveSettings(patch) { settings = Object.assign({}, settings, patch); store.set('hear.settings', settings); applyTheme(); }
@@ -844,40 +833,45 @@ async function digDeeper(artist, title, yr) {
   const items = (parseJSON(last).items || []).filter(i => i && /^https?:/i.test(i.url || ''));
   return items.map(i => ({ title: i.title || i.url, url: i.url, work: i.source || '', year: i.date ? +String(i.date).slice(0, 4) || null : null, date: i.date || '', kind: ['review', 'interview', 'article'].includes(i.kind) ? i.kind : 'article', score: i.score || '' }));
 }
-async function estimateRatings(items, opts = {}) {
-  // Claude's consensus estimate for albums Wikipedia doesn't rate. Not from listening: from what it knows of the reception.
+// The Hear rating: Claude rates each album on the house rubric, using published reviews as reference, not as the verdict.
+// Stored on the album's rating record as hr (score), hrConf, hrWhy, hrT; the Wikipedia critic data lives alongside as reference.
+const RUBRIC = `You are the sole critic of a record-collection app. Rate each album on a strict 5-star scale, half-stars allowed:
+5 — a generational landmark: extremely relevant to its genre and its decade, and of the highest artistic integrity. Rare: a handful per genre per decade.
+4.5 — artistically superb, close to flawless, but not a generational masterpiece. Also rare.
+4 — an all-round great album, essential within its artist's catalog.
+3.5 — a good, solid album with real highlights.
+3 — decent; mainly for fans.
+2.5 and below — flawed, slight, or poor.
+Judge each record within its genre and era. Use the critical reception you actually know of (AllMusic, Pitchfork, RYM, Metacritic, Christgau, the major press) as reference, not as the verdict; never invent reception. You cannot hear the music: rate from what you know, and be stingy with 4.5 and 5. If you do not recognize an album or know too little about it, omit the score and set confidence "low".
+"i" is the album's number below. "why" is one sentence, the way a record guide would put it, that sums up the critical view and your verdict.`;
+async function rateAlbums(items) {
   const todo = items.filter(it => it.id && it.title).slice(0, 20);
   if (!todo.length || !settings.anthropicKey) return [];
   const list = todo.map((it, i) => `${i}. ${it.artist || 'Unknown artist'} — ${it.title}${it.year ? ' (' + it.year + ')' : ''}`).join('\n');
-  const prompt = `You are an experienced music critic estimating consensus ratings. For each album below, estimate the rating AllMusic's editors would give on their 1-5 scale (5 = essential, 4 = excellent, 3 = good or solid, 2 = flawed, 1 = poor), judging the record within its genre and the artist's catalog and weighing the critical reception you actually know of (AllMusic, Pitchfork, RYM, Metacritic, Christgau, major press). You cannot hear the music; rate only from what you know, and never invent reception. Use half-stars (x.0 or x.5). If you do not recognize an album or know too little about its reception, set confidence "low" and omit the score. "i" is the album's number below; "why" is one sentence naming the basis, e.g. 'widely regarded as their peak; Pitchfork 8.7, AllMusic 4.5'.\nAlbums:\n${list}`;
-  const parsed = await askJSON(prompt, SCHEMA.ratings, 6000, { effort: 'low' });
-  const out = [];
+  const parsed = await askJSON(`${RUBRIC}\nAlbums:\n${list}`, SCHEMA.ratings, 6000, { effort: 'low' });
+  const out = []; const seen = new Set();
   for (const r of parsed.ratings || []) {
-    const it = todo[r.i]; if (!it) continue;
+    const it = todo[r.i]; if (!it || seen.has(it.id)) continue; seen.add(it.id);
     const conf = ['high', 'medium', 'low'].includes(r.confidence) ? r.confidence : 'low';
-    const score = conf !== 'low' && typeof r.score === 'number' ? Math.max(0.5, Math.min(5, Math.round(r.score * 2) / 2)) : null;
-    const prev = store.get('hear.rating.' + it.id, null);
-    if (prev && prev.score != null && !prev.est) continue; // a real score arrived meanwhile; keep it
-    // wp: has Wikipedia already been asked about this album? (any non-estimate record came from that lookup)
-    const wp = !!opts.checked || !!(prev && (prev.wp || (prev.t && !prev.est)));
-    out.push(Ratings.put(it.id, Object.assign({}, prev || {}, { score: score, n: 0, est: true, wp, confidence: conf, why: r.why || '', sources: [], model: settings.model || DEFAULTS.model })));
+    const hr = conf !== 'low' && typeof r.score === 'number' ? Math.max(0.5, Math.min(5, Math.round(r.score * 2) / 2)) : null;
+    out.push(Ratings.put(it.id, Object.assign({}, Ratings.cached(it.id) || {}, { hr, hrConf: conf, hrWhy: r.why ? String(r.why) : '', hrT: Date.now(), hrModel: settings.model || DEFAULTS.model })));
   }
+  for (const it of todo) if (!seen.has(it.id)) Ratings.put(it.id, Object.assign({}, Ratings.cached(it.id) || {}, { hr: null, hrConf: 'low', hrWhy: '', hrT: Date.now() }));
   return out;
 }
-// Estimate queue: badges that come up without a score drop their album here; batches of up to 20 go to Claude after a
-// short pause, two batches at a time. A real aggregate found later always replaces an estimate (Ratings.merge).
+// Rating queue: badges that have no Hear rating yet drop their album here; batches of up to 20 go to Claude after a short pause.
 const EstQueue = {
   items: [], seen: new Set(), timer: null, active: 0,
   want(item) {
     if (!settings.autoEst || !settings.anthropicKey || !item || !item.id || !item.title || this.seen.has(item.id)) return;
-    const c = Ratings.cached(item.id); if (c && (c.score != null || c.est)) return;
+    const c = Ratings.cached(item.id); if (c && c.hrT && Date.now() - c.hrT < 30 * 864e5) return;
     this.seen.add(item.id); this.items.push(item);
     clearTimeout(this.timer); this.timer = setTimeout(() => this.flush(), this.items.length >= 20 ? 0 : 600);
   },
   async flush() {
     while (this.items.length && this.active < 2) {
       const batch = this.items.splice(0, 20); this.active++;
-      try { await estimateRatings(batch); } catch (e) { console.warn('estimate', e); for (const it of batch) this.seen.delete(it.id); }
+      try { await rateAlbums(batch); } catch (e) { console.warn('rating', e); for (const it of batch) this.seen.delete(it.id); }
       finally { this.active--; }
     }
     if (this.items.length) this.timer = setTimeout(() => this.flush(), 300);
@@ -1059,30 +1053,32 @@ const Ratings = {
   mem: new Map(), queue: [], active: 0, max: 3,
   key: (id) => 'hear.rating.' + id,
   pending: new Set(),
+  // Older records: an "estimate" becomes the Hear rating; a Wikipedia result without the flag counts as checked.
+  migrate(c) {
+    if (!c) return null;
+    if (c.est && c.hr === undefined) { c.hr = c.score; c.hrConf = c.confidence || 'medium'; c.hrWhy = c.why || ''; c.hrT = c.t; c.score = null; c.n = 0; c.sources = []; }
+    if (!c.est && c.wp === undefined && c.t) c.wp = true;
+    return c;
+  },
+  cached(rgid) { return rgid ? this.migrate(store.get(this.key(rgid), null)) : null; },
+  // Resolves the record once the Wikipedia reference data is in (cached a month). The Hear rating arrives separately (watch()).
   get(rgid, title, artist, opts = {}) {
     if (!rgid) return Promise.resolve(null);
-    const cached = store.get(this.key(rgid), null);
-    // An estimate Wikipedia has never been asked about: check once, so a real score replaces it when one exists.
-    const unchecked = !!(cached && cached.est && !cached.wp && title);
-    if (unchecked) return this.pending.has(rgid) ? this.mem.get(rgid) : this.enqueue(rgid, title, artist, cached);
-    const complete = !!cached && (cached.sources || cached.score == null);
-    if (!opts.full || complete) { if (this.mem.has(rgid)) return this.mem.get(rgid); }
-    if (cached && Date.now() - cached.t < 30 * 864e5 && (!opts.full || complete)) { const p = Promise.resolve(cached); this.mem.set(rgid, p); return p; }
+    const cached = this.cached(rgid);
+    if (cached && cached.wp && Date.now() - cached.t < 30 * 864e5) { if (!this.mem.has(rgid)) this.mem.set(rgid, Promise.resolve(cached)); return this.mem.get(rgid); }
+    if (this.pending.has(rgid) && this.mem.has(rgid)) return this.mem.get(rgid);
     return this.enqueue(rgid, title, artist, cached);
   },
   enqueue(rgid, title, artist, prev) { const p = new Promise((resolve) => { this.queue.push({ rgid, title, artist, resolve, prev }); this.pump(); }); this.mem.set(rgid, p); this.pending.add(rgid); return p; },
-  cached(rgid) { return rgid ? store.get(this.key(rgid), null) : null; },
   put(rgid, data) { const r = Object.assign({ t: Date.now() }, data); store.set(this.key(rgid), r); this.mem.set(rgid, Promise.resolve(r)); this.notify(rgid, r); return r; },
-  // A real result always wins; when Wikipedia has nothing, an existing estimate stays, now marked as checked.
-  merge(prev, r) { if (r.score != null || !(prev && prev.est)) return r; return Object.assign({}, prev, { wp: true, noPage: !!r.noPage, blurb: r.blurb || prev.blurb || '' }); },
+  merge(prev, r) { const keep = {}; for (const k of ['hr', 'hrConf', 'hrWhy', 'hrT', 'hrModel']) if (prev && prev[k] !== undefined) keep[k] = prev[k]; return Object.assign({}, prev || {}, r, keep, { wp: true, est: false }); },
   watchers: new Map(),
   watch(rgid, fn) { const arr = this.watchers.get(rgid) || []; arr.push(fn); this.watchers.set(rgid, arr); },
   notify(rgid, r) { const arr = this.watchers.get(rgid); if (!arr) return; const keep = arr.filter(fn => fn(r) !== false); if (keep.length) this.watchers.set(rgid, keep); else this.watchers.delete(rgid); },
-  async known(rgid) { const r = await this.get(rgid); return r && r.score != null; },
   pump() {
     while (this.active < this.max && this.queue.length) {
       const job = this.queue.shift(); this.active++;
-      this.run(job).then(r => job.resolve(this.put(job.rgid, this.merge(job.prev, r)))).catch(() => job.resolve(this.put(job.rgid, this.merge(job.prev, { score: null, n: 0 })))).finally(() => { this.active--; this.pending.delete(job.rgid); this.pump(); });
+      this.run(job).then(r => job.resolve(this.put(job.rgid, this.merge(this.cached(job.rgid) || job.prev, r)))).catch(() => job.resolve(this.put(job.rgid, this.merge(this.cached(job.rgid) || job.prev, { score: null, n: 0 })))).finally(() => { this.active--; this.pending.delete(job.rgid); this.pump(); });
     }
   },
   async run(job) {
@@ -1099,17 +1095,17 @@ function ratingBadge(item, opts = {}) {
   const b = el('span', { class: 'rb' + (opts.size === 'lg' ? ' lg' : '') });
   if (!item.id) return b;
   const fill = (r) => {
-    b.innerHTML = ''; b.classList.toggle('est', !!(r && r.est));
-    if (!r || r.score == null) { if (opts.showEmpty) b.append(el('span', { class: 'rbn muted', text: r && r.est ? 'not enough known' : 'no ratings' })); return; }
-    const inner = [starsEl(r.score, true), el('span', { class: 'rbn', text: (r.est ? '~' : '') + r.score.toFixed(1) }), opts.count ? el('span', { class: 'rbc', text: r.est ? 'estimate' : r.n ? (r.web ? `${r.n} review${r.n === 1 ? '' : 's'} · web` : `${r.n} review${r.n === 1 ? '' : 's'}`) : '' }) : null];
+    b.innerHTML = '';
+    if (!r || r.hr == null) { if (opts.showEmpty && r && r.hrT) b.append(el('span', { class: 'rbn muted', text: 'unrated' })); return; }
+    const inner = [starsEl(r.hr, true), el('span', { class: 'rbn', text: r.hr.toFixed(1) })];
     if (opts.sheet === false) b.append(...inner);
-    else b.append(el('button', { type: 'button', class: 'rbtn', 'aria-label': `${r.score.toFixed(1)} stars — see the reviews`, onclick: (e) => { e.preventDefault(); e.stopPropagation(); openRatingSheet(item); } }, ...inner));
+    else b.append(el('button', { type: 'button', class: 'rbtn', 'aria-label': `${r.hr.toFixed(1)} stars — see the verdict and reviews`, onclick: (e) => { e.preventDefault(); e.stopPropagation(); openRatingSheet(item); } }, ...inner));
   };
   const load = () => {
     const c = Ratings.cached(item.id);
-    if (c && c.est && c.score != null) fill(c);
-    if (!c) EstQueue.want(item); // no record yet: ask Claude now, in parallel with the Wikipedia lookup
-    Ratings.get(item.id, item.title, item.artist).then(r => { fill(r); if (!r || (r.score == null && !r.est)) EstQueue.want(item); });
+    if (c) fill(c);
+    EstQueue.want(item); // the Hear rating, if this album doesn't have one yet (in parallel with the Wikipedia reference lookup)
+    Ratings.get(item.id, item.title, item.artist).then(fill);
   };
   Ratings.watch(item.id, (r) => { if (!b.isConnected) return false; fill(r); return true; });
   if (opts.now) load(); else whenVisible(b, load);
@@ -1121,33 +1117,37 @@ function albumTile(item, opts = {}) {
   tile.append(link, ratingBadge(item));
   return tile;
 }
+function criticsBlock(r) {
+  // Reference material: each critic's score, Metacritic, and the reception paragraph (no counts, no averages)
+  const host = el('div', { class: 'stack', style: { gap: '6px' } });
+  if (r.sources && r.sources.length) { host.append(el('div', { class: 'eyebrow', style: { paddingTop: '6px' } }, 'Critics')); const list = el('div'); for (const x of r.sources) list.append(el(x.url ? 'a' : 'div', Object.assign({ class: 'srow' }, x.url ? { href: x.url, target: '_blank', rel: 'noopener' } : {}), el('span', { class: 'src', text: x.source }), el('span', { class: 'raw', text: x.raw }), starsEl(x.norm, true), x.url ? el('span', { class: 'arrow' }, icon('ext')) : null)); host.append(list); }
+  if (r.mc) host.append(r.mcUrl ? el('a', { class: 'mono', href: r.mcUrl, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, `Metacritic ${r.mc} ↗`) : el('div', { class: 'mono' }, `Metacritic ${r.mc}`));
+  if (r.blurb) host.append(el('div', { class: 'stack', style: { gap: '4px', paddingTop: '8px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'What critics said'), r.title ? el('a', { class: 'mono', href: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(r.title.replace(/ /g, '_')), target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, 'Wikipedia · CC BY-SA ↗') : null), el('div', { class: 'about', style: { whiteSpace: 'pre-line' } }, r.blurb)));
+  return host.children.length ? host : null;
+}
+function verdictBlock(r) {
+  if (!r || r.hr == null) return el('div', { class: 'muted', style: { fontSize: '13px', paddingTop: '12px' } }, r && r.hrT ? "Claude doesn't know this record well enough to rate it." : (settings.anthropicKey ? 'Rating…' : 'Add a Claude API key in Settings for ratings.'));
+  return el('div', { class: 'stack', style: { gap: '6px', paddingTop: '14px' } },
+    el('div', { class: 'row', style: { gap: '12px', alignItems: 'baseline', flexWrap: 'wrap' } }, el('div', { class: 'score', text: r.hr.toFixed(1) }), starsEl(r.hr), r.hrConf && r.hrConf !== 'high' ? el('div', { class: 'mono', text: r.hrConf + ' confidence' }) : null),
+    r.hrWhy ? el('div', { class: 'about' }, r.hrWhy) : null);
+}
 function openRatingSheet(item) {
   const back = el('div', { class: 'sheet-back', onclick: (e) => { if (e.target === back) close(); } });
-  const sheet = el('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': `Reviews of ${item.title}` });
+  const sheet = el('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': `Rating of ${item.title}` });
   back.append(sheet); document.body.append(back);
   const onKey = (e) => { if (e.key === 'Escape') close(); };
   document.addEventListener('keydown', onKey);
   function close() { back.remove(); document.removeEventListener('keydown', onKey); }
+  const body = el('div');
   sheet.append(el('div', { class: 'handle' }),
     el('div', { class: 'row', style: { gap: '12px' } }, el('div', { style: { width: '56px', flexShrink: 0 } }, coverEl(item.id, item.title, 250, null, item.img)), el('div', { style: { minWidth: 0 } }, el('div', { style: { fontWeight: 700, fontSize: '16px', lineHeight: 1.2 } }, item.title), el('div', { class: 'mono' }, [item.artist, item.year].filter(Boolean).join(' · ')))),
-    el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Gathering the reviews…'));
-  Ratings.get(item.id, item.title, item.artist, { full: true }).then(r => {
-    if (!back.isConnected) return;
-    sheet.querySelector('.loading').remove();
-    if (r && r.est) {
-      sheet.append(el('div', { class: 'row', style: { gap: '12px', alignItems: 'baseline', paddingTop: '16px', flexWrap: 'wrap' } }, r.score != null ? el('div', { class: 'score', text: r.score.toFixed(1) }) : el('div', { class: 'score', text: '—' }), r.score != null ? el('span', { class: 'rb est' }, starsEl(r.score)) : null, el('div', { class: 'mono' }, `Claude's estimate · ${r.confidence} confidence`)),
-        el('div', { class: 'about', style: { paddingTop: '8px' } }, r.why || ''),
-        el('div', { class: 'mono', style: { paddingTop: '6px' } }, 'Estimated from what Claude knows of the record\'s reception, not from listening. Not a critic score.'));
-      if (settings.anthropicKey) { const vb = el('button', { class: 'btn sm quiet', style: { marginTop: '10px' }, onclick: async () => { vb.disabled = true; vb.textContent = 'Searching the web…'; try { const items = await digDeeper(item.artist, item.title, item.year ? +item.year : null); store.set('hear.dig.' + item.id, { t: Date.now(), items }); const web = scoresFromWeb(items); if (web) { Ratings.put(item.id, Object.assign({ title: r.title || '' }, web)); close(); openRatingSheet(item); } else { vb.textContent = 'No scored reviews found on the web'; } } catch (err) { vb.disabled = false; vb.textContent = 'Check the web for real scores'; toast(err.message, 4000); } } }, icon('spark'), 'Check the web for real scores'); sheet.append(vb); }
-    } else if (!r || r.score == null) { sheet.append(el('div', { class: 'empty' }, 'No critic ratings found for this album.')); }
-    else {
-      sheet.append(el('div', { class: 'row', style: { gap: '12px', alignItems: 'baseline', paddingTop: '16px', flexWrap: 'wrap' } }, el('div', { class: 'score', text: r.score.toFixed(1) }), starsEl(r.score), el('div', { class: 'mono' }, r.n ? `from ${r.n} review${r.n === 1 ? '' : 's'}` : 'Metacritic only')));
-      if (r.mc) sheet.append(r.mcUrl ? el('a', { class: 'mono', href: r.mcUrl, target: '_blank', rel: 'noopener', style: { textDecoration: 'none', display: 'block', paddingTop: '4px' } }, `Metacritic ${r.mc} ↗`) : el('div', { class: 'mono', style: { paddingTop: '4px' } }, `Metacritic ${r.mc}`));
-      if (r.sources && r.sources.length) { const list = el('div', { style: { paddingTop: '10px' } }); for (const s of r.sources) list.append(el(s.url ? 'a' : 'div', Object.assign({ class: 'srow' }, s.url ? { href: s.url, target: '_blank', rel: 'noopener' } : {}), el('span', { class: 'src', text: s.source }), el('span', { class: 'raw', text: s.raw }), starsEl(s.norm, true), s.url ? el('span', { class: 'arrow' }, icon('ext')) : null)); sheet.append(list); }
-      if (r.blurb) sheet.append(el('div', { class: 'section', style: { paddingTop: '14px' } }, el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'What critics said'), r.title ? el('a', { class: 'mono', href: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(r.title.replace(/ /g, '_')), target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, 'Wikipedia · CC BY-SA ↗') : null), el('div', { class: 'about', style: { whiteSpace: 'pre-line' } }, r.blurb)));
-    }
-    sheet.append(el('div', { class: 'btnrow', style: { paddingTop: '18px' } }, el('a', { class: 'btn primary', href: `#/album/${item.id}`, onclick: close }, 'Open album'), el('button', { class: 'btn quiet', onclick: close }, 'Close')));
-  });
+    body,
+    el('div', { class: 'btnrow', style: { paddingTop: '18px' } }, el('a', { class: 'btn primary', href: `#/album/${item.id}`, onclick: close }, 'Open album'), el('button', { class: 'btn quiet', onclick: close }, 'Close')));
+  const draw = (r) => { body.innerHTML = ''; body.append(verdictBlock(r)); const c = r ? criticsBlock(r) : null; if (c) body.append(c); };
+  draw(Ratings.cached(item.id));
+  EstQueue.want(item);
+  Ratings.get(item.id, item.title, item.artist).then(r => { if (back.isConnected) draw(r); });
+  Ratings.watch(item.id, (r) => { if (!back.isConnected) return false; draw(r); return true; });
 }
 
 // ---------- shelf ----------
@@ -1416,7 +1416,7 @@ async function HomeView(rid) {
       genreSec.setSub(r.data.source === 'tags' ? 'from MusicBrainz tags · add a Claude key for curated picks' : r.data.source === 'discogs' ? 'most collected on Discogs' : `picked by ${r.data.source}`);
       genreSec.setLink('#/search', 'Dig deeper →', (e) => { e.preventDefault(); digDeeperInto(p.genre); });
       genreSec.body.innerHTML = '';
-      const flow = coverFlow(items, { size: 180, years: false, showArtist: true, actions: 'light', label: p.genre + ' essentials' });
+      const flow = homeStrip(items);
       genreSec.body.append(flow);
       (async () => { for (let i = 0; i < items.length; i++) { if (items[i].id) continue; const hit = await resolveAlbum(items[i].artist, items[i].title); if (rid !== routeSeq) return; if (hit) { flow.setId(i, hit.id, hit.img); if (r.shared) saveCollectionItem(r.key, items[i]); else store.set(r.key, r.data); } } })();
     } catch (e) { if (e.message === 'stale') return; fail(genreSec, "Couldn't load this genre (" + e.message + ')'); }
@@ -1427,7 +1427,7 @@ async function HomeView(rid) {
       if (!d || !d.all.length) { fail(labelSec, 'Nothing found for this label. Shuffle for another.'); return; }
       labelSec.setTitle(d.name); if (d.id) labelSec.setLink(`#/label/${d.id}`, 'Browse the label →');
       labelSec.body.innerHTML = '';
-      labelSec.body.append(coverFlow(sample(d.all, 14).sort((x, y) => (x.year || '9999').localeCompare(y.year || '9999')), { size: 180, years: false, showArtist: true, actions: 'light', label: d.name }));
+      labelSec.body.append(homeStrip(sample(d.all, 14).sort((x, y) => (x.year || '9999').localeCompare(y.year || '9999'))));
     } catch (e) { if (e.message === 'stale') return; fail(labelSec, "Couldn't load this label (" + e.message + ')'); }
   })();
   (async () => {
@@ -1435,7 +1435,7 @@ async function HomeView(rid) {
       if (rid !== routeSeq || !d || !d.items.length) return;
       artistSec.setTitle(d.name); artistSec.setLink(`#/artist/${d.id}`, 'All releases →'); artistSec.setSub(d.partial ? 'checking which are studio albums…' : '');
       artistSec.body.innerHTML = '';
-      artistSec.body.append(coverFlow(d.items, { size: 180, years: true, actions: 'light', label: d.name + ' albums' }));
+      artistSec.body.append(homeStrip(d.items, { primary: 'title', twoLine: true }));
     };
     try {
       const d = await artistStrip(p.artist, show); if (rid !== routeSeq) return;
@@ -2088,60 +2088,12 @@ function collectArtistLinks(rels) {
   for (const r of rels || []) { const u = r.url && r.url.resource; if (!u) continue; const t = (r.type || '').toLowerCase(); if (t === 'bandcamp' || t === 'discogs' || t === 'allmusic' || t === 'wikipedia') { if (!out[t]) out[t] = u; } else if (t === 'official homepage' && !out.homepage) out.homepage = u; }
   return out;
 }
-function coverFlow(items, opts = {}) {
-  // items: [{id, title, artist, artistId, year, type, why}]. opts.size = cover px; opts.actions = 'full' | 'light' | 'none'.
-  const COVER = opts.size || 240; const SLOT = Math.round(COVER / 2); const STAGE = COVER + 60;
-  const root = el('div', { class: 'stack', style: { gap: '0' } });
-  const flow = el('div', { class: 'flow', tabindex: '0', role: 'listbox', 'aria-label': opts.label || 'Albums', style: { height: STAGE + 'px', padding: `0 calc(50% - ${SLOT / 2}px)` } });
-  const covers = [];
-  const slots = items.map((g, i) => {
-    const c = coverEl(g.id || null, g.title, 500, null, g.img); covers[i] = c;
-    c.style.width = COVER + 'px'; c.style.height = COVER + 'px';
-    const btn = el('button', { class: 'fc', role: 'option', 'aria-label': `${g.title}${g.artist ? ' by ' + g.artist : ''}${g.year ? ', ' + g.year : ''}`, style: { width: COVER + 'px', height: COVER + 'px', marginLeft: (-COVER / 2) + 'px' }, onclick: () => { if (i === current) { if (g.id) location.hash = `#/album/${g.id}`; else toast('Still matching this one to the catalog…'); } else goTo(i); } }, c);
-    return el('div', { class: 'slot', style: { flex: `0 0 ${SLOT}px`, height: COVER + 'px' } }, btn);
-  });
-  flow.append(...slots);
-  const years = el('div', { class: 'years', role: 'tablist' });
-  const yearBtns = opts.years === false ? [] : items.map((g, i) => el('button', { onclick: () => goTo(i) }, g.year || '—'));
-  if (yearBtns.length) years.append(...yearBtns);
-  const now = el('div', { class: 'nowplaying' });
-  const actions = el('div', { class: 'stack', style: { paddingTop: '12px' } });
-  root.append(flow); if (yearBtns.length) root.append(years); root.append(now); if (opts.actions !== 'none') root.append(actions);
-  let current = -1; let settleT = null;
-  function layout() {
-    const sl = flow.scrollLeft;
-    slots.forEach((slot, i) => {
-      const d = (i * SLOT - sl) / SLOT; const ad = Math.abs(d); const a = Math.min(ad, 1);
-      const rot = -Math.max(-1, Math.min(1, d)) * 58;
-      const tx = Math.sign(d) * a * (COVER * 0.14); const tz = -a * (COVER * 0.62) - Math.max(ad - 1, 0) * 6; const sc = 1 - a * 0.14;
-      const c = slot.firstElementChild;
-      c.style.transform = `perspective(900px) translate3d(${tx}px,0,${tz}px) rotateY(${rot}deg) scale(${sc})`;
-      c.style.zIndex = String(200 - Math.round(ad * 10));
-      c.style.opacity = ad > 6 ? '0' : '1';
-    });
-  }
-  function settle() {
-    const i = Math.max(0, Math.min(items.length - 1, Math.round(flow.scrollLeft / SLOT)));
-    if (i === current) return; current = i;
-    const g = items[i];
-    yearBtns.forEach((b, j) => b.classList.toggle('on', j === i));
-    if (yearBtns[i]) yearBtns[i].scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
-    now.innerHTML = '';
-    now.append(el('h2', { text: g.title }), el('div', { class: 'mono' }, [opts.showArtist ? g.artist : '', g.year, g.type, `${i + 1} of ${items.length}`].filter(Boolean).join(' · ')), ratingBadge(g, { now: true, count: true }));
-    if (g.why) now.append(el('div', { style: { fontSize: '13px', lineHeight: 1.35 } }, g.why));
-    if (opts.actions === 'none') return;
-    actions.innerHTML = '';
-    actions.append(hearButtons(serviceLinks(g.artist || '', g.title)));
-    if (opts.actions !== 'light') actions.append(el('div', { class: 'btnrow' }, g.id ? el('a', { class: 'btn quiet', href: `#/album/${g.id}` }, 'Details, links & tracks') : el('span', { class: 'btn quiet', style: { opacity: 0.5 } }, 'Matching…'), g.id ? shelfButton({ id: g.id, title: g.title, artist: g.artist, artistId: g.artistId, year: g.year, type: g.type }, true) : null));
-    else if (g.id) actions.append(el('div', { class: 'row', style: { justifyContent: 'center' } }, el('a', { class: 'link', href: `#/album/${g.id}`, style: { fontSize: '14px', height: '36px', display: 'inline-flex', alignItems: 'center' } }, 'Details, links & reviews →')));
-  }
-  function goTo(i) { flow.scrollTo({ left: i * SLOT, behavior: 'smooth' }); }
-  let raf = 0;
-  flow.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; layout(); }); clearTimeout(settleT); settleT = setTimeout(settle, 90); }, { passive: true });
-  flow.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') { e.preventDefault(); goTo(Math.min(items.length - 1, current + 1)); } if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(Math.max(0, current - 1)); } if (e.key === 'Enter' && current >= 0 && items[current].id) location.hash = `#/album/${items[current].id}`; });
-  requestAnimationFrame(() => { layout(); if (opts.start) { flow.scrollLeft = opts.start * SLOT; layout(); } settle(); });
-  root.setId = (i, id, img) => { items[i].id = id; if (img) items[i].img = img; const c = coverEl(id, items[i].title, 500, null, items[i].img); c.style.width = COVER + 'px'; c.style.height = COVER + 'px'; covers[i].replaceWith(c); covers[i] = c; if (i === current) { current = -1; settle(); } };
-  return root;
+// A plain, scrollable row of large covers for the home page. setId(i, id, img) swaps a tile in once its album is matched.
+function homeStrip(items, opts = {}) {
+  const strip = el('div', { class: 'strip lg' });
+  const tiles = items.map(it => { const t = albumTile(it, opts); strip.append(t); return t; });
+  strip.setId = (i, id, img) => { items[i].id = id; if (img) items[i].img = img; const nt = albumTile(items[i], opts); tiles[i].replaceWith(nt); tiles[i] = nt; };
+  return strip;
 }
 function shelfButton(item, compact) {
   const b = el('button', { class: 'btn' + (compact ? ' quiet' : ' accent') });
@@ -2231,8 +2183,7 @@ async function AlbumView(id, rid) {
   drawMeta();
   const ratingLine = el('div', { style: { paddingTop: '2px', minHeight: '20px' } });
   const ratingItem = { id: album.id, title, artist: album.primaryArtist, img: album.img };
-  const showHeaderBadge = () => { if (!ratingLine.children.length) ratingLine.append(ratingBadge(ratingItem, { now: true, count: true, size: 'lg' })); };
-  Ratings.get(album.id, title, album.primaryArtist).then(r => { if (r && r.score != null) showHeaderBadge(); });
+  ratingLine.append(ratingBadge(ratingItem, { now: true, size: 'lg' }));
   try { const rv = store.get('hear.recentAlbums', []).filter(x => x.id !== album.id); rv.unshift({ id: album.id, title, artist: artistName, artistId: fa && fa.id, year: album.year, type: album.type, img: album.img || '' }); store.set('hear.recentAlbums', rv.slice(0, 12)); } catch (e) { }
   // A few style chips up top (the full list lives under About)
   const styleLine = el('div', { class: 'wrap', style: { paddingTop: '4px' } });
@@ -2288,70 +2239,29 @@ async function AlbumView(id, rid) {
   const likeKey = 'hear.like.' + album.id;
   const byYear = (a, b) => (a.year || 9999) - (b.year || 9999);
   const loadingRow = (text) => el('div', { class: 'loading', style: { padding: '6px 0' } }, el('div', { class: 'spinner' }), text);
-  const ratingMeta = (r) => !r ? '' : r.score == null ? (r.est ? 'not enough known' : 'no critic scores') : `${r.est ? '~' : ''}${r.score.toFixed(1)} ★${r.est ? ' estimate' : r.n ? ` · ${r.n} review${r.n === 1 ? '' : 's'}` : ''}`;
+  const ratingMeta = (r) => !r || r.hr == null ? (r && r.hrT ? 'unrated' : '') : `${r.hr.toFixed(1)} ★`;
   const fReviews = fold('Ratings & reviews', { key: 'reviews', build: drawReviews });
   const fPress = fold('Interviews & articles', { key: 'press', build: drawPress });
   const fAbout = fold('About', { key: 'about', build: drawAbout });
   const fLike = fold('More like this', { key: 'like', build: drawLike });
   view.append(el('div', { class: 'folds' }, fReviews.root, fPress.root, fAbout.root, fLike.root));
+  fReviews.setMeta(ratingMeta(Ratings.cached(album.id)));
   Ratings.get(album.id, title, album.primaryArtist).then(r => fReviews.setMeta(ratingMeta(r)));
-  Ratings.watch(album.id, (r) => { if (!fReviews.root.isConnected) return false; fReviews.setMeta(ratingMeta(r)); if (r && r.score != null) showHeaderBadge(); return true; });
+  Ratings.watch(album.id, (r) => { if (!fReviews.root.isConnected) return false; fReviews.setMeta(ratingMeta(r)); fReviews.refresh(); return true; });
 
-  // No critic scores anywhere: Claude estimates the consensus rating for this one album (and can check the web for real ones).
-  function estimateBlock() {
-    if (!settings.anthropicKey) return el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' for an estimated rating.');
-    const host = el('div', { class: 'stack', style: { gap: '8px' } });
-    const show = (r) => {
-      host.innerHTML = '';
-      if (!r || r.score == null) host.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, r && r.est ? "Claude doesn't know this record's reception well enough to estimate a rating." : 'No estimate available.'));
-      else {
-        host.append(el('div', { class: 'card' },
-          el('div', { class: 'row', style: { gap: '12px', alignItems: 'baseline', flexWrap: 'wrap' } }, el('div', { class: 'score', text: r.score.toFixed(1) }), el('span', { class: 'rb est' }, starsEl(r.score)), el('div', { class: 'mono' }, `Claude's estimate · ${r.confidence} confidence`)),
-          r.why ? el('div', { class: 'about' }, r.why) : null,
-          el('div', { class: 'mono' }, "Estimated from what Claude knows of the record's reception, not from listening. Not a critic score.")));
-        showHeaderBadge();
-      }
-      const vb = el('button', { type: 'button', class: 'btn sm quiet', onclick: async () => {
-        vb.disabled = true; vb.textContent = 'Searching the web…';
-        try {
-          const items = await digDeeper(album.primaryArtist, title, ry); store.set('hear.dig.' + album.id, { t: Date.now(), items });
-          const web = scoresFromWeb(items);
-          if (web) { Ratings.put(album.id, Object.assign({ title: (r && r.title) || '' }, web)); toast('Found real scores on the web'); fReviews.refresh(); fPress.refresh(); }
-          else vb.textContent = 'No scored reviews found on the web';
-        } catch (err) { vb.disabled = false; vb.innerHTML = ''; vb.append(icon('spark'), 'Check the web for real scores'); toast(err.message, 4000); }
-      } }, icon('spark'), 'Check the web for real scores');
-      host.append(el('div', { class: 'row' }, vb));
-    };
-    const cached = Ratings.cached(album.id);
-    if (cached && cached.est) show(cached);
-    else {
-      host.append(loadingRow('Asking Claude for an estimate…'));
-      estimateRatings([{ id: album.id, title, artist: album.primaryArtist, year: album.year }], { checked: true }).then(out => { if (host.isConnected) show(out[0] || null); }).catch(err => { host.innerHTML = ''; host.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't get an estimate: " + err.message)); });
-    }
-    return host;
-  }
   function drawReviews(body) {
     const cov = covData;
-    if (!cov) { body.append(loadingRow('Looking up ratings and reviews…')); return; }
-    let rs = cov.ratings || [];
-    let mean = rs.length ? rs.reduce((s, r) => s + r.norm, 0) / rs.length : (cov.metacritic ? cov.metacritic.norm : null);
-    let caption = cov.wikiUrl ? el('a', { class: 'mono', href: cov.wikiUrl, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, 'via Wikipedia ↗') : el('div', { class: 'mono' }, 'no Wikipedia entry found');
-    // Scores Claude found on the web (from "Check the web for real scores") stand in when Wikipedia has none.
     const rc = Ratings.cached(album.id);
-    if (mean == null && rc && rc.web && rc.score != null && rc.sources && rc.sources.length) { mean = rc.score; rs = rc.sources.map(s => ({ source: s.source, raw: s.raw, norm: s.norm, url: s.url || null })); caption = el('div', { class: 'mono' }, 'found on the web by Claude'); }
-    body.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Ratings'), caption));
-    if (mean != null) {
-      const card = el('div', { class: 'card' });
-      card.append(el('div', { class: 'row', style: { gap: '12px', alignItems: 'baseline', flexWrap: 'wrap' } }, el('div', { class: 'score', text: mean.toFixed(1) }), starsEl(mean), el('div', { class: 'mono' }, rs.length ? `from ${rs.length} review${rs.length === 1 ? '' : 's'}` : 'Metacritic only')));
-      if (cov.metacritic && (cov.ratings || []).length) card.append(cov.metacritic.url ? el('a', { class: 'mono', href: cov.metacritic.url, target: '_blank', rel: 'noopener', style: { textDecoration: 'none' } }, `Metacritic ${cov.metacritic.raw} ↗`) : el('div', { class: 'mono' }, `Metacritic ${cov.metacritic.raw}`));
-      const list = el('div');
-      for (const r of rs) list.append(el(r.url ? 'a' : 'div', Object.assign({ class: 'srow' }, r.url ? { href: r.url, target: '_blank', rel: 'noopener' } : {}), el('span', { class: 'src', text: r.source }), el('span', { class: 'raw', text: r.raw }), starsEl(r.norm, true), r.url ? el('span', { class: 'arrow' }, icon('ext')) : null));
-      card.append(list);
-      body.append(card);
-    } else {
-      body.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, cov.wikiUrl ? 'This Wikipedia entry has no ratings box.' : 'No critic ratings found for this album.'), estimateBlock());
-    }
-    if (rc && rc.blurb) body.append(el('div', { class: 'stack', style: { gap: '4px', paddingTop: '6px' } }, el('div', { class: 'eyebrow' }, 'What critics said'), el('div', { class: 'about', style: { whiteSpace: 'pre-line' } }, rc.blurb)));
+    // The verdict (Claude, on the house rubric), then the critics' own scores as reference
+    body.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, 'Rating'), el('div', { class: 'mono' }, 'Hear · Claude')));
+    const v = verdictBlock(rc); v.style.paddingTop = '0'; body.append(v);
+    if (!cov) { body.append(loadingRow('Looking up the critics…')); return; }
+    let rs = cov.ratings || [];
+    if (!rs.length && rc && rc.sources && rc.sources.length) rs = rc.sources.map(s => ({ source: s.source, raw: s.raw, norm: s.norm, url: s.url || null }));
+    const ref = { sources: rs, mc: cov.metacritic ? cov.metacritic.raw : (rc && rc.mc), mcUrl: cov.metacritic ? cov.metacritic.url : (rc && rc.mcUrl), blurb: rc && rc.blurb, title: cov.wikiTitle || (rc && rc.title) };
+    const cb = criticsBlock(ref);
+    if (cb) body.append(cb);
+    else body.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, cov.wikiUrl ? 'No critic scores on this album\'s Wikipedia entry.' : 'No critic scores on record for this album.'));
     const reviews = []; const seenUrl = new Set();
     const push = (x) => { if (!x.url || seenUrl.has(x.url)) return; seenUrl.add(x.url); reviews.push(x); };
     for (const r of rs) if (r.url) push({ title: r.source + ' review', work: r.source, url: r.url, year: r.year, score: r.raw });
@@ -2361,7 +2271,7 @@ async function AlbumView(id, rid) {
     if (links.review) push({ title: 'Review', work: hostOf(links.review), url: links.review });
     if (links.rym) push({ title: 'RateYourMusic', work: 'RateYourMusic', url: links.rym });
     reviews.sort(byYear);
-    body.append(el('div', { class: 'sechead', style: { paddingTop: '8px' } }, el('div', { class: 'eyebrow' }, 'Reviews'), el('div', { class: 'mono', text: reviews.length ? String(reviews.length) : '' })));
+    body.append(el('div', { class: 'eyebrow', style: { paddingTop: '10px' } }, 'Reviews'));
     if (reviews.length) body.append(el('div', { class: 'list' }, reviews.map(r => el('a', { class: 'crow', href: r.url, target: '_blank', rel: 'noopener' }, el('div', { class: 't', text: r.title }), el('div', { class: 'm', text: [r.work || hostOf(r.url), r.year, r.score].filter(Boolean).join(' · ') })))));
     const hasHost = (h) => reviews.some(r => hostOf(r.url).endsWith(h));
     body.append(el('div', { class: 'wrap' },
@@ -2392,7 +2302,7 @@ async function AlbumView(id, rid) {
     const digHost = el('div', { class: 'stack', style: { paddingTop: '6px' } });
     const drawDug = (items) => { digHost.innerHTML = ''; digHost.append(el('div', { class: 'subhead', text: `Found on the web by Claude · ${items.length}` }), el('div', { class: 'list' }, items.map(i => el('a', { class: 'crow', href: i.url, target: '_blank', rel: 'noopener' }, el('div', { class: 't' }, el('span', { class: 'kind', text: i.kind }), i.title), el('div', { class: 'm', text: [i.work || hostOf(i.url), i.date, i.score].filter(Boolean).join(' · ') }))))); };
     if (dug) drawDug(dug.items);
-    else if (settings.anthropicKey) digHost.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Searching the web…'; try { const items = await digDeeper(artistName, title, ry); store.set(digKey, { t: Date.now(), items }); drawDug(items); const web = scoresFromWeb(items); const rc = Ratings.cached(album.id); if (web && (!rc || rc.score == null || rc.est)) { Ratings.put(album.id, Object.assign({ title: (rc && rc.title) || '' }, web)); fReviews.refresh(); } } catch (err) { b.disabled = false; b.textContent = 'Dig deeper with Claude'; toast(err.message, 4000); } } }, icon('spark'), 'Dig deeper with Claude'));
+    else if (settings.anthropicKey) digHost.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Searching the web…'; try { const items = await digDeeper(artistName, title, ry); store.set(digKey, { t: Date.now(), items }); drawDug(items); const web = scoresFromWeb(items); if (web) { const rc = Ratings.cached(album.id) || {}; const have = new Set((rc.sources || []).map(x => x.url || x.source)); const add = web.sources.filter(x => !have.has(x.url || x.source)); if (add.length) { Ratings.put(album.id, Object.assign({}, rc, { sources: (rc.sources || []).concat(add), wp: true })); fReviews.refresh(); } } } catch (err) { b.disabled = false; b.textContent = 'Dig deeper with Claude'; toast(err.message, 4000); } } }, icon('spark'), 'Dig deeper with Claude'));
     else digHost.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to search the web for more reviews and interviews.'));
     body.append(digHost);
   }
@@ -2464,8 +2374,8 @@ async function AlbumView(id, rid) {
           store.set('hear.wptitle.' + album.id, p.title);
           const rs0 = parsed.ratings; const mean0 = rs0.length ? rs0.reduce((s, r) => s + r.norm, 0) / rs0.length : (parsed.metacritic ? parsed.metacritic.norm : null);
           const prevR = Ratings.cached(album.id);
-          // A real aggregate replaces whatever was there; if Wikipedia has no scores, an existing estimate or web result stays (merge keeps it).
-          if (!(mean0 == null && prevR && prevR.web && prevR.score != null)) Ratings.put(album.id, Ratings.merge(prevR, { score: mean0, n: rs0.length, mc: parsed.metacritic ? parsed.metacritic.raw : null, mcUrl: parsed.metacritic ? parsed.metacritic.url : null, hasBox: !!(rs0.length || parsed.metacritic), title: p.title, sources: rs0.map(r => ({ source: r.source, raw: r.raw, norm: r.norm, url: r.url || null })), blurb: parsed.blurb || (prevR || {}).blurb || '', wp: true }));
+          const srcs = rs0.map(r => ({ source: r.source, raw: r.raw, norm: r.norm, url: r.url || null }));
+          Ratings.put(album.id, Ratings.merge(prevR, { score: mean0, n: rs0.length, mc: parsed.metacritic ? parsed.metacritic.raw : null, mcUrl: parsed.metacritic ? parsed.metacritic.url : null, hasBox: !!(rs0.length || parsed.metacritic), title: p.title, sources: srcs.length ? srcs : ((prevR || {}).sources || []), blurb: parsed.blurb || (prevR || {}).blurb || '' }));
           cov.summary = await WP.summary(p.title);
         } catch (e) { console.warn('Wikipedia', e); }
       })();
@@ -2749,8 +2659,7 @@ async function AIView(text, rid) {
     const footer = el('div', { class: 'row', style: { justifyContent: 'center', paddingTop: '12px' } }, el('button', { type: 'button', class: 'btn sm quiet', onclick: () => doRefine('') }, 'Ten different records'));
     out.append(flow, busy, footer);
     if (live) footer.hidden = true;
-    document.documentElement.classList.add('snapy');
-    stopFx = vflowFx(flow);
+        stopFx = vflowFx(flow);
     const finish = () => {
       if (busy) busy.remove(); footer.hidden = false;
       count.textContent = res.albums.length ? `${res.albums.length} records` : 'Nothing came back. Try different words.';
@@ -2787,7 +2696,7 @@ function aiCard(a, i, n, onChange) {
     : el('button', { type: 'button', class: 'vartist', onclick: async (e) => { const b = e.currentTarget; b.style.opacity = '0.5'; const hit = await resolveArtist(a.artist); if (hit) { a.artistId = hit.id; onChange(); location.hash = `#/artist/${hit.id}`; } else { b.style.opacity = '1'; toast('Not found in the catalog'); } } }, a.artist);
   const metaText = () => [a.year ? String(a.year) : '', a.label || ''].filter(Boolean).join(' · ');
   const meta = el('div', { class: 'mono vmeta', text: metaText() });
-  const rb = el('div', { class: 'rbslot' }, ratingBadge(a, { count: true }));
+  const rb = el('div', { class: 'rbslot' }, ratingBadge(a));
   const links = serviceLinks(a.artist, a.title);
   let notFound = false;
   const qobuzFirst = settings.primary === 'qobuz';
@@ -2805,32 +2714,12 @@ function aiCard(a, i, n, onChange) {
     a.id = hit.id; a.img = hit.img || a.img; if (!a.label && hit.label) a.label = hit.label; if (!a.year && hit.year) a.year = hit.year; onChange();
     cov.innerHTML = ''; cov.append(coverEl(a.id, a.title, 500, null, a.img));
     meta.textContent = metaText();
-    rb.innerHTML = ''; rb.append(ratingBadge(a, { count: true }));
+    rb.innerHTML = ''; rb.append(ratingBadge(a));
     btnHost.innerHTML = ''; btnHost.append(btns());
   });
   return { card, ready };
 }
-// The "cover flow" feel: covers tilt and shrink as they leave the focus line, with the document snapping card to card.
-function vflowFx(container) {
-  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return () => { };
-  let ticking = false;
-  const update = () => {
-    ticking = false;
-    const vh = window.innerHeight || 800; const mid = vh * 0.45;
-    for (const c of container.querySelectorAll('.vcov')) {
-      const r = c.getBoundingClientRect();
-      if (r.bottom < -vh || r.top > vh * 2) continue;
-      const off = (r.top + r.height / 2 - mid) / vh; // negative above the focus line, positive below
-      const d = Math.min(1, Math.abs(off));
-      c.style.transform = `perspective(900px) rotateX(${(-off * 16).toFixed(1)}deg) scale(${(1 - 0.1 * d).toFixed(3)})`;
-      c.style.opacity = (1 - 0.35 * d).toFixed(2);
-    }
-  };
-  const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
-  window.addEventListener('scroll', onScroll, { passive: true }); window.addEventListener('resize', onScroll);
-  requestAnimationFrame(update); setTimeout(update, 300);
-  return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); };
-}
+function vflowFx() { return () => { }; }
 
 // ============================================================
 // Settings
@@ -2864,7 +2753,7 @@ function SettingsView() {
     field('anthropicKey', 'Claude API key (optional)', el('span', {}, 'Powers Ask Claude, Moods, “more like this”, estimated ratings and web checks. Keys stay in this browser only (each address keeps its own settings). Create one at ', el('a', { class: 'link', href: 'https://console.anthropic.com/', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), ' (Get API key). Keys can carry an expiry date; if Claude features stop with a 401, create a new key and paste it here.'), 'password'),
     el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap' } }, el('button', { type: 'button', class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; const k = f.anthropicKey.value.trim(); if (!k) { toast('Paste a Claude API key first'); return; } b.disabled = true; b.textContent = 'Testing…'; saveSettings({ anthropicKey: k, model: f.model.value.trim() || DEFAULTS.model }); const t0 = Date.now(); try { const r = await askJSON('Reply with ok set to "yes".', SCHEMA.ok, 2000, { effort: 'low' }); b.textContent = `Works · ${settings.model} answered in ${((Date.now() - t0) / 1000).toFixed(1)} s`; } catch (err) { b.textContent = 'Test key'; b.disabled = false; toast(err.message, 8000); } } }, 'Test key'), el('div', { class: 'help', style: { flex: 1, minWidth: '160px' } }, 'Sends one tiny request and reports what came back.')),
     field('model', 'Claude model', 'Model name for recommendations.'),
-    select('autoEst', 'Estimate missing ratings with Claude', [['yes', 'Yes — every album you see gets a rating'], ['no', 'No — only real critic aggregates']], 'Most albums have no critic aggregate on record, so Claude estimates the consensus rating for whatever is on screen (shown with a ~). A real aggregate replaces it whenever one exists. About a cent per twenty albums.'),
+    select('autoEst', 'Star ratings by Claude', [['yes', 'Yes — every album you see gets rated'], ['no', 'No ratings']], 'Claude rates each album on the house scale (5 = generational landmark, 4.5 = superb but not generational, 4 = all-round great…) using published reviews as reference. About a cent per twenty albums.'),
     el('div', { class: 'btnrow' }, el('button', { class: 'btn primary', type: 'submit' }, 'Save settings')));
   view.append(el('div', { class: 'stack', style: { gap: '10px' } }, el('h1', { text: 'Settings' }), statusRow), form,
     el('div', { class: 'section' }, el('div', { class: 'eyebrow' }, 'Housekeeping'),
