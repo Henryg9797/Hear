@@ -3,7 +3,7 @@
    the cached copy is only used offline. Icons and the manifest are served cache-first. Catalog requests
    (MusicBrainz, Cover Art Archive, Discogs, Claude) never touch the cache.
    Bump VERSION whenever index.html changes (the page's BUILD constant must match). */
-const VERSION = 'hear-v20';
+const VERSION = 'hear-v21';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {

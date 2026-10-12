@@ -52,7 +52,8 @@ Under the search box, three ways to browse (tap one to open it, tap again to clo
 
 - **Genres**: a table of sixteen major genres (Rock, Pop, Electronic, Hip Hop, Jazz, Funk / Soul, Blues, Folk, Country, Reggae, Latin, World, Classical, Metal, Punk, Experimental) with their styles underneath, AllMusic-style. Every name is a link to a genre page.
 - **Moods**: the same table for moods (Feel, Energy, Texture, Voice, Mind, Time & place). Tap one and the Moods tab finds records that feel like it; a link below lets you mix up to three.
-- **Ask Claude**: a search bar for exactly what you want to hear, plus your recent asks and a few examples. See below.
+- **Ask**: a search bar for exactly what you want to hear, plus your recent asks and a few examples. See below.
+- **Find**: advanced search. Set any combination of a release-year range (with decade shortcuts), a minimum rating on the house scale, a genre or style, a mood, and a free-text note; Claude searches its knowledge against every filter at once and returns up to twenty records, best fits first, on the same streaming page as Ask Claude (refine, fresh set, save as crate). The rating Claude applies while filtering is the rating the album then carries everywhere, so results and badges agree, and anything outside the years or under the rating floor is dropped. "Edit filters" reopens the form with your settings; the Search tab's *Filters* chip opens it too.
 
 ## Ask Claude
 
