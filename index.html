@@ -366,7 +366,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { } }
 };
-const BUILD = 'v15'; // keep in step with VERSION in sw.js
+const BUILD = 'v16'; // keep in step with VERSION in sw.js
 const DEFAULTS = { discogsToken: '', discogsUser: '', discogsOk: null, source: 'auto', anthropicKey: '', model: 'claude-sonnet-5-5', autoRate: false, qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
 let settings = Object.assign({}, DEFAULTS, store.get('hear.settings', {}));
 function saveSettings(patch) { settings = Object.assign({}, settings, patch); store.set('hear.settings', settings); applyTheme(); }
@@ -518,7 +518,17 @@ const Discogs = { get: (path, params) => DG.get(path, params) };
 // ---------- Claude (optional) ----------
 // One door to the Claude API. A 2-minute timeout; one retry when the connection fails or the reply is cut off in transit;
 // short back-off retries when the API is overloaded. Errors come back in plain words.
-async function claudeFetch(body, attempt = 0) {
+// Speed: current models think before answering by default and the thinking counts against max_tokens, so every request
+// sets an effort level and asks Sonnet to skip up-front thinking; a model that rejects either setting gets it dropped for the session.
+const claudeCaps = { effort: true, thinkingOff: true };
+function claudeBody(body) {
+  const b = Object.assign({ model: settings.model || DEFAULTS.model }, body);
+  const effort = b.effort; delete b.effort;
+  if (claudeCaps.effort && effort) b.output_config = Object.assign({}, b.output_config || {}, { effort });
+  if (claudeCaps.thinkingOff && /sonnet-5-5/.test(b.model) && b.tools === undefined) b.thinking = { type: 'between_tools' };
+  return b;
+}
+async function claudeRequest(body, attempt = 0) {
   if (!settings.anthropicKey) throw new Error('No Claude API key set. Add one in Settings.');
   const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 120000);
   let res;
@@ -526,20 +536,53 @@ async function claudeFetch(body, attempt = 0) {
     res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', signal: ctl.signal,
       headers: { 'content-type': 'application/json', 'x-api-key': settings.anthropicKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify(Object.assign({ model: settings.model || DEFAULTS.model }, body))
+      body: JSON.stringify(claudeBody(body))
     });
   } catch (e) {
     clearTimeout(timer);
-    if (attempt < 1 && e.name !== 'AbortError') { await sleep(1200); return claudeFetch(body, attempt + 1); }
+    if (attempt < 1 && e.name !== 'AbortError') { await sleep(1200); return claudeRequest(body, attempt + 1); }
     throw new Error(e.name === 'AbortError' ? 'Claude took more than two minutes to answer. Try again.' : "Couldn't reach Claude: no connection, or the request was blocked. Try again.");
   }
-  clearTimeout(timer);
-  if ((res.status === 529 || res.status === 503 || res.status === 500) && attempt < 2) { await sleep(2000 * (attempt + 1)); return claudeFetch(body, attempt + 1); }
-  if (!res.ok) throw await claudeError(res);
+  if ((res.status === 529 || res.status === 503 || res.status === 500) && attempt < 2) { clearTimeout(timer); await sleep(2000 * (attempt + 1)); return claudeRequest(body, attempt + 1); }
+  if (res.status === 400 && attempt < 3) {
+    // A model that doesn't take one of the speed settings: drop it and retry
+    let msg = ''; try { msg = (await res.clone().json()).error.message || ''; } catch (e) { }
+    if (/thinking/i.test(msg) && claudeCaps.thinkingOff) { clearTimeout(timer); claudeCaps.thinkingOff = false; return claudeRequest(body, attempt + 1); }
+    if (/effort/i.test(msg) && claudeCaps.effort) { clearTimeout(timer); claudeCaps.effort = false; return claudeRequest(body, attempt + 1); }
+  }
+  if (!res.ok) { clearTimeout(timer); throw await claudeError(res); }
+  res._timer = timer;
+  return res;
+}
+async function claudeFetch(body, attempt = 0) {
+  const res = await claudeRequest(body);
   let data;
   try { data = await res.json(); }
-  catch (e) { if (attempt < 1) { await sleep(800); return claudeFetch(body, attempt + 1); } throw new Error('The reply from Claude was cut off before it finished arriving. Try again.'); }
+  catch (e) { clearTimeout(res._timer); if (attempt < 1) { await sleep(800); return claudeFetch(body, attempt + 1); } throw new Error('The reply from Claude was cut off before it finished arriving. Try again.'); }
+  clearTimeout(res._timer);
   return data;
+}
+// Streaming: onText(textSoFar) fires as the answer arrives. Resolves { text, stop_reason }.
+async function claudeStream(body, onText) {
+  const res = await claudeRequest(Object.assign({ stream: true }, body));
+  const reader = res.body.getReader(); const dec = new TextDecoder();
+  let buf = '', text = '', stop = null;
+  try {
+    while (true) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n\n')) >= 0) {
+        const block = buf.slice(0, i); buf = buf.slice(i + 2);
+        const dataLine = block.split('\n').find(l => l.startsWith('data:')); if (!dataLine) continue;
+        let ev; try { ev = JSON.parse(dataLine.slice(5).trim()); } catch (e) { continue; }
+        if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') { text += ev.delta.text; if (onText) onText(text); }
+        else if (ev.type === 'message_delta' && ev.delta && ev.delta.stop_reason) stop = ev.delta.stop_reason;
+        else if (ev.type === 'error') throw new Error('Claude API: ' + ((ev.error && ev.error.message) || 'stream error'));
+      }
+    }
+  } finally { clearTimeout(res._timer); }
+  return { text, stop_reason: stop };
 }
 async function askClaude(input, maxTokens = 1500) {
   const messages = Array.isArray(input) ? input : [{ role: 'user', content: input }];
@@ -567,24 +610,45 @@ const SCHEMA = {
   moods: obj({ moods: { type: 'array', items: { type: 'string' } }, blurb: { type: 'string' } }, ['moods', 'blurb']),
   ok: obj({ ok: { type: 'string' } }, ['ok'])
 };
-let structuredOK = true; // flipped off for the session if the chosen model rejects output_config
-async function askJSON(input, schema, maxTokens = 2500) {
+let structuredOK = true; // flipped off for the session if the chosen model rejects output_config.format
+// opts: { effort: 'low'|'medium'|'high', onText(partialText) } — with onText the reply streams.
+async function askJSON(input, schema, maxTokens = 8000, opts = {}) {
   const messages = Array.isArray(input) ? input : [{ role: 'user', content: input }];
+  const effort = opts.effort || 'low';
+  const run = async (body) => {
+    if (opts.onText) { const r = await claudeStream(body, opts.onText); return { stop_reason: r.stop_reason, content: [{ type: 'text', text: r.text }] }; }
+    return claudeFetch(body);
+  };
   let data;
   if (structuredOK) {
-    try { data = await claudeFetch({ max_tokens: maxTokens, messages, output_config: { format: { type: 'json_schema', schema } } }); }
-    catch (e) { if (!/output_config|output_format|structured|json_schema|format/i.test(e.message) || !/400/.test(e.message)) throw e; structuredOK = false; }
+    try { data = await run({ max_tokens: maxTokens, messages, effort, output_config: { format: { type: 'json_schema', schema } } }); }
+    catch (e) { if (!/400/.test(e.message) || !/output_config|output_format|structured|json_schema|format/i.test(e.message)) throw e; structuredOK = false; }
   }
   if (!data) {
     // Plain-text route: describe the shape and parse leniently
     const last = messages[messages.length - 1];
     const shaped = messages.slice(0, -1).concat([{ role: 'user', content: (typeof last.content === 'string' ? last.content : '') + `\n\nReply with ONLY a JSON object of this shape (no prose, no code fences): ${JSON.stringify(schemaExample(schema))}` }]);
-    data = await claudeFetch({ max_tokens: maxTokens, messages: shaped });
+    data = await run({ max_tokens: maxTokens, messages: shaped, effort });
   }
   if (data.stop_reason === 'max_tokens') throw new Error('Claude ran out of room before finishing. Try again.');
   if (data.stop_reason === 'refusal') throw new Error('Claude declined to answer that one. Try rephrasing.');
   const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
   return parseJSON(text);
+}
+// Complete objects inside the "albums" array of a JSON text that is still arriving.
+function partialAlbums(text) {
+  const out = []; const start = text.indexOf('"albums"'); if (start < 0) return out;
+  const arr = text.indexOf('[', start); if (arr < 0) return out;
+  let depth = 0, inStr = false, esc = false, objStart = -1;
+  for (let i = arr + 1; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true;
+    else if (ch === '{') { if (depth === 0) objStart = i; depth++; }
+    else if (ch === '}') { depth--; if (depth === 0 && objStart >= 0) { try { out.push(JSON.parse(text.slice(objStart, i + 1))); } catch (e) { } objStart = -1; } }
+    else if (ch === ']' && depth === 0) break;
+  }
+  return out;
 }
 // A one-line example built from a schema, for the plain-text route
 function schemaExample(sc) {
@@ -784,7 +848,7 @@ async function estimateRatings(items, opts = {}) {
   if (!todo.length || !settings.anthropicKey) return [];
   const list = todo.map((it, i) => `${i}. ${it.artist || 'Unknown artist'} — ${it.title}${it.year ? ' (' + it.year + ')' : ''}`).join('\n');
   const prompt = `You are an experienced music critic estimating consensus ratings. For each album below, estimate the rating AllMusic's editors would give on their 1-5 scale (5 = essential, 4 = excellent, 3 = good or solid, 2 = flawed, 1 = poor), judging the record within its genre and the artist's catalog and weighing the critical reception you actually know of (AllMusic, Pitchfork, RYM, Metacritic, Christgau, major press). You cannot hear the music; rate only from what you know, and never invent reception. Use half-stars (x.0 or x.5). If you do not recognize an album or know too little about its reception, set confidence "low" and omit the score. "i" is the album's number below; "why" is one sentence naming the basis, e.g. 'widely regarded as their peak; Pitchfork 8.7, AllMusic 4.5'.\nAlbums:\n${list}`;
-  const parsed = await askJSON(prompt, SCHEMA.ratings, 2500);
+  const parsed = await askJSON(prompt, SCHEMA.ratings, 6000, { effort: 'low' });
   const out = [];
   for (const r of parsed.ratings || []) {
     const it = todo[r.i]; if (!it) continue;
@@ -833,7 +897,7 @@ function describePrompt(text, rich) {
   const why = rich
     ? 'two or three sentences spoken to the customer across the counter: what the record sounds like, which parts of their request it nails, and anything it only half-fits. Plain and specific; never repeat the artist and title, never gush.'
     : 'one sentence naming which parts of the description it satisfies.';
-  return `You are a deeply knowledgeable record-store clerk with wide-ranging, specific taste. A customer describes what they want to hear:\n\n"""${text}"""\n\nTreat every attribute in that description as a requirement, not a loose mood: the instrumentation, the voice, the tone, the era, the genre hints. Recommend 10 real, released albums (studio albums or EPs; no singles, no compilations unless essential) that satisfy ALL of it as exactly as possible. Prefer the best fit over the most famous. Mix well-known and lesser-known picks, and no more than one album per artist. For each album give the artist, the title, the year, the label that first released it, and "why": ${why}`;
+  return `You are a deeply knowledgeable record-store clerk with wide-ranging, specific taste. A customer describes what they want to hear:\n\n"""${text}"""\n\nTreat every attribute in that description as a requirement, not a loose mood: the instrumentation, the voice, the tone, the era, the genre hints, and any production qualities they ask for (mixing, mastering, spatial sound, dynamics). If they name a reference point (a film scene, an artist, a record), go by what that reference actually sounds like. Recommend 10 real, released albums (studio albums or EPs; no singles, no compilations unless essential) that satisfy ALL of it as exactly as possible. Prefer the best fit over the most famous. Mix well-known and lesser-known picks, and no more than one album per artist. For each album give the artist, the title, the year, the label that first released it, and "why": ${why}`;
 }
 function handoffPrompt(text) {
   return `I'm looking for albums that fit this description: "${text}". Treat every attribute as a requirement, not a loose mood. Recommend 10 real albums (no singles or compilations) that fit it as exactly as possible, mixing well-known and lesser-known picks, no more than one per artist. Reply ONLY with a numbered list, one album per line, in exactly this format:\nArtist — Album Title (Year) — one short sentence on why it fits`;
@@ -865,12 +929,12 @@ async function resolveAlbum(artist, title) {
 const cleanAlbums = (list) => (list || []).filter(a => a && a.artist && a.title).map(a => ({ artist: String(a.artist), title: String(a.title), year: a.year ? +a.year || '' : '', label: a.label ? String(a.label) : '', why: a.why ? String(a.why) : '' })).slice(0, 12);
 async function askPicks(text, opts = {}) {
   const msgs = [{ role: 'user', content: describePrompt(text, opts.rich) }];
-  const albums = cleanAlbums((await askJSON(msgs, SCHEMA.albums, 4000)).albums);
+  const albums = cleanAlbums((await askJSON(msgs, SCHEMA.albums, 16000, { effort: 'medium', onText: opts.onText })).albums);
   return { text, albums, convo: msgs.concat([{ role: 'assistant', content: JSON.stringify({ albums }) }]), source: settings.model || DEFAULTS.model };
 }
-async function refinePicks(prev, text) {
+async function refinePicks(prev, text, opts = {}) {
   const msgs = (prev.convo || [{ role: 'user', content: describePrompt(prev.text) }, { role: 'assistant', content: JSON.stringify({ albums: prev.albums }) }]).concat([{ role: 'user', content: `Refinement from the customer: "${text}". Apply it on top of the original description and give a fresh list of 10 in the same form, keeping earlier picks only if they still fit.` }]);
-  const albums = cleanAlbums((await askJSON(msgs, SCHEMA.albums, 4000)).albums);
+  const albums = cleanAlbums((await askJSON(msgs, SCHEMA.albums, 16000, { effort: 'medium', onText: opts.onText })).albums);
   return { text: prev.text, refined: (prev.refined ? prev.refined + ' · ' : '') + text, albums, convo: msgs.concat([{ role: 'assistant', content: JSON.stringify({ albums }) }]), source: prev.source };
 }
 const Crates = {
@@ -987,7 +1051,7 @@ function ratingsFromWikitext(text) {
   return { score, n: sources.length, mc: mc ? mc.raw : null, mcUrl: mc ? mc.url : null, hasBox: true, sources, blurb };
 }
 const Ratings = {
-  mem: new Map(), queue: [], active: 0, max: 2,
+  mem: new Map(), queue: [], active: 0, max: 3,
   key: (id) => 'hear.rating.' + id,
   pending: new Set(),
   get(rgid, title, artist, opts = {}) {
@@ -1275,15 +1339,16 @@ async function labelStrip(name) {
   for (const r of d.releases || []) { const rg = r['release-group']; if (!rg || seen.has(rg.id) || bucket(rg) !== 'album') continue; seen.set(rg.id, { id: rg.id, title: rg.title, artist: credit(r['artist-credit']), year: year(rg['first-release-date'] || r.date), type: rgType(rg) }); }
   const data = { t: Date.now(), id: l.id, name: l.name, all: [...seen.values()] }; store.set(key, data); return data;
 }
-async function artistStrip(a) {
+async function artistStrip(a, onPartial) {
   let id = a.id, name = a.name;
   if ((id && /^da\d/.test(id)) || (!id && DG.on())) {
     let raw = a.raw || '';
     if (!id) { const hit = await resolveArtist(name); if (!hit) return null; id = hit.id; name = hit.name; raw = hit.raw || hit.name; }
     if (!raw) { const art = await DG.get(`artists/${id.slice(2)}`); raw = art.name; name = DG.clean(art.name); }
-    const d = await discographyFor({ id, name, raw });
-    const row = d.rows.find(r => r.label === 'Albums');
-    return { id, name, items: row ? row.items : [] };
+    const albumsOf = (d) => { const row = d.rows.find(r => r.label === 'Albums'); return row ? row.items : []; };
+    // Discogs' album list shows first; the MusicBrainz-verified studio list replaces it when it lands.
+    const d = await discographyFor({ id, name, raw }, onPartial ? (part) => onPartial({ id, name, items: albumsOf(part), partial: true }) : null);
+    return { id, name, items: albumsOf(d) };
   }
   if (!id) {
     const key = 'hear.home.artist.' + slug(name); const c = store.get(key, null);
@@ -1306,7 +1371,7 @@ async function genreStrip(genre) {
     data = { t: Date.now(), source: 'discogs', items }; store.set(key, data); return { key, data };
   }
   if (settings.anthropicKey) {
-    const reply = await askJSON(`List 12 essential ${genre} albums: a mix of foundational classics and lesser-known gems that a serious fan would call definitive. No more than one album per artist, real releases only. "why" is one short sentence.`, SCHEMA.albums, 2000);
+    const reply = await askJSON(`List 12 essential ${genre} albums: a mix of foundational classics and lesser-known gems that a serious fan would call definitive. No more than one album per artist, real releases only. "why" is one short sentence.`, SCHEMA.albums, 6000, { effort: 'low' });
     data = { t: Date.now(), source: settings.model || DEFAULTS.model, items: cleanAlbums(reply.albums).map(a => ({ title: a.title, artist: a.artist, year: a.year ? String(a.year) : '', why: a.why })) };
   } else {
     const d = await MB.get('release-group', { query: `tag:"${luceneEscape(genre.toLowerCase())}" AND primarytype:album`, limit: 14 });
@@ -1365,12 +1430,16 @@ async function HomeView(rid) {
     } catch (e) { if (e.message === 'stale') return; fail(labelSec, "Couldn't load this label (" + e.message + ')'); }
   })();
   (async () => {
-    try {
-      const d = await artistStrip(p.artist); if (rid !== routeSeq) return;
-      if (!d || !d.items.length) { fail(artistSec, 'No albums found for this artist. Shuffle for another.'); return; }
-      artistSec.setTitle(d.name); artistSec.setLink(`#/artist/${d.id}`, 'All releases →');
+    const show = (d) => {
+      if (rid !== routeSeq || !d || !d.items.length) return;
+      artistSec.setTitle(d.name); artistSec.setLink(`#/artist/${d.id}`, 'All releases →'); artistSec.setSub(d.partial ? 'checking which are studio albums…' : '');
       artistSec.body.innerHTML = '';
       artistSec.body.append(coverFlow(d.items, { size: 180, years: true, actions: 'light', label: d.name + ' albums' }));
+    };
+    try {
+      const d = await artistStrip(p.artist, show); if (rid !== routeSeq) return;
+      if (!d || !d.items.length) { fail(artistSec, 'No albums found for this artist. Shuffle for another.'); return; }
+      show(d);
     } catch (e) { if (e.message === 'stale') return; fail(artistSec, "Couldn't load this artist (" + e.message + ')'); }
   })();
 }
@@ -1881,7 +1950,7 @@ async function GenreView(name, rid) {
     try {
       let data = store.get(key, null);
       if (!data || Date.now() - data.t > 30 * 864e5) {
-        const reply = await askJSON(`List 14 essential ${genre} artists: the originators and defining names first, then a few lesser-known ones a serious fan would insist on. Real artists only. "why" is one short phrase, e.g. 'the sound's architect' or 'the 90s revival'.`, SCHEMA.artists, 1200);
+        const reply = await askJSON(`List 14 essential ${genre} artists: the originators and defining names first, then a few lesser-known ones a serious fan would insist on. Real artists only. "why" is one short phrase, e.g. 'the sound's architect' or 'the 90s revival'.`, SCHEMA.artists, 4000, { effort: 'low' });
         data = { t: Date.now(), items: (reply.artists || []).filter(a => a && a.name).map(a => ({ name: String(a.name), why: a.why ? String(a.why) : '' })).slice(0, 14) }; store.set(key, data);
       }
       if (rid !== routeSeq) return;
@@ -2258,7 +2327,7 @@ async function AlbumView(id, rid) {
       moodBody.append(el('div', { class: 'mono' }, `Written by ${settings.model || DEFAULTS.model} — may be wrong.`));
     };
     if (cachedMood) drawMoods(cachedMood);
-    else if (settings.anthropicKey) moodBody.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const m = await askJSON(`Album: "${title}" by ${artistName}${album.year ? ' (' + album.year + ')' : ''}.\nGive AllMusic-style mood descriptors for this specific album: six to eight single words or two-word phrases, and a blurb of two plain sentences describing how it sounds and when to play it; no superlatives; if you are not confident you know this album, say so in the blurb.`, SCHEMA.moods, 600); store.set('hear.ai.' + album.id, m); drawMoods(m); } catch (err) { b.disabled = false; b.textContent = 'Generate moods'; toast(err.message, 3500); } } }, icon('spark'), 'Generate moods'));
+    else if (settings.anthropicKey) moodBody.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const m = await askJSON(`Album: "${title}" by ${artistName}${album.year ? ' (' + album.year + ')' : ''}.\nGive AllMusic-style mood descriptors for this specific album: six to eight single words or two-word phrases, and a blurb of two plain sentences describing how it sounds and when to play it; no superlatives; if you are not confident you know this album, say so in the blurb.`, SCHEMA.moods, 3000, { effort: 'low' }); store.set('hear.ai.' + album.id, m); drawMoods(m); } catch (err) { b.disabled = false; b.textContent = 'Generate moods'; toast(err.message, 3500); } } }, icon('spark'), 'Generate moods'));
     else moodBody.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to generate mood tags.'));
     // Release details
     const detail = [album.releasesCount ? `${album.releasesCount} release${album.releasesCount === 1 ? '' : 's'}` : '', album.formats.length ? album.formats.slice(0, 3).join(' · ') : '', album.country, album.released].filter(Boolean).join(' · ');
@@ -2282,7 +2351,7 @@ async function AlbumView(id, rid) {
       body.append(el('div', { class: 'mono' }, 'Picked by Claude'));
     };
     if (liked) render(liked.items);
-    else if (settings.anthropicKey) body.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const reply = await askJSON(`A listener loves the album "${title}" by ${artistName}${ry ? ' (' + ry + ')' : ''}. Recommend 6 albums to hear next: three close to it in sound and era, three that share its spirit but come from a different scene or decade. No other albums by ${artistName}; real releases only. "why" is one short sentence on the connection.`, SCHEMA.albums, 1500); const items = cleanAlbums(reply.albums).slice(0, 8); store.set(likeKey, { t: Date.now(), items }); render(items); } catch (err) { b.disabled = false; b.textContent = 'Find similar albums'; toast(err.message, 4000); } } }, icon('spark'), 'Find similar albums'));
+    else if (settings.anthropicKey) body.append(el('button', { class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Thinking…'; try { const reply = await askJSON(`A listener loves the album "${title}" by ${artistName}${ry ? ' (' + ry + ')' : ''}. Recommend 6 albums to hear next: three close to it in sound and era, three that share its spirit but come from a different scene or decade. No other albums by ${artistName}; real releases only. "why" is one short sentence on the connection.`, SCHEMA.albums, 6000, { effort: 'low' }); const items = cleanAlbums(reply.albums).slice(0, 8); store.set(likeKey, { t: Date.now(), items }); render(items); } catch (err) { b.disabled = false; b.textContent = 'Find similar albums'; toast(err.message, 4000); } } }, icon('spark'), 'Find similar albums'));
     else body.append(el('div', { class: 'muted', style: { fontSize: '13px' } }, 'Add a Claude API key in ', el('a', { class: 'link', href: '#/settings' }, 'Settings'), ' to get recommendations.'));
   }
   if (store.get(likeKey, null)) fLike.setMeta('ready');
@@ -2569,42 +2638,62 @@ async function AIView(text, rid) {
     return;
   }
   let res = store.get(key, null);
-  if (!res || !Array.isArray(res.albums)) {
-    out.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), 'Asking Claude…'));
-    try { res = await askPicks(q, { rich: true }); res.t = Date.now(); store.set(key, res); pruneKeys('hear.aiq.', 30); }
-    catch (err) { if (rid !== routeSeq) return; out.innerHTML = ''; out.append(el('div', { class: 'notice warn' }, err.message), el('div', { class: 'row', style: { gap: '8px' } }, el('button', { class: 'btn sm primary', onclick: () => route() }, 'Try again'), el('a', { class: 'btn sm quiet', href: '#/settings' }, 'Check Settings'))); return; }
-    if (rid !== routeSeq) return;
-  }
-  rememberAsk(q);
   let stopFx = null;
   currentCleanup = () => { if (stopFx) stopFx(); document.documentElement.classList.remove('snapy'); };
-  const draw = (r) => {
-    res = r; store.set(key, res);
+  const sameList = (a, b) => a.length === b.length && a.every((x, i) => x.artist.toLowerCase() === b[i].artist.toLowerCase() && x.title.toLowerCase() === b[i].title.toLowerCase());
+  // Renders a result; with live=true the list is still arriving and cards are added as Claude writes them.
+  const draw = (r, live) => {
+    res = r;
     if (stopFx) { stopFx(); stopFx = null; }
     out.innerHTML = '';
-    if (!res.albums.length) { out.append(el('div', { class: 'empty' }, 'Nothing came back. Try different words.')); return; }
     const tools = el('div', { class: 'row', style: { gap: '12px', flexShrink: 0 } });
     tools.append(crateSaver(tools, res, q));
-    out.append(el('div', { class: 'sechead' }, el('div', { class: 'eyebrow' }, `${res.albums.length} records`), tools),
+    const count = el('div', { class: 'eyebrow' }, live ? 'Claude is choosing…' : `${res.albums.length} records`);
+    out.append(el('div', { class: 'sechead' }, count, tools),
       el('div', { class: 'mono', text: [`picked by ${res.source}`, res.refined ? 'refined: ' + res.refined : ''].filter(Boolean).join(' · ') }));
-    const doRefine = async (t) => {
-      out.innerHTML = ''; out.append(el('div', { class: 'loading' }, el('div', { class: 'spinner' }), t ? 'Refining…' : 'Finding a different set…'));
-      try { const r2 = await refinePicks(res, t || 'Give me 10 different albums than any you have listed so far, same brief.'); if (rid !== routeSeq) return; if (!t) r2.refined = res.refined || ''; draw(r2); }
-      catch (err) { if (rid !== routeSeq) return; draw(res); toast(err.message, 4000); }
-    };
     const refine = el('input', { id: 'refine', type: 'text', placeholder: 'Refine: less jazzy, more 70s, no strings…', enterkeyhint: 'send', style: { flex: 1, minWidth: 0, border: 0, outline: 0, background: 'transparent', fontSize: '15px' } });
     refine.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const t = refine.value.trim(); if (t) doRefine(t); } });
     out.append(el('div', { class: 'field', style: { height: '48px' } }, icon('spark'), refine, el('button', { type: 'button', class: 'btn sm primary', onclick: () => { const t = refine.value.trim(); if (t) doRefine(t); } }, 'Refine')));
     const flow = el('div', { class: 'vflow' });
     const pending = [];
-    res.albums.forEach((a, i) => { const { card, ready } = aiCard(a, i, res.albums.length, () => store.set(key, res)); flow.append(card); pending.push(ready); });
-    out.append(flow, el('div', { class: 'row', style: { justifyContent: 'center', paddingTop: '12px' } }, el('button', { type: 'button', class: 'btn sm quiet', onclick: () => doRefine('') }, 'Ten different records')));
+    const addCard = (a, i) => { const { card, ready } = aiCard(a, i, res.albums.length, () => store.set(key, res)); flow.append(card); pending.push(ready); };
+    res.albums.forEach((a, i) => addCard(a, i));
+    const busy = live ? el('div', { class: 'loading', style: { justifyContent: 'center' } }, el('div', { class: 'spinner' }), 'Claude is writing…') : null;
+    const footer = el('div', { class: 'row', style: { justifyContent: 'center', paddingTop: '12px' } }, el('button', { type: 'button', class: 'btn sm quiet', onclick: () => doRefine('') }, 'Ten different records'));
+    out.append(flow, busy, footer);
+    if (live) footer.hidden = true;
     document.documentElement.classList.add('snapy');
     stopFx = vflowFx(flow);
-    // Stars under every pick: real scores where Wikipedia has them, Claude's estimate for the rest.
-    Promise.all(pending).then(() => { if (rid !== routeSeq) return; rateAll(res.albums.filter(a => a.id)).catch(() => { }); });
+    const finish = () => {
+      if (busy) busy.remove(); footer.hidden = false;
+      count.textContent = res.albums.length ? `${res.albums.length} records` : 'Nothing came back. Try different words.';
+      flow.querySelectorAll('.vn').forEach((n, i) => { n.textContent = `${i + 1} of ${res.albums.length}`; });
+      store.set(key, res); pruneKeys('hear.aiq.', 30);
+      // Stars under every pick: real scores where Wikipedia has them, Claude's estimate for the rest.
+      Promise.all(pending).then(() => { if (rid !== routeSeq) return; rateAll(res.albums.filter(a => a.id)).catch(() => { }); });
+    };
+    if (!live) finish();
+    return { addCard, finish };
   };
-  draw(res);
+  // Runs an ask (or a refinement) with the answer streaming into cards; `run(onText)` returns the finished result.
+  const streamIn = async (seed, run) => {
+    const ui = draw(seed, true);
+    let shown = 0;
+    const onText = (t) => { if (rid !== routeSeq) return; const objs = partialAlbums(t); for (; shown < objs.length; shown++) { const a = cleanAlbums([objs[shown]])[0]; if (!a) continue; seed.albums.push(a); ui.addCard(a, seed.albums.length - 1); } };
+    const full = await run(onText);
+    if (rid !== routeSeq) return null;
+    if (sameList(seed.albums, full.albums)) { seed.convo = full.convo; seed.source = full.source; seed.t = Date.now(); ui.finish(); return seed; }
+    full.refined = seed.refined || ''; full.t = Date.now(); draw(full, false); return full;
+  };
+  const doRefine = async (t) => {
+    const prev = res;
+    const seed = { text: q, albums: [], source: prev.source, refined: t ? (prev.refined ? prev.refined + ' · ' : '') + t : prev.refined || '' };
+    try { await streamIn(seed, (onText) => refinePicks(prev, t || 'Give me 10 different albums than any you have listed so far, same brief.', { onText })); }
+    catch (err) { if (rid !== routeSeq) return; draw(prev, false); toast(err.message, 5000); }
+  };
+  if (res && Array.isArray(res.albums) && res.albums.length) { rememberAsk(q); draw(res, false); return; }
+  try { const r = await streamIn({ text: q, albums: [], source: settings.model || DEFAULTS.model }, (onText) => askPicks(q, { rich: true, onText })); if (r) rememberAsk(q); }
+  catch (err) { if (rid !== routeSeq) return; out.innerHTML = ''; out.append(el('div', { class: 'notice warn' }, err.message), el('div', { class: 'row', style: { gap: '8px' } }, el('button', { class: 'btn sm primary', onclick: () => route() }, 'Try again'), el('a', { class: 'btn sm quiet', href: '#/settings' }, 'Check Settings'))); }
 }
 function aiCard(a, i, n, onChange) {
   const cov = el('div', { class: 'vcov' }, coverEl(a.id || null, a.title, 500, null, a.img));
@@ -2688,7 +2777,7 @@ function SettingsView() {
     el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap' } }, el('button', { type: 'button', class: 'btn sm primary', onclick: async (e) => { const b = e.currentTarget; const tok = f.discogsToken.value.trim(); if (!tok) { toast('Paste your Discogs token first'); return; } b.disabled = true; b.textContent = 'Connecting…'; saveSettings({ discogsToken: tok }); try { const me = await DG.identity(); saveSettings({ discogsUser: me.username || '', discogsOk: true }); toast(`Connected to Discogs as ${me.username}`); route(); } catch (err) { saveSettings({ discogsOk: false }); b.disabled = false; b.textContent = 'Connect'; toast(/TypeError|Failed to fetch/i.test(String(err)) ? "Discogs refused the request from this browser. The app will keep using MusicBrainz." : 'Discogs said: ' + err.message, 6000); } } }, 'Connect'), el('div', { class: 'help', style: { flex: 1, minWidth: '160px' } }, 'Tests the token and switches the catalog to Discogs.')),
     select('source', 'Catalog', [['auto', 'Discogs when connected (recommended)'], ['musicbrainz', 'MusicBrainz']], 'Where artists, albums and labels come from. Links, ratings and reviews work either way.'),
     field('anthropicKey', 'Claude API key (optional)', el('span', {}, 'Powers Ask Claude, Moods, “more like this”, estimated ratings and web checks. Keys stay in this browser only (each address keeps its own settings). Create one at ', el('a', { class: 'link', href: 'https://console.anthropic.com/', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), ' (Get API key). Keys can carry an expiry date; if Claude features stop with a 401, create a new key and paste it here.'), 'password'),
-    el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap' } }, el('button', { type: 'button', class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; const k = f.anthropicKey.value.trim(); if (!k) { toast('Paste a Claude API key first'); return; } b.disabled = true; b.textContent = 'Testing…'; saveSettings({ anthropicKey: k, model: f.model.value.trim() || DEFAULTS.model }); const t0 = Date.now(); try { const r = await askJSON('Reply with ok set to "yes".', SCHEMA.ok, 50); b.textContent = `Works · ${settings.model} answered in ${((Date.now() - t0) / 1000).toFixed(1)} s`; } catch (err) { b.textContent = 'Test key'; b.disabled = false; toast(err.message, 8000); } } }, 'Test key'), el('div', { class: 'help', style: { flex: 1, minWidth: '160px' } }, 'Sends one tiny request and reports what came back.')),
+    el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap' } }, el('button', { type: 'button', class: 'btn sm quiet', onclick: async (e) => { const b = e.currentTarget; const k = f.anthropicKey.value.trim(); if (!k) { toast('Paste a Claude API key first'); return; } b.disabled = true; b.textContent = 'Testing…'; saveSettings({ anthropicKey: k, model: f.model.value.trim() || DEFAULTS.model }); const t0 = Date.now(); try { const r = await askJSON('Reply with ok set to "yes".', SCHEMA.ok, 2000, { effort: 'low' }); b.textContent = `Works · ${settings.model} answered in ${((Date.now() - t0) / 1000).toFixed(1)} s`; } catch (err) { b.textContent = 'Test key'; b.disabled = false; toast(err.message, 8000); } } }, 'Test key'), el('div', { class: 'help', style: { flex: 1, minWidth: '160px' } }, 'Sends one tiny request and reports what came back.')),
     field('model', 'Claude model', 'Model name for recommendations.'),
     select('autoRate', 'Rate unrated albums automatically', [['no', 'No — use the “Rate the rest” button'], ['yes', 'Yes — on every artist, label, genre and shelf page']], 'Albums without critic scores get Claude\'s estimated star rating (shown muted, marked “est.”). Automatic rating costs about a cent per page of unrated albums; album pages always estimate their one album.'),
     el('div', { class: 'btnrow' }, el('button', { class: 'btn primary', type: 'submit' }, 'Save settings')));

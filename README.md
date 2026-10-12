@@ -127,6 +127,8 @@ Wikipedia content is used under CC BY-SA and always linked. Albums without a Wik
 
 If Claude features misbehave, Settings → **Test key** sends one tiny request and reports exactly what came back (works and how fast, or the error in plain words). Claude requests time out after two minutes and retry once on connection trouble or when the API is overloaded.
 
+Speed of the Claude features: current models think before answering by default (at "high" effort), which is slow and counts against the reply budget. Every request therefore sets an effort level (medium for recommendations, low for ratings, moods and lists), asks Sonnet 5.5 to skip up-front thinking, and leaves a large token budget so a long answer can't be cut off. Ask Claude streams its answer, so the first record appears within a few seconds and the rest follow as they're written.
+
 ## Files
 
 - `index.html` – the whole app (markup, styles, script)
