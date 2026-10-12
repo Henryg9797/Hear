@@ -256,6 +256,20 @@ textarea.area { width: 100%; resize: vertical; min-height: 84px; border: 1px sol
 /* Home browse: Genres / Moods / Ask Claude */
 .browse-seg { margin-top: 12px; }
 .browse { padding-top: 12px; }
+.gtree { display: flex; flex-direction: column; padding-top: 10px; }
+.gnode { display: flex; flex-direction: column; }
+.gnode.d0 > .grow2 { border-top: 1px solid var(--line); min-height: 52px; }
+.gnode.d0 > .grow2 .gname { font-size: 17px; font-weight: 700; }
+.grow2 { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 0; }
+.gnode.d1 > .grow2 { padding-left: 22px; }
+.gnode.d2 > .grow2 { padding-left: 44px; }
+.gname { flex: 1; min-width: 0; text-decoration: none; color: inherit; font-weight: 600; font-size: 15px; }
+.gtog { width: 32px; height: 32px; border: 0; background: transparent; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; border-radius: 16px; flex-shrink: 0; }
+.gtog svg { width: 18px; height: 18px; transition: transform 0.15s; }
+.gnode.open > .grow2 .gtog svg { transform: rotate(90deg); }
+.gdot { width: 32px; flex-shrink: 0; text-align: center; color: var(--line); }
+.gdot::before { content: '·'; }
+.gkids { display: flex; flex-direction: column; }
 .gtable { display: flex; flex-direction: column; }
 .grow { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); }
 .grow:first-child { border-top: 0; padding-top: 2px; }
@@ -356,7 +370,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { } }
 };
-const BUILD = 'v21'; // keep in step with VERSION in sw.js
+const BUILD = 'v22'; // keep in step with VERSION in sw.js
 const DEFAULTS = { discogsToken: '', discogsUser: '', discogsOk: null, source: 'auto', anthropicKey: '', model: 'claude-sonnet-5-5', autoEst: true, qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
 let settings = Object.assign({}, DEFAULTS, store.get('hear.settings', {}));
 function saveSettings(patch) { settings = Object.assign({}, settings, patch); store.set('hear.settings', settings); applyTheme(); }
@@ -1209,6 +1223,7 @@ async function route() {
       case 'label': await LabelView(parts[1], rid); break;
       case 'genre': await (settings.anthropicKey ? CollectionView('genre', parts.slice(1).join('/'), rid) : GenreView(parts.slice(1).join('/'), rid)); break;
       case 'mood': await CollectionView('mood', parts.slice(1).join('/'), rid); break;
+      case 'genres': GenresView(parts.slice(1).join('/')); break;
       case 'search': SearchView(parts[1]); break;
       case 'ai': await AIView(parts.slice(1).join('/'), rid); break;
       case 'find': await FindView(parts.slice(1).join('/'), rid); break;
@@ -1233,27 +1248,75 @@ window.addEventListener('hashchange', route);
 const GENRES = ['Dub', 'Krautrock', 'Bossa nova', 'Post-punk', 'Afrobeat', 'Minimal techno', 'Free jazz', 'Shoegaze', 'Ethio-jazz', 'Highlife', 'Dream pop', 'Drum and bass', 'Chamber pop', 'Delta blues', 'Bebop', 'Spiritual jazz', 'Trip hop', 'Baroque pop', 'Tropicália', 'Cumbia', 'Doom metal', 'Outlaw country', 'Bluegrass', 'Zydeco', 'Chicago house', 'Detroit techno', 'UK garage', 'Grime', 'Boom bap', 'G-funk', 'Neo-soul', 'Quiet storm', 'Philly soul', 'Northern soul', 'Rocksteady', 'Lovers rock', 'Dancehall', 'Jùjú', 'Gnawa', 'Fado', 'Flamenco', 'Tango nuevo', 'Minimalism', 'Ambient', 'Library music', 'Exotica', 'Lounge', 'Yacht rock', 'Power pop', 'Jangle pop', 'Riot grrrl', 'Post-rock', 'Math rock', 'Slowcore', 'Freak folk', 'British folk rock', 'Hard bop', 'Cool jazz', 'Modal jazz', 'Jazz fusion', 'Chanson', 'Yé-yé', 'Italo disco', 'Synth-pop', 'New wave', 'Industrial', 'Coldwave', 'Goth rock', 'Noise rock', 'No wave', 'Jazz-funk', 'Rare groove', 'Acid jazz', 'Broken beat', 'Footwork', 'Jungle', 'IDM', 'City pop', 'Shibuya-kei', 'Qawwali', 'Afro-Cuban jazz', 'Klezmer', 'Rebetiko', 'Anatolian rock', 'Thai funk', 'Soukous', 'Afrobeats', 'Amapiano', 'Desert blues', 'Reggaeton', 'Salsa', 'Son cubano', 'Bolero', 'Carnatic', 'Hindustani classical', 'Country soul', 'Gospel', 'Doo-wop', 'Rockabilly', 'Surf rock', 'Garage rock', 'Psychedelic rock', 'Progressive rock', 'Glam rock', 'Pub rock', 'Hardcore punk', 'Post-hardcore', 'Emo', 'Grunge', 'Britpop', 'Madchester', 'Big beat', 'Downtempo', 'Deep house', 'Acid house', 'Electro', 'Conscious hip hop', 'Jazz rap', 'Reggae', 'Ska', 'Calypso', 'Zouk', 'Mbalax', 'Makossa', 'Benga', 'Morna', 'Mariachi', 'Norteño', 'Tejano', 'Nueva canción', 'MPB', 'Samba', 'Forró', 'Choro', 'Andean folk', 'Sacred Harp', 'Western swing', 'Honky-tonk', 'Americana', 'Alt-country', 'Cosmic American music', 'Sophisti-pop', 'Blue-eyed soul', 'Boogie', 'Disco', 'Hi-NRG', 'Electroclash', 'Microhouse', 'Dubstep', 'Vaporwave', 'Hyperpop', 'Bedroom pop', 'Indie folk', 'Folktronica', 'Modern classical', 'Fourth world', 'Space rock', 'Stoner rock', 'Sludge metal', 'Black metal', 'Thrash metal', 'NWOBHM', 'Avant-garde jazz', 'Third stream', 'Vocal jazz', 'Latin jazz', 'Bebop vocalese', 'Swing', 'Ragtime', 'Stride piano', 'Boogie-woogie', 'Chicago blues', 'Piedmont blues', 'Country blues', 'Jump blues', 'Soul jazz', 'Organ trio'];
 const LABELS = ['Blue Note', 'Warp', '4AD', 'Factory', 'Stax', 'Motown', 'Sub Pop', 'Rough Trade', 'Stones Throw', 'Ninja Tune', 'Impulse!', 'ECM', 'Def Jam', 'Mo Wax', 'Drag City', 'Thrill Jockey', 'Kranky', 'Constellation', 'Matador', 'Merge', 'Touch and Go', 'SST', 'Dischord', 'Creation', 'Sarah Records', 'Mute', 'Trojan', 'Studio One', 'Island Records', 'Chess', 'Atlantic', 'Verve', 'Prestige', 'Riverside', 'CTI', 'Strata-East', 'Tzadik', 'Nonesuch', 'Harvest', 'Vertigo', 'Brain', 'Kompakt', 'Tresor', 'Underground Resistance', 'Hyperdub', 'Planet Mu', 'Rephlex', 'Ghost Box', 'Light in the Attic', 'Numero Group', 'Soul Jazz', 'Analog Africa', 'Luaka Bop', 'Smithsonian Folkways', 'Sacred Bones', 'Dead Oceans', 'Jagjaguwar', 'Secretly Canadian', 'Domino', 'XL Recordings', 'Brainfeeder', 'Daptone', 'International Anthem', 'Erased Tapes', 'Bella Union', 'Captured Tracks', 'Mexican Summer', 'RVNG Intl.', 'Music From Memory', 'Finders Keepers', 'Now-Again', 'Strut', 'Mr Bongo', 'Ed Banger', 'Saravah', 'Elektra', 'Reprise Records', 'Asylum', 'Virgin', 'Charisma', 'Stiff', 'Postcard', 'Cherry Red', 'Heavenly', 'Beggars Banquet', 'Too Pure', 'Duophonic', 'Flying Nun', 'Mushroom', 'Chapter Music', 'Elefant', 'Marina', 'Tôt ou tard', 'Barclay', 'Philips', 'Deutsche Grammophon', 'Ohr', 'Sky', 'Bureau B', 'Kitty-Yo', 'City Slang', 'Morr Music', 'Ostgut Ton', 'Dial', 'Perlon', 'Rush Hour', 'Dekmantel', 'Awesome Tapes From Africa', 'Sahel Sounds', 'Honest Jon\'s', 'Soundway', 'Far Out', 'Tru Thoughts', 'BBE', 'Jazzman', 'Gearbox', 'Edition', 'ACT', 'Enja', 'Black Saint', 'Steeplechase', 'Candid', 'Contemporary', 'Pacific Jazz', 'Fantasy', 'Milestone', 'Flying Dutchman', 'Perception', 'Mainstream', 'Cadet', 'Chess', 'Vee-Jay', 'King', 'Hi Records', 'Goldwax', 'Fame', 'Muscle Shoals Sound', 'Philadelphia International', 'Salsoul', 'West End', 'Prelude', 'Sleeping Bag', 'Tommy Boy', 'Sugar Hill', 'Cold Chillin\'', 'Wild Pitch', 'Rawkus', 'Fondle \'Em', 'Definitive Jux', 'Anticon', 'Rhymesayers', 'Mello Music Group'];
 const ARTISTS = [['Alice Coltrane'], ['Stereolab'], ['Fela Kuti'], ['Nina Simone'], ['Kraftwerk'], ['Cocteau Twins'], ['Boards of Canada'], ['Caetano Veloso'], ['Gal Costa'], ['Jorge Ben Jor'], ['Mulatu Astatke'], ['Pharoah Sanders'], ['Sun Ra'], ['Charles Mingus'], ['Thelonious Monk'], ['Joni Mitchell'], ['Nick Drake'], ['Talk Talk'], ['Scott Walker'], ['Serge Gainsbourg'], ['Françoise Hardy'], ['Can', 'country:DE'], ['Neu!'], ['Harmonia'], ['Brian Eno'], ['Robert Wyatt'], ['Arthur Russell'], ['Tom Waits'], ['Leonard Cohen'], ['Bob Dylan'], ['Marvin Gaye'], ['Stevie Wonder'], ['Curtis Mayfield'], ['Funkadelic'], ['Prince', 'type:person'], ['D\'Angelo'], ['Erykah Badu'], ['The Roots'], ['A Tribe Called Quest'], ['De La Soul'], ['Madlib'], ['J Dilla'], ['MF DOOM'], ['Kendrick Lamar'], ['OutKast'], ['Missy Elliott'], ['Björk'], ['Portishead'], ['Massive Attack'], ['Tricky'], ['Aphex Twin'], ['Autechre'], ['Burial'], ['Four Tet'], ['Caribou'], ['Floating Points'], ['Jon Hassell'], ['Laraaji'], ['Hiroshi Yoshimura'], ['Haruomi Hosono'], ['Yellow Magic Orchestra'], ['Ryuichi Sakamoto'], ['Cornelius'], ['Pizzicato Five'], ['Fishmans'], ['Os Mutantes'], ['Milton Nascimento'], ['Elis Regina'], ['João Gilberto'], ['Tim Maia'], ['Ali Farka Touré'], ['Tinariwen'], ['Orchestra Baobab'], ['Youssou N\'Dour'], ['Oumou Sangaré'], ['Ebo Taylor'], ['William Onyeabor'], ['Manu Dibango'], ['Hailu Mergia'], ['The Velvet Underground'], ['Television', 'country:US'], ['Patti Smith'], ['Wire', 'country:GB'], ['Joy Division'], ['New Order'], ['The Cure'], ['The Smiths'], ['My Bloody Valentine'], ['Slowdive'], ['Broadcast'], ['Pavement'], ['Yo La Tengo'], ['Low', 'country:US'], ['Sparklehorse'], ['Elliott Smith'], ['Sufjan Stevens'], ['Joanna Newsom'], ['Fleet Foxes'], ['Radiohead'], ['PJ Harvey'], ['Nick Cave & The Bad Seeds'], ['Sonic Youth'], ['Pixies'], ['Fugazi'], ['Slint'], ['Tortoise'], ['Godspeed You! Black Emperor'], ['Sigur Rós'], ['Mogwai'], ['Beach House'], ['Grizzly Bear'], ['Animal Collective'], ['Deerhunter'], ['Spiritualized'], ['Spacemen 3'], ['Galaxie 500'], ['Mazzy Star'], ['Cat Power'], ['Lucinda Williams'], ['Gillian Welch'], ['Townes Van Zandt'], ['Emmylou Harris'], ['Willie Nelson'], ['Dolly Parton'], ['Johnny Cash'], ['Miles Davis'], ['John Coltrane'], ['Herbie Hancock'], ['Wayne Shorter'], ['Ornette Coleman'], ['Eric Dolphy'], ['Yusef Lateef'], ['Don Cherry'], ['Abdullah Ibrahim'], ['Hugh Masekela'], ['Bobby Hutcherson'], ['Lee Morgan'], ['Horace Silver'], ['Art Blakey'], ['Ella Fitzgerald'], ['Billie Holiday'], ['Sarah Vaughan'], ['Chet Baker'], ['Julie London'], ['Dusty Springfield'], ['Aretha Franklin'], ['Otis Redding'], ['Al Green'], ['Bill Withers'], ['Roberta Flack'], ['Donny Hathaway'], ['Shuggie Otis'], ['Terry Callier'], ['Gil Scott-Heron'], ['Sade'], ['Kate Bush'], ['Peter Gabriel'], ['David Bowie'], ['Roxy Music'], ['Talking Heads'], ['Fleetwood Mac'], ['Steely Dan'], ['Big Star'], ['Todd Rundgren'], ['Harry Nilsson'], ['Randy Newman'], ['Van Morrison'], ['The Zombies'], ['The Kinks'], ['Fairport Convention'], ['Pentangle'], ['Sandy Denny'], ['Vashti Bunyan'], ['Linda Perhacs'], ['Karen Dalton'], ['Judee Sill'], ['Bill Evans', 'type:person'], ['Cluster'], ['Popol Vuh'], ['Faust', 'country:DE'], ['Ash Ra Tempel'], ['Tangerine Dream'], ['Jean-Michel Jarre'], ['Vangelis'], ['Wendy Carlos'], ['Delia Derbyshire'], ['Laurie Anderson'], ['Meredith Monk'], ['Steve Reich'], ['Terry Riley'], ['Philip Glass'], ['Arvo Pärt'], ['Nils Frahm'], ['Ólafur Arnalds'], ['Max Richter'], ['Jóhann Jóhannsson'], ['Hildur Guðnadóttir'], ['Colleen'], ['Grouper'], ['Julianna Barwick'], ['Mary Lattimore'], ['Kali Malone'], ['Sarah Davachi'], ['Ryoji Ikeda'], ['Alva Noto'], ['Fennesz'], ['Tim Hecker'], ['William Basinski'], ['Stars of the Lid'], ['Labradford'], ['Bark Psychosis'], ['Disco Inferno'], ['Pram'], ['Movietone'], ['Flying Saucer Attack'], ['Hood'], ['Boards of Canada']];
-// Browse table: major genres with their styles, AllMusic-style. Names follow Discogs styles where one exists, so genre pages resolve well.
-const GENRE_TREE = [
-  ['Rock', ['Indie Rock', 'Alternative Rock', 'Psychedelic Rock', 'Garage Rock', 'Post-Punk', 'Post Rock', 'Shoegaze', 'Krautrock', 'Prog Rock', 'Art Rock', 'Folk Rock', 'Hard Rock', 'Classic Rock', 'Glam', 'New Wave', 'Grunge', 'Britpop', 'Noise Rock', 'Math Rock', 'Slowcore', 'Space Rock', 'Stoner Rock', 'Power Pop', 'Jangle Pop', 'Soft Rock', 'Southern Rock', 'Surf', 'Rockabilly', 'Rock & Roll', 'Lo-Fi', 'Emo', 'Post-Hardcore']],
-  ['Pop', ['Synth-pop', 'Indie Pop', 'Dream Pop', 'Chamber Pop', 'Baroque Pop', 'Art Pop', 'Sophisti-pop', 'Electropop', 'Dance-pop', 'Bedroom Pop', 'Hyperpop', 'City Pop', 'Shibuya-kei', 'Yé-yé', 'Chanson', 'Schlager', 'Europop', 'Vocal', 'Easy Listening', 'Exotica', 'Lounge', 'Bubblegum']],
-  ['Electronic', ['Ambient', 'Techno', 'House', 'Deep House', 'Acid House', 'Detroit Techno', 'Minimal', 'Dub Techno', 'Electro', 'IDM', 'Downtempo', 'Trip Hop', 'Drum n Bass', 'Jungle', 'UK Garage', 'Dubstep', 'Grime', 'Footwork', 'Breakbeat', 'Big Beat', 'Trance', 'Progressive House', 'Tech House', 'Italo-Disco', 'Synthwave', 'Vaporwave', 'Chillwave', 'Glitch', 'Leftfield', 'Berlin-School', 'Electroclash', 'Microhouse', 'Broken Beat', 'Future Jazz', 'Bass Music', 'Juke', 'Gabber']],
-  ['Hip Hop', ['Boom Bap', 'Conscious', 'Jazzy Hip-Hop', 'G-Funk', 'Gangsta', 'Hardcore Hip-Hop', 'Trap', 'Drill', 'Cloud Rap', 'Instrumental', 'Abstract', 'Southern Rap', 'Crunk', 'Bounce', 'UK Hip Hop', 'Turntablism', 'Old School', 'Golden Age', 'Alternative Hip Hop', 'Lo-Fi Hip Hop']],
-  ['Jazz', ['Bop', 'Hard Bop', 'Cool Jazz', 'Modal', 'Post Bop', 'Free Jazz', 'Spiritual Jazz', 'Avant-garde Jazz', 'Fusion', 'Jazz-Funk', 'Soul-Jazz', 'Latin Jazz', 'Afro-Cuban Jazz', 'Big Band', 'Swing', 'Dixieland', 'Ragtime', 'Vocal Jazz', 'Contemporary Jazz', 'Smooth Jazz', 'Free Improvisation', 'Third Stream', 'Ethio-jazz', 'Nu Jazz', 'Space-Age', 'Bossa Nova']],
-  ['Funk / Soul', ['Soul', 'Funk', 'Disco', 'Rhythm & Blues', 'Neo Soul', 'Gospel', 'P.Funk', 'Boogie', 'Contemporary R&B', 'New Jack Swing', 'Northern Soul', 'Southern Soul', 'Philly Soul', 'Deep Soul', 'Psychedelic Soul', 'Quiet Storm', 'Rare Groove', 'Afro-Funk', 'Go-Go', 'Doo Wop', 'Motown']],
-  ['Blues', ['Delta Blues', 'Chicago Blues', 'Electric Blues', 'Country Blues', 'Texas Blues', 'Piedmont Blues', 'Jump Blues', 'Louisiana Blues', 'Harmonica Blues', 'Piano Blues', 'Boogie Woogie', 'Modern Electric Blues', 'Blues Rock', 'Acoustic Blues', 'Hill Country Blues', 'Soul Blues']],
-  ['Folk', ['Folk', 'Folk Rock', 'Singer-Songwriter', 'British Folk', 'Celtic', 'Americana', 'Freak Folk', 'Indie Folk', 'Psych Folk', 'Anti-Folk', 'Traditional', 'Nordic', 'Acoustic', 'Folktronica', 'Old-Time', 'Appalachian']],
-  ['Country', ['Country', 'Outlaw Country', 'Honky Tonk', 'Bluegrass', 'Alt-Country', 'Country Rock', 'Western Swing', 'Hillbilly', 'Cosmic American', 'Bakersfield Sound', 'Nashville Sound', 'Country Soul', 'Texas Country', 'Red Dirt', 'Country Pop', 'Cowboy', 'Cajun', 'Zydeco']],
-  ['Reggae', ['Roots Reggae', 'Dub', 'Ska', 'Rocksteady', 'Dancehall', 'Lovers Rock', 'Ragga', 'Reggae-Pop', 'Calypso', 'Soca', 'Mento', 'Steel Band', 'Digital Reggae', 'Early Reggae', 'Nyahbinghi']],
-  ['Latin', ['Salsa', 'Cumbia', 'Bossa Nova', 'Samba', 'MPB', 'Tropicália', 'Forró', 'Choro', 'Tango', 'Bolero', 'Son', 'Mambo', 'Boogaloo', 'Merengue', 'Bachata', 'Reggaeton', 'Norteño', 'Ranchera', 'Mariachi', 'Tejano', 'Nueva Cancion', 'Nueva Trova', 'Latin Rock', 'Vallenato', 'Timba', 'Rumba']],
-  ['World', ['Afrobeat', 'Highlife', 'Afro-Cuban', 'Soukous', 'Mbalax', 'Makossa', 'Benga', 'Juju', 'Fuji', 'Mbaqanga', 'Desert Blues', 'Gnawa', 'Raï', 'Ethiopian', 'Afrobeats', 'Amapiano', 'Fado', 'Flamenco', 'Rebetiko', 'Laïkó', 'Klezmer', 'Qawwali', 'Hindustani', 'Carnatic', 'Bhangra', 'Bollywood', 'Gamelan', 'Enka', 'Thai Funk', 'Luk Thung', 'Andean', 'Polka', 'Balkan', 'Anatolian Rock', 'Zouk', 'Morna']],
-  ['Classical', ['Baroque', 'Classical Period', 'Romantic', 'Modern', 'Contemporary', 'Minimalism', 'Opera', 'Choral', 'Chamber Music', 'Piano', 'Early Music', 'Medieval', 'Renaissance', 'Impressionism', 'Neo-Classical', 'Modern Classical', 'Post-Minimalism', 'Film Score', 'Serial', 'Spectral']],
-  ['Metal', ['Heavy Metal', 'Thrash', 'Death Metal', 'Black Metal', 'Doom Metal', 'Sludge Metal', 'Stoner Metal', 'Post-Metal', 'Progressive Metal', 'Power Metal', 'Speed Metal', 'NWOBHM', 'Grindcore', 'Metalcore', 'Nu Metal', 'Gothic Metal', 'Folk Metal', 'Symphonic Metal', 'Atmospheric Black Metal', 'Funeral Doom', 'Drone Metal', 'Industrial Metal']],
-  ['Punk', ['Punk', 'Hardcore', 'Post-Punk', 'Post-Hardcore', 'Pop Punk', 'Garage Punk', 'Anarcho-Punk', 'Oi!', 'Riot Grrrl', 'Emo', 'Screamo', 'Skate Punk', 'Crust', 'D-Beat', 'Proto-Punk', 'Art Punk', 'Egg Punk', 'No Wave', 'Ska Punk', 'Psychobilly']],
-  ['Experimental', ['Experimental', 'Avant-garde', 'Noise', 'Drone', 'Dark Ambient', 'Industrial', 'Musique Concrète', 'Sound Collage', 'Field Recording', 'Free Improvisation', 'Electroacoustic', 'Minimalism', 'Lowercase', 'Power Electronics', 'Harsh Noise', 'Plunderphonics', 'Sound Art', 'Fourth World', 'New Age', 'Spoken Word']]
+// Genre taxonomy: [name, children]; a child is a style name or another [name, children] group.
+const TAXONOMY = [
+  ['Rock', [
+    ['Classic Rock', ['Rock & Roll', 'Rockabilly', 'British Invasion', 'Merseybeat', 'Surf Rock', 'Garage Rock', 'Blues Rock', 'Boogie Rock', 'Southern Rock', 'Heartland Rock', 'Roots Rock', 'Pub Rock', 'Arena Rock', 'Soft Rock', 'Yacht Rock', 'AOR', 'Jam Band']],
+    ['Psychedelic', ['Psychedelic Rock', 'Acid Rock', 'Space Rock', 'Neo-Psychedelia', 'Freakbeat', 'Psychedelic Pop', 'Krautrock', 'Heavy Psych', 'Raga Rock', 'Zamrock', 'Anatolian Rock', 'Turkish Psychedelic', 'Cambodian Rock']],
+    ['Progressive', ['Progressive Rock', 'Symphonic Prog', 'Canterbury Scene', 'Art Rock', 'Zeuhl', 'Rock in Opposition', 'Avant-Prog', 'Neo-Prog', 'Prog Folk', 'Math Rock', 'Post-Rock']],
+    ['Hard Rock & Glam', ['Hard Rock', 'Glam Rock', 'Proto-Metal', 'Stoner Rock', 'Grunge', 'Post-Grunge', 'Alternative Metal']],
+    ['Punk', ['Proto-Punk', 'Punk Rock', 'Hardcore Punk', 'Post-Hardcore', 'Pop Punk', 'Skate Punk', 'Anarcho-Punk', 'Oi!', 'Street Punk', 'Garage Punk', 'Art Punk', 'Crust Punk', 'D-Beat', 'Riot Grrrl', 'Queercore', 'Egg Punk', 'Emo', 'Midwest Emo', 'Screamo', 'Celtic Punk', 'Folk Punk', 'Ska Punk', 'Psychobilly', 'Cowpunk']],
+    ['Post-Punk & New Wave', ['Post-Punk', 'New Wave', 'No Wave', 'Gothic Rock', 'Deathrock', 'Coldwave', 'Minimal Wave', 'Darkwave', 'Ethereal Wave', 'Dance-Punk', 'Industrial Rock', 'Post-Punk Revival']],
+    ['Alternative & Indie', ['Alternative Rock', 'Indie Rock', 'College Rock', 'Jangle Pop', 'Paisley Underground', 'C86', 'Twee Pop', 'Shoegaze', 'Nu Gaze', 'Dream Pop', 'Noise Pop', 'Noise Rock', 'Lo-Fi', 'Slacker Rock', 'Slowcore', 'Sadcore', 'Britpop', 'Madchester', 'Post-Britpop', 'Garage Rock Revival', 'Power Pop', 'Emo Pop', 'Alternative Dance', 'Indietronica', 'Midwest Indie', 'Indie Folk', 'Chamber Pop']],
+    ['Folk & Country Rock', ['Folk Rock', 'Country Rock', 'Cosmic American Music', 'Alt-Country', 'Americana', 'Celtic Rock', 'Folk Baroque']],
+    ['Experimental Rock', ['Experimental Rock', 'Avant-Garde Rock', 'Drone Rock', 'Industrial', 'Krautrock', 'No Wave', 'Noise Rock']]
+  ]],
+  ['Metal', ['Heavy Metal', 'NWOBHM', 'Speed Metal', 'Power Metal', 'Thrash Metal', 'Crossover Thrash', 'Death Metal', 'Melodic Death Metal', 'Technical Death Metal', 'Brutal Death Metal', 'Death-Doom', 'Black Metal', 'Atmospheric Black Metal', 'Blackgaze', 'Depressive Black Metal', 'Doom Metal', 'Traditional Doom', 'Epic Doom', 'Funeral Doom', 'Stoner Metal', 'Sludge Metal', 'Drone Metal', 'Post-Metal', 'Progressive Metal', 'Djent', 'Groove Metal', 'Nu Metal', 'Metalcore', 'Mathcore', 'Deathcore', 'Grindcore', 'Goregrind', 'Powerviolence', 'Gothic Metal', 'Symphonic Metal', 'Folk Metal', 'Viking Metal', 'Pagan Metal', 'Industrial Metal', 'Avant-Garde Metal', 'Glam Metal', 'Hair Metal']],
+  ['Pop', ['Pop', 'Traditional Pop', 'Vocal Pop', 'Easy Listening', 'Lounge', 'Exotica', 'Space Age Pop', 'Sunshine Pop', 'Baroque Pop', 'Bubblegum Pop', 'Teen Pop', 'Soft Pop', 'Adult Contemporary', 'Synth-Pop', 'Electropop', 'Dance-Pop', 'Europop', 'Eurodance', 'Italo Pop', 'Schlager', 'Chanson', 'Yé-Yé', 'City Pop', 'J-Pop', 'K-Pop', 'Cantopop', 'Mandopop', 'Shibuya-kei', 'Art Pop', 'Sophisti-Pop', 'Chamber Pop', 'Indie Pop', 'Bedroom Pop', 'Hyperpop', 'Alt-Pop', 'Pop Rock', 'Power Pop', 'Progressive Pop', 'Psychedelic Pop', 'Latin Pop', 'Afropop', 'Pop Soul']],
+  ['Electronic', [
+    ['Ambient', ['Ambient', 'Dark Ambient', 'Space Ambient', 'Drone', 'Ambient Techno', 'Ambient Dub', 'Ambient Pop', 'New Age', 'Fourth World', 'Berlin School', 'Kankyō Ongaku']],
+    ['House', ['House', 'Chicago House', 'Deep House', 'Acid House', 'Garage House', 'New York House', 'Jackin House', 'Tech House', 'Progressive House', 'French House', 'Filter House', 'Microhouse', 'Minimal House', 'Electro House', 'Future House', 'Tropical House', 'Afro House', 'Lo-Fi House', 'Outsider House', 'Hip House', 'Kwaito']],
+    ['Techno', ['Techno', 'Detroit Techno', 'Minimal Techno', 'Dub Techno', 'Acid Techno', 'Hard Techno', 'Industrial Techno', 'Birmingham Techno', 'Schranz', 'Hardgroove', 'Tech Trance', 'Bleep Techno']],
+    ['Breakbeat & Bass', ['Breakbeat', 'Big Beat', 'Breaks', 'Jungle', 'Drum and Bass', 'Liquid Funk', 'Neurofunk', 'Jump-Up', 'Darkstep', 'Drumfunk', 'UK Garage', '2-Step', 'Speed Garage', 'Bassline', 'UK Funky', 'Grime', 'Dubstep', 'Brostep', 'Future Garage', 'Footwork', 'Juke', 'Ghettotech', 'Miami Bass', 'Baltimore Club', 'Jersey Club', 'Bass Music', 'Wave', 'Halftime']],
+    ['Trance & Hardcore', ['Trance', 'Goa Trance', 'Psytrance', 'Progressive Trance', 'Uplifting Trance', 'Hard Trance', 'Hardcore Techno', 'Gabber', 'Happy Hardcore', 'UK Hardcore', 'Breakcore', 'Speedcore', 'Hardstyle']],
+    ['Electro & Synth', ['Electro', 'Electroclash', 'Synthwave', 'Vaporwave', 'Chillwave', 'Future Funk', 'Italo Disco', 'Hi-NRG', 'Freestyle', 'Nu-Disco', 'Space Disco', 'Cosmic Disco', 'EBM', 'Industrial', 'Power Noise', 'Minimal Synth', 'Synth-Pop', 'Electro-Funk']],
+    ['Downtempo & IDM', ['Downtempo', 'Trip Hop', 'Chillout', 'Nu Jazz', 'Broken Beat', 'Acid Jazz', 'IDM', 'Braindance', 'Glitch', 'Folktronica', 'Illbient', 'Lo-Fi Beats', 'Electronica', 'Leftfield', 'Balearic Beat']],
+    ['Experimental Electronic', ['Musique Concrète', 'Electroacoustic', 'Noise', 'Sound Collage', 'Plunderphonics', 'Deconstructed Club', 'Microsound', 'Clicks and Cuts', 'Algorave', 'Hauntology', 'Hypnagogic Pop']]
+  ]],
+  ['Hip-Hop', ['Old School Hip Hop', 'Golden Age Hip Hop', 'Boom Bap', 'East Coast Hip Hop', 'West Coast Hip Hop', 'G-Funk', 'Gangsta Rap', 'Hardcore Hip Hop', 'Horrorcore', 'Southern Hip Hop', 'Dirty South', 'Crunk', 'Snap', 'Trap', 'Drill', 'Chicago Drill', 'UK Drill', 'Memphis Rap', 'Houston Rap', 'Chopped and Screwed', 'Bay Area Hip Hop', 'Hyphy', 'Bounce', 'Conscious Hip Hop', 'Political Hip Hop', 'Jazz Rap', 'Alternative Hip Hop', 'Abstract Hip Hop', 'Experimental Hip Hop', 'Underground Hip Hop', 'Backpack Rap', 'Cloud Rap', 'Emo Rap', 'Rage', 'Plugg', 'Pop Rap', 'Latin Trap', 'UK Hip Hop', 'Grime', 'French Hip Hop', 'German Hip Hop', 'Instrumental Hip Hop', 'Lo-Fi Hip Hop', 'Turntablism', 'Chipmunk Soul', 'Nerdcore', 'Christian Hip Hop', 'Afro Trap']],
+  ['Jazz', [
+    ['Early Jazz', ['Ragtime', 'Dixieland', 'New Orleans Jazz', 'Chicago Jazz', 'Stride', 'Swing', 'Big Band', 'Gypsy Jazz', 'Boogie-Woogie', 'Jump Blues']],
+    ['Bebop & Beyond', ['Bebop', 'Hard Bop', 'Cool Jazz', 'West Coast Jazz', 'Third Stream', 'Modal Jazz', 'Post-Bop', 'Soul Jazz', 'Latin Jazz', 'Afro-Cuban Jazz', 'Bossa Nova', 'Jazz-Funk', 'Jazz Fusion', 'Smooth Jazz', 'Contemporary Jazz', 'Vocal Jazz', 'Vocalese', 'Chamber Jazz', 'Mainstream Jazz']],
+    ['Free & Avant-Garde', ['Free Jazz', 'Avant-Garde Jazz', 'Spiritual Jazz', 'Free Improvisation', 'Loft Jazz', 'European Free Jazz', 'Modern Creative', 'Jazz Poetry', 'Fire Music']],
+    ['Global & Modern', ['Ethio-Jazz', 'Afro-Jazz', 'Cape Jazz', 'Nu Jazz', 'Acid Jazz', 'Jazztronica', 'UK Jazz', 'Scandinavian Jazz', 'Japanese Jazz', 'Jazz Rap', 'Jazz Manouche', 'Jazz Noir']]
+  ]],
+  ['R&B, Soul & Funk', ['Rhythm & Blues', 'Doo-Wop', 'Soul', 'Northern Soul', 'Southern Soul', 'Deep Soul', 'Memphis Soul', 'Chicago Soul', 'Philly Soul', 'Motown', 'Blue-Eyed Soul', 'Psychedelic Soul', 'Progressive Soul', 'Funk', 'P-Funk', 'Deep Funk', 'Jazz-Funk', 'Afro-Funk', 'Go-Go', 'Boogie', 'Disco', 'Post-Disco', 'Quiet Storm', 'Contemporary R&B', 'New Jack Swing', 'Neo Soul', 'Alternative R&B', 'Hip Hop Soul', 'Modern Soul', 'Rare Groove', 'UK Soul', 'Soul Blues', 'Gospel', 'Traditional Gospel', 'Contemporary Gospel']],
+  ['Blues', ['Country Blues', 'Delta Blues', 'Piedmont Blues', 'Memphis Blues', 'Texas Blues', 'Chicago Blues', 'Electric Blues', 'Jump Blues', 'West Coast Blues', 'Louisiana Blues', 'Swamp Blues', 'New Orleans Blues', 'Hill Country Blues', 'Harmonica Blues', 'Piano Blues', 'Boogie-Woogie', 'Acoustic Blues', 'Modern Electric Blues', 'Blues Rock', 'British Blues', 'Soul Blues', 'Gospel Blues', 'Jug Band', 'Vaudeville Blues', 'Songster']],
+  ['Country', ['Old-Time', 'Hillbilly', 'Western Swing', 'Honky Tonk', 'Bakersfield Sound', 'Nashville Sound', 'Countrypolitan', 'Outlaw Country', 'Progressive Country', 'Country Rock', 'Cosmic American Music', 'Country Pop', 'Urban Cowboy', 'Neotraditional Country', 'Contemporary Country', 'Bro-Country', 'Alt-Country', 'Americana', 'Texas Country', 'Red Dirt', 'Bluegrass', 'Progressive Bluegrass', 'Newgrass', 'Country Gospel', 'Cowboy & Western', 'Truck Driving Country', 'Country Soul', 'Rockabilly', 'Cajun', 'Zydeco', 'Tejano', 'Appalachian Folk']],
+  ['Folk', ['Traditional Folk', 'Appalachian Folk', 'Old-Time', 'Sea Shanties', 'Contemporary Folk', 'Singer-Songwriter', 'Folk Revival', 'Protest Folk', 'Folk Rock', 'Folk Baroque', 'British Folk', 'English Folk', 'Celtic', 'Irish Folk', 'Scottish Folk', 'Breton Folk', 'Nordic Folk', 'Freak Folk', 'New Weird America', 'Psych Folk', 'Indie Folk', 'Chamber Folk', 'Anti-Folk', 'Folktronica', 'Neofolk', 'Dark Folk', 'Acid Folk', 'Folk Pop', 'Americana', 'Bluegrass', 'Field Recordings', 'Spirituals', 'Sacred Harp']],
+  ['Latin', [
+    ['Brazil', ['Bossa Nova', 'Samba', 'MPB', 'Tropicália', 'Jovem Guarda', 'Forró', 'Choro', 'Baião', 'Axé', 'Pagode', 'Sertanejo', 'Funk Carioca', 'Baile Funk', 'Mangue Beat', 'Brazilian Jazz', 'Samba-Rock', 'Brazilian Psychedelia']],
+    ['Caribbean Latin', ['Salsa', 'Salsa Dura', 'Timba', 'Son Cubano', 'Mambo', 'Cha-Cha-Chá', 'Boogaloo', 'Latin Soul', 'Latin Jazz', 'Rumba', 'Guaguancó', 'Bolero', 'Trova', 'Nueva Trova', 'Bachata', 'Merengue', 'Reggaeton', 'Dembow', 'Latin Trap', 'Afro-Cuban']],
+    ['Andes, Río de la Plata & Beyond', ['Tango', 'Nuevo Tango', 'Milonga', 'Candombe', 'Nueva Canción', 'Cumbia', 'Cumbia Villera', 'Chicha', 'Vallenato', 'Champeta', 'Música Andina', 'Huayno', 'Música Criolla', 'Latin Rock', 'Rock en Español', 'Latin Alternative', 'Latin Pop', 'Tropical']],
+    ['Mexico & Tejano', ['Mariachi', 'Ranchera', 'Norteño', 'Banda', 'Corrido', 'Tejano', 'Conjunto', 'Bolero Ranchero', 'Son Jarocho', 'Regional Mexican', 'Mexican Rock']]
+  ]],
+  ['African', ['Afrobeat', 'Afrobeats', 'Afropop', 'Highlife', 'Hiplife', 'Palm-Wine', 'Jùjú', 'Fújì', 'Apala', 'Afro-Funk', 'Afro-Rock', 'Soukous', 'Congolese Rumba', 'Ndombolo', 'Makossa', 'Bikutsi', 'Coupé-Décalé', 'Mbalax', 'Wassoulou', 'Mande Music', 'Desert Blues', 'Tuareg Rock', 'Gnawa', 'Raï', 'Chaabi', 'Ethio-Jazz', 'Ethiopian Pop', 'Benga', 'Taarab', 'Bongo Flava', 'Kwaito', 'Amapiano', 'Gqom', 'Mbaqanga', 'Maskandi', 'Marabi', 'Kwela', 'Township Jive', 'Isicathamiya', 'Zamrock', 'Chimurenga', 'Sungura', 'Kuduro', 'Semba', 'Morna', 'Coladeira', 'Funaná', 'Gumbe', 'Cape Jazz', 'Afro House', 'Afro Trap']],
+  ['Caribbean', ['Mento', 'Ska', 'Rocksteady', 'Reggae', 'Roots Reggae', 'Dub', 'UK Dub', 'Steppers', 'Lovers Rock', 'Dancehall', 'Ragga', 'Digital Reggae', 'Reggae Fusion', 'Nyabinghi', 'Dub Poetry', 'Calypso', 'Soca', 'Chutney', 'Rapso', 'Steelband', 'Zouk', 'Kompa', 'Rara', 'Twoubadou', 'Cadence-lypso', 'Bouyon', 'Punta', 'Bachata', 'Merengue', 'Reggaeton', 'Dembow']],
+  ['Asian & Middle Eastern', [
+    ['Japan', ['Enka', 'Kayōkyoku', 'City Pop', 'J-Pop', 'J-Rock', 'Shibuya-kei', 'Visual Kei', 'Japanese Noise', 'Onkyo', 'Min-yō', 'Gagaku', 'Japanese Jazz', 'Kankyō Ongaku', 'Anime Soundtrack']],
+    ['Korea & China', ['K-Pop', 'Trot', 'Korean Indie', 'Korean Hip Hop', 'Cantopop', 'Mandopop', 'C-Pop', 'Chinese Rock', 'Guoyue', 'Taiwanese Indie']],
+    ['South Asia', ['Bollywood', 'Filmi', 'Hindustani Classical', 'Carnatic', 'Bhangra', 'Qawwali', 'Ghazal', 'Indipop', 'Indian Indie', 'Baul', 'Sufi Music', 'Kirtan', 'Bhajan']],
+    ['Southeast Asia', ['Gamelan', 'Dangdut', 'Keroncong', 'Indonesian Pop', 'OPM', 'Pinoy Rock', 'Thai Funk', 'Luk Thung', 'Mor Lam', 'Phleng Phuea Chiwit', 'Cambodian Rock', 'V-Pop', 'Vietnamese Bolero']],
+    ['Middle East & Central Asia', ['Arabic Pop', 'Arabic Classical', 'Tarab', 'Shaabi', 'Mahraganat', 'Dabke', 'Turkish Folk', 'Turkish Psychedelic', 'Arabesk', 'Anatolian Rock', 'Persian Classical', 'Persian Pop', 'Israeli Pop', 'Mizrahi', 'Klezmer', 'Hebrew Folk', 'Afghan Folk', 'Central Asian Folk', 'Armenian Folk', 'Kurdish Folk']]
+  ]],
+  ['European Folk & Song', ['Chanson', 'Musette', 'Flamenco', 'Nuevo Flamenco', 'Fado', 'Rebetiko', 'Laïkó', 'Éntekhno', 'Balkan Brass', 'Sevdalinka', 'Klezmer', 'Polka', 'Celtic', 'Nordic Folk', 'Sámi Joik', 'Russian Romance', 'Bard Music', 'Turbo-Folk', 'Manele', 'Schlager', 'Volksmusik', 'Alpine Folk', 'Yodel', 'Italian Folk', 'Canzone Italiana', 'Neapolitan Song', 'Portuguese Folk', 'Polish Folk', 'Hungarian Folk', 'Romani Music', 'Gypsy Jazz', 'Mediterranean Folk', 'Basque Folk', 'Catalan Rumba']],
+  ['Classical', ['Medieval', 'Renaissance', 'Baroque', 'Classical Period', 'Romantic', 'Late Romantic', 'Impressionism', 'Modern Classical', 'Serialism', 'Minimalism', 'Post-Minimalism', 'Spectral Music', 'Contemporary Classical', 'Neoclassicism', 'Holy Minimalism', 'Early Music', 'Choral', 'Sacred Music', 'Gregorian Chant', 'Opera', 'Operetta', 'Oratorio', 'Lieder', 'Art Song', 'Chamber Music', 'String Quartet', 'Symphony', 'Concerto', 'Solo Piano', 'Organ Music', 'Orchestral', 'Ballet', 'Electroacoustic', 'Microtonal', 'New Complexity', 'Post-Classical', 'Neo-Classical', 'Film Score']],
+  ['Experimental & Avant-Garde', ['Experimental', 'Avant-Garde', 'Musique Concrète', 'Electroacoustic', 'Sound Art', 'Sound Collage', 'Plunderphonics', 'Noise', 'Harsh Noise', 'Harsh Noise Wall', 'Power Electronics', 'Death Industrial', 'Industrial', 'Dark Ambient', 'Drone', 'Lowercase', 'Reductionism', 'Onkyo', 'Free Improvisation', 'Electroacoustic Improvisation', 'Field Recordings', 'Turntablism', 'Tape Music', 'Minimalism', 'Fluxus', 'Outsider Music', 'Spoken Word', 'Sound Poetry', 'Glitch', 'Deconstructed Club', 'Fourth World', 'Microsound', 'Totalism']],
+  ['Stage & Screen', ['Film Score', 'Soundtrack', 'Library Music', 'Musical Theatre', 'Broadway', 'Cast Recording', 'TV Themes', 'Video Game Music', 'Chiptune', 'Anime Soundtrack', 'Spaghetti Western', 'Giallo Soundtrack', 'Blaxploitation Soundtrack', 'Bollywood', 'Exotica', 'Lounge', 'Space Age Pop']],
+  ['Religious & New Age', ['New Age', 'Meditation Music', 'Celtic New Age', 'Gospel', 'Contemporary Christian', 'Praise & Worship', 'Christian Rock', 'Christian Hip Hop', 'Spirituals', 'Sacred Harp', 'Qawwali', 'Sufi Music', 'Kirtan', 'Bhajan', 'Devotional', 'Jewish Liturgical', 'Buddhist Chant', 'Gregorian Chant', 'Sacred Music']]
 ];
+const foldName = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+// Flat index of every genre and style with its path, for search boxes and the datalists
+function genreIndex() {
+  if (genreIndex.cache) return genreIndex.cache;
+  const out = []; const seen = new Set();
+  const walk = (children, path) => { for (const c of children) { const name = Array.isArray(c) ? c[0] : c; const kids = Array.isArray(c) ? c[1] : null; if (!seen.has(name)) { seen.add(name); out.push({ name, path: path.slice(), key: foldName(name) }); } if (kids) walk(kids, path.concat([name])); } };
+  walk(TAXONOMY, []);
+  return (genreIndex.cache = out);
+}
+const GENRE_NAMES = () => genreIndex().map(g => g.name);
 // Where a major genre's own page should point when its name isn't a Discogs style or genre.
-const GENRE_KEY = { Metal: 'Heavy Metal' };
+const GENRE_KEY = { Metal: 'Heavy Metal', 'R&B, Soul & Funk': 'Soul', 'Asian & Middle Eastern': 'Asian Music', 'European Folk & Song': 'European Folk', 'Experimental & Avant-Garde': 'Experimental', 'Religious & New Age': 'Devotional Music', 'Hip-Hop': 'Hip Hop' };
 let homeBrowse = ''; // which browse panel is open on Home ('' = none); kept for the session, not across reloads
 const AI_EXAMPLES = ['Hazy late-night dub-tinged post-punk with a female vocal', 'Spiritual jazz from the 70s that feels like a sunrise', 'Like the last two Talk Talk records, but made this decade', 'Warm, wordless music for cooking dinner on a Sunday', 'Brazilian records from the late 60s with strings and fuzz guitar', 'Country albums for a long drive at night'];
 function aiGo(text) { const t = (text || '').trim(); if (!t) { toast('Describe what you want to hear first'); return; } location.hash = '#/ai/' + encodeURIComponent(t); }
@@ -1277,21 +1340,6 @@ function pruneKeys(prefix, max) {
     if (keys.length <= max) return;
     keys.map(k => ({ k, t: (store.get(k, {}) || {}).t || 0 })).sort((a, b) => a.t - b.t).slice(0, keys.length - max).forEach(x => store.del(x.k));
   } catch (e) { }
-}
-function browseGenres() {
-  const host = el('div', { class: 'gtable' });
-  for (const [name, subs] of GENRE_TREE) {
-    const chips = el('div', { class: 'wrap' });
-    const LIMIT = 8;
-    const draw = (all) => {
-      chips.innerHTML = '';
-      for (const s of all ? subs : subs.slice(0, LIMIT)) chips.append(el('a', { class: 'tag soft', href: `#/genre/${encodeURIComponent(s)}` }, s));
-      if (!all && subs.length > LIMIT) chips.append(el('button', { type: 'button', class: 'tag', onclick: () => draw(true) }, `+${subs.length - LIMIT} more`));
-    };
-    draw(false);
-    host.append(el('div', { class: 'grow' }, el('a', { class: 'ghead', href: `#/genre/${encodeURIComponent(GENRE_KEY[name] || name)}` }, el('span', { text: name }), el('span', { class: 'mono', text: `${subs.length} styles` }), icon('chevron')), chips));
-  }
-  return host;
 }
 function browseMoods() {
   const host = el('div', { class: 'gtable' });
@@ -1401,10 +1449,9 @@ async function HomeView(rid) {
   const browsePanel = el('div', { class: 'browse', hidden: true });
   function drawBrowse() {
     browseSeg.innerHTML = '';
-    for (const [k, label] of [['genres', 'Genres'], ['moods', 'Moods'], ['ai', 'Ask'], ['find', 'Find']]) browseSeg.append(el('button', { type: 'button', class: homeBrowse === k ? 'on' : '', role: 'tab', 'aria-selected': String(homeBrowse === k), onclick: () => { homeBrowse = homeBrowse === k ? '' : k; drawBrowse(); if (homeBrowse === 'ai') setTimeout(() => { const i = browsePanel.querySelector('#aiq'); if (i) i.focus(); }, 50); } }, k === 'ai' ? icon('spark') : null, label));
+    for (const [k, label] of [['genres', 'Genres'], ['moods', 'Moods'], ['ai', 'Ask'], ['find', 'Find']]) browseSeg.append(el('button', { type: 'button', class: homeBrowse === k ? 'on' : '', role: 'tab', 'aria-selected': String(homeBrowse === k), onclick: () => { if (k === 'genres') { location.hash = '#/genres'; return; } homeBrowse = homeBrowse === k ? '' : k; drawBrowse(); if (homeBrowse === 'ai') setTimeout(() => { const i = browsePanel.querySelector('#aiq'); if (i) i.focus(); }, 50); } }, k === 'ai' ? icon('spark') : null, label));
     browsePanel.innerHTML = ''; browsePanel.hidden = !homeBrowse;
-    if (homeBrowse === 'genres') browsePanel.append(browseGenres());
-    else if (homeBrowse === 'moods') browsePanel.append(browseMoods());
+    if (homeBrowse === 'moods') browsePanel.append(browseMoods());
     else if (homeBrowse === 'ai') browsePanel.append(browseAsk());
     else if (homeBrowse === 'find') browsePanel.append(el('div', { class: 'stack', style: { gap: '12px', paddingTop: '4px' } }, el('div', { class: 'muted', style: { fontSize: '14px', lineHeight: 1.4 } }, 'Years, rating, genre, mood — any combination.'), findForm()));
   }
@@ -1940,6 +1987,51 @@ async function ArtistView(id, rid) {
 // ============================================================
 // Genre — essential artists and albums, plus everyone tagged with it
 // ============================================================
+// ============================================================
+// Genres — the whole taxonomy as an expandable, searchable tree
+// ============================================================
+const genresOpen = new Set(); // which branches are expanded (kept for the session)
+function GenresView(q0) {
+  setTop({ back: true, title: 'Genres' });
+  const idx = genreIndex();
+  const input = el('input', { id: 'gq', type: 'search', placeholder: 'Search genres and styles', autocomplete: 'off', autocapitalize: 'none', enterkeyhint: 'search', value: q0 || '', 'aria-label': 'Search genres' });
+  const field = el('div', { class: 'field' }, icon('search'), input, el('button', { class: 'iconbtn', 'aria-label': 'Clear', style: { width: '36px', height: '36px' }, onclick: () => { input.value = ''; render(); input.focus(); } }, icon('x')));
+  const tree = el('div', { class: 'gtree' });
+  view.append(el('div', { class: 'stack', style: { gap: '6px' } }, el('div', { class: 'eyebrow' }, 'Browse'), el('h1', { text: 'Genres' }), el('div', { class: 'mono' }, `${idx.length} genres and styles · tap a name to open its page, the arrow to expand`)), el('div', { style: { paddingTop: '12px' } }, field), tree);
+  const pageHref = (name) => `#/genre/${encodeURIComponent(GENRE_KEY[name] || name)}`;
+  const node = (entry, depth, path) => {
+    const name = Array.isArray(entry) ? entry[0] : entry; const kids = Array.isArray(entry) ? entry[1].filter(k => (Array.isArray(k) ? k[0] : k) !== name) : null; // a group's own name is covered by its header link
+    const key = path.concat([name]).join('>');
+    const row = el('div', { class: 'gnode d' + depth });
+    const link = el('a', { class: 'gname', href: pageHref(name) }, name);
+    if (kids) {
+      const open = genresOpen.has(key);
+      const count = (() => { let n = 0; const w = (c) => { for (const x of c) { n++; if (Array.isArray(x)) w(x[1]); } }; w(kids); return n; })();
+      const tog = el('button', { type: 'button', class: 'gtog', 'aria-expanded': String(open), 'aria-label': (open ? 'Collapse ' : 'Expand ') + name }, icon('chevron'));
+      const sub = el('div', { class: 'gkids', hidden: !open });
+      const fill = () => { if (sub.children.length) return; for (const k of kids) sub.append(node(k, depth + 1, path.concat([name]))); };
+      if (open) fill();
+      tog.addEventListener('click', () => { const now = !genresOpen.has(key); if (now) { genresOpen.add(key); fill(); } else genresOpen.delete(key); sub.hidden = !now; tog.setAttribute('aria-expanded', String(now)); row.classList.toggle('open', now); });
+      row.classList.toggle('open', open);
+      row.append(el('div', { class: 'grow2' }, tog, link, el('span', { class: 'mono', text: String(count) })), sub);
+    } else row.append(el('div', { class: 'grow2' }, el('span', { class: 'gdot' }), link));
+    return row;
+  };
+  const render = () => {
+    tree.innerHTML = '';
+    const q = foldName(input.value.trim());
+    if (!q) { for (const top of TAXONOMY) tree.append(node(top, 0, [])); return; }
+    const hits = idx.filter(g => g.key.includes(q));
+    if (!hits.length) { tree.append(el('div', { class: 'empty' }, `No genre called “${input.value.trim()}”. `, el('a', { class: 'link', href: `#/genre/${encodeURIComponent(input.value.trim())}` }, 'Open it as a page anyway →'))); return; }
+    hits.sort((a, b) => (a.key.startsWith(q) ? 0 : 1) - (b.key.startsWith(q) ? 0 : 1) || a.name.localeCompare(b.name));
+    tree.append(el('div', { class: 'mono', style: { padding: '4px 0 8px' } }, `${hits.length} match${hits.length === 1 ? '' : 'es'}`));
+    for (const h of hits.slice(0, 80)) tree.append(el('a', { class: 'item', href: pageHref(h.name), style: { minHeight: '48px', padding: '6px 0' } }, el('div', { class: 'main' }, el('div', { class: 't', text: h.name }), h.path.length ? el('div', { class: 's', text: h.path.join(' › ') }) : null), el('span', { class: 'arrow' }, icon('chevron'))));
+  };
+  input.addEventListener('input', render);
+  render();
+  if (!q0) setTimeout(() => input.focus(), 50);
+}
+
 // ============================================================
 // Genre and mood pages — Claude's editorial page: a short history, related names, key artists, and a grid of highlights
 // ============================================================
@@ -2673,7 +2765,7 @@ function findForm(initial) {
   const seg = el('div', { class: 'seg' });
   const drawSeg = () => { seg.innerHTML = ''; for (const [v, l] of FIND_RATINGS) seg.append(el('button', { type: 'button', class: f.min === v ? 'on' : '', onclick: () => { f.min = v; drawSeg(); } }, l)); };
   drawSeg();
-  const genreList = el('datalist', { id: 'genre-list' }, GENRE_TREE.flatMap(([g, subs]) => [g, ...subs]).map(n => el('option', { value: n })));
+  const genreList = el('datalist', { id: 'genre-list' }, GENRE_NAMES().map(n => el('option', { value: n })));
   const moodList = el('datalist', { id: 'mood-list' }, MOODS.flatMap(([, ws]) => ws).map(n => el('option', { value: n })));
   const genreIn = el('input', { type: 'text', class: 'fin', list: 'genre-list', placeholder: 'Any genre or style', value: f.genre, autocomplete: 'off', 'aria-label': 'Genre', oninput: (e) => { f.genre = e.target.value.trim(); } });
   const moodIn = el('input', { type: 'text', class: 'fin', list: 'mood-list', placeholder: 'Any mood', value: f.mood, autocomplete: 'off', 'aria-label': 'Mood', oninput: (e) => { f.mood = e.target.value.trim(); } });
