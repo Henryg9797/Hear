@@ -63,6 +63,10 @@ Each card has Hear on Spotify / Qobuz buttons and a Details link once the album 
 
 The Search tab's "Describe it" sends you to the same page when a key is set. Genre pages and the home spotlight have an "Ask Claude for deeper cuts" link that fills the question in for you.
 
+## Sample Search (the listening tool)
+
+Home → **Samples** reads the results of `tools/dig`, a small program for your computer that fetches free records from the Internet Archive by year and genre (the Great 78 Project, netlabels, the Live Music Archive), separates each into stems, finds every stretch where one instrument plays alone, and measures its key and tempo. Filter the passages by year, instrument, length and purity; tap one to open the record on archive.org at that timestamp; *Sampled?* asks Claude how heavily a record has been used. See `tools/dig/README.md` for install and use.
+
 ## Artist and genre pages
 
 An artist page opens with their photo and a short bio (from Wikipedia, with Discogs as a photo fallback when a token is set), their genres as tappable chips, and their releases as horizontal rows, AllMusic-style: **Albums** (studio and live), **Singles & EPs**, **Compilations**, oldest first, each cover with its star rating underneath.

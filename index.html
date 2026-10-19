@@ -370,7 +370,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { } }
 };
-const BUILD = 'v23'; // keep in step with VERSION in sw.js
+const BUILD = 'v24'; // keep in step with VERSION in sw.js
 const DEFAULTS = { discogsToken: '', discogsUser: '', discogsOk: null, source: 'auto', anthropicKey: '', model: 'claude-sonnet-5-5', autoEst: true, qobuzRegion: 'us-en', primary: 'spotify', theme: 'auto', showApple: true };
 let settings = Object.assign({}, DEFAULTS, store.get('hear.settings', {}));
 function saveSettings(patch) { settings = Object.assign({}, settings, patch); store.set('hear.settings', settings); applyTheme(); }
@@ -618,6 +618,7 @@ const SCHEMA = {
   // A second pass for a genre or mood page: more highlights beyond the ones already listed
   more: obj({ albums: { type: 'array', items: obj({ artist: { type: 'string' }, title: { type: 'string' }, year: { type: 'integer' }, rating: { type: 'number' }, verdict: { type: 'string' }, why: { type: 'string' } }, ['artist', 'title', 'year', 'rating', 'verdict', 'why']) } }, ['albums']),
   found: obj({ albums: { type: 'array', items: obj({ artist: { type: 'string' }, title: { type: 'string' }, year: { type: 'integer' }, label: { type: 'string' }, rating: { type: 'number' }, verdict: { type: 'string' }, why: { type: 'string' } }, ['artist', 'title', 'year', 'rating', 'verdict', 'why']) } }, ['albums']),
+  sampled: obj({ known: { type: 'string', enum: ['heavily', 'some', 'rarely', 'unknown'] }, note: { type: 'string' } }, ['known', 'note']),
   tags: obj({ genres: { type: 'array', items: { type: 'string' } }, styles: { type: 'array', items: { type: 'string' } } }, ['genres', 'styles']),
   albumTags: obj({ genres: { type: 'array', items: { type: 'string' } }, styles: { type: 'array', items: { type: 'string' } }, moods: { type: 'array', items: { type: 'string' } }, blurb: { type: 'string' } }, ['genres', 'styles', 'moods', 'blurb'])
 };
@@ -1235,6 +1236,7 @@ async function route() {
       case 'genre': await (settings.anthropicKey ? CollectionView('genre', parts.slice(1).join('/'), rid) : GenreView(parts.slice(1).join('/'), rid)); break;
       case 'mood': await CollectionView('mood', parts.slice(1).join('/'), rid); break;
       case 'genres': GenresView(parts.slice(1).join('/')); break;
+      case 'samples': SamplesView(rid); break;
       case 'search': SearchView(parts[1]); break;
       case 'ai': await AIView(parts.slice(1).join('/'), rid); break;
       case 'find': await FindView(parts.slice(1).join('/'), rid); break;
@@ -1460,7 +1462,7 @@ async function HomeView(rid) {
   const browsePanel = el('div', { class: 'browse', hidden: true });
   function drawBrowse() {
     browseSeg.innerHTML = '';
-    for (const [k, label] of [['genres', 'Genres'], ['moods', 'Moods'], ['ai', 'Ask'], ['find', 'Find']]) browseSeg.append(el('button', { type: 'button', class: homeBrowse === k ? 'on' : '', role: 'tab', 'aria-selected': String(homeBrowse === k), onclick: () => { if (k === 'genres') { location.hash = '#/genres'; return; } homeBrowse = homeBrowse === k ? '' : k; drawBrowse(); if (homeBrowse === 'ai') setTimeout(() => { const i = browsePanel.querySelector('#aiq'); if (i) i.focus(); }, 50); } }, k === 'ai' ? icon('spark') : null, label));
+    for (const [k, label] of [['genres', 'Genres'], ['moods', 'Moods'], ['ai', 'Ask'], ['find', 'Find'], ['samples', 'Samples']]) browseSeg.append(el('button', { type: 'button', class: homeBrowse === k ? 'on' : '', role: 'tab', 'aria-selected': String(homeBrowse === k), onclick: () => { if (k === 'genres' || k === 'samples') { location.hash = '#/' + k; return; } homeBrowse = homeBrowse === k ? '' : k; drawBrowse(); if (homeBrowse === 'ai') setTimeout(() => { const i = browsePanel.querySelector('#aiq'); if (i) i.focus(); }, 50); } }, k === 'ai' ? icon('spark') : null, label));
     browsePanel.innerHTML = ''; browsePanel.hidden = !homeBrowse;
     if (homeBrowse === 'moods') browsePanel.append(browseMoods());
     else if (homeBrowse === 'ai') browsePanel.append(browseAsk());
@@ -2243,6 +2245,99 @@ async function GenreView(name, rid) {
       if (DG.on()) (async () => { for (const a of as) { if (a.id) continue; const hit = await resolveArtist(a.name); if (rid !== routeSeq) return; if (hit) { a.id = hit.id; a.img = hit.img; const old = [...list.children].find(r => r.querySelector('.t') && r.querySelector('.t').textContent === a.name); if (old) old.replaceWith(artistRow(a)); } } })();
     } catch (e) { if (e.message === 'stale') return; const ld = moreSec.querySelector('.loading'); if (ld) ld.replaceWith(el('div', { class: 'muted', style: { fontSize: '13px' } }, "Couldn't load: " + e.message)); }
   })();
+}
+// ============================================================
+// Sample Search — reads the results file written by tools/dig (the listening tool): isolated instrument passages
+// found by scanning audio, with the key and tempo of each. Filter by year, instrument, length and purity.
+// ============================================================
+const Dig = {
+  key: 'hear.dig', mem: null,
+  load() { if (this.mem) return this.mem; this.mem = store.get(this.key, null); return this.mem; },
+  set(d) { this.mem = d; const s = JSON.stringify(d); if (s.length < 3.5e6) store.set(this.key, d); else { store.del(this.key); toast('Results kept for this visit only (file too big to remember)'); } },
+  clear() { this.mem = null; store.del(this.key); }
+};
+const fmtClock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+function SamplesView(rid) {
+  setTop({ back: true, title: 'Sample Search' });
+  const f = Object.assign({ from: 0, to: 0, inst: '', min: 2, clean: false, q: '', sort: 'length' }, store.get('hear.dig.filters', {}));
+  const head = el('div', { class: 'stack', style: { gap: '6px' } }, el('div', { class: 'eyebrow' }, 'Listening tool'), el('h1', { text: 'Sample Search' }));
+  const intro = el('div', { class: 'muted', style: { fontSize: '14px', lineHeight: 1.45 } }, 'Isolated drums, bass, keys, horns and vocals found by scanning audio with the dig tool — with the key and tempo of each passage. ', el('a', { class: 'link', href: 'https://github.com/Henryg9797/Hear/tree/main/tools/dig', target: '_blank', rel: 'noopener' }, 'How to run a scan ↗'));
+  const status = el('div', { class: 'row', style: { gap: '10px', flexWrap: 'wrap', alignItems: 'center' } });
+  const file = el('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' }, onchange: async (e) => { const fl = e.target.files[0]; if (!fl) return; try { const d = JSON.parse(await fl.text()); if (!d || !Array.isArray(d.tracks)) throw new Error('not a dig results file'); Dig.set(d); toast(`${d.tracks.length} tracks loaded`); draw(); } catch (err) { toast("Couldn't read that file: " + err.message, 6000); } } });
+  const filters = el('div', { class: 'stack', style: { gap: '10px' } });
+  const list = el('div', { class: 'list' });
+  const summary = el('div', { class: 'mono' });
+  view.append(head, el('div', { style: { paddingTop: '8px' } }, intro), el('div', { style: { paddingTop: '14px' } }, status), file, el('div', { style: { paddingTop: '14px' } }, filters), el('div', { class: 'sechead', style: { paddingTop: '18px' } }, el('div', { class: 'eyebrow' }, 'Passages'), summary), list);
+  const save = () => store.set('hear.dig.filters', f);
+  function drawFilters(d) {
+    filters.innerHTML = '';
+    const insts = [...new Set(d.tracks.flatMap(t => t.segments.map(s => s.stem)))].sort();
+    const label = { drums: 'Drums', bass: 'Bass', vocals: 'Vocals', guitar: 'Guitar', piano: 'Piano / keys', other: 'Other (horns, strings, synths)' };
+    const num = (key, ph) => el('input', { type: 'number', inputmode: 'numeric', min: '1890', max: String(new Date().getFullYear()), placeholder: ph, value: f[key] || '', 'aria-label': ph, class: 'fin', oninput: (e) => { f[key] = +e.target.value || 0; save(); drawList(); } });
+    const inst = el('div', { class: 'chips' });
+    for (const [k, l] of [['', 'Any instrument']].concat(insts.map(i => [i, label[i] || i]))) inst.append(el('button', { type: 'button', class: 'chip' + (f.inst === k ? ' on' : ''), onclick: () => { f.inst = k; save(); drawFilters(d); drawList(); } }, l));
+    const seg = el('div', { class: 'seg', role: 'tablist' });
+    for (const [v, l] of [[2, '2 s+'], [4, '4 s+'], [8, '8 s+'], [16, '16 s+']]) seg.append(el('button', { type: 'button', class: f.min === v ? 'on' : '', onclick: () => { f.min = v; save(); drawFilters(d); drawList(); } }, l));
+    const clean = el('button', { type: 'button', class: 'chip' + (f.clean ? ' on' : ''), onclick: () => { f.clean = !f.clean; save(); drawFilters(d); drawList(); } }, 'Clean only');
+    const sort = el('button', { type: 'button', class: 'chip', onclick: () => { f.sort = f.sort === 'length' ? 'year' : f.sort === 'year' ? 'tempo' : 'length'; save(); drawFilters(d); drawList(); } }, 'Sort: ' + { length: 'longest first', year: 'oldest first', tempo: 'slowest first' }[f.sort]);
+    const q = el('input', { type: 'search', class: 'fin', placeholder: 'Artist, title or key (e.g. F minor)', value: f.q, oninput: (e) => { f.q = e.target.value.trim(); save(); drawList(); } });
+    filters.append(el('div', { class: 'row', style: { gap: '8px' } }, num('from', 'From year'), el('span', { class: 'mono' }, '–'), num('to', 'To year')), inst, seg, el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap' } }, clean, sort), q);
+  }
+  function rows(d) {
+    const out = [];
+    const ql = f.q.toLowerCase();
+    for (const t of d.tracks) {
+      const y = +t.year || 0;
+      if (f.from && y && y < f.from) continue; if (f.to && y && y > f.to) continue;
+      const textHit = !ql || `${t.artist} ${t.title} ${t.album}`.toLowerCase().includes(ql);
+      for (const s of t.segments) {
+        if (!textHit && (s.key || '').toLowerCase() !== ql) continue;
+        if (f.inst && s.stem !== f.inst) continue; if (s.seconds < f.min) continue; if (f.clean && s.tier !== 'clean') continue;
+        out.push({ t, s });
+      }
+    }
+    out.sort((a, b) => f.sort === 'year' ? ((+a.t.year || 9999) - (+b.t.year || 9999)) || b.s.seconds - a.s.seconds : f.sort === 'tempo' ? ((a.s.tempo || 999) - (b.s.tempo || 999)) : b.s.seconds - a.s.seconds);
+    return out;
+  }
+  function row({ t, s }) {
+    const where = s.whole ? 'Whole track' : `${fmtClock(s.start)}–${fmtClock(s.end)}`;
+    const href = t.url ? `${t.url}${t.url.includes('?') ? '&' : '?'}start=${Math.max(0, Math.floor(s.start))}` : '';
+    const r = el(href ? 'a' : 'div', Object.assign({ class: 'item', style: { alignItems: 'flex-start' } }, href ? { href, target: '_blank', rel: 'noopener' } : {}),
+      el('div', { class: 'main' }, el('div', { class: 't', text: t.title || t.file.split(/[\\/]/).pop() }), el('div', { class: 's', text: [t.artist, t.year, s.instrument].filter(Boolean).join(' · ') }),
+        el('div', { class: 'row', style: { gap: '10px', flexWrap: 'wrap', paddingTop: '4px' } }, el('span', { class: 'mono', style: { color: 'var(--ink)' } }, where), el('span', { class: 'mono' }, `${s.seconds} s`), s.key ? el('span', { class: 'mono' }, s.key + (s.keyConf < 0.4 ? '?' : '')) : null, s.tempo ? el('span', { class: 'mono' }, `${Math.round(s.tempo)} bpm` + (s.tempoConf < 0.4 ? '?' : '')) : null, s.tier !== 'clean' ? el('span', { class: 'mono' }, 'mostly isolated') : null)),
+      sampledBtn(t), href ? el('span', { class: 'arrow' }, icon('ext')) : null);
+    return r;
+  }
+  // "Sampled?" — Claude's knowledge of how heavily this record has been sampled (famous records only; obscure ones come back "unknown")
+  function sampledBtn(t) {
+    if (!settings.anthropicKey || !t.artist || !t.title) return null;
+    const key = 'hear.sampled.' + hashKey(`${t.artist}|${t.title}`); const c = store.get(key, null);
+    const paint = (b, r) => { b.replaceWith(el('span', { class: 'mono', title: r.note, style: { flexShrink: 0, maxWidth: '96px', textAlign: 'right', color: r.known === 'heavily' ? 'var(--accent)' : 'var(--muted)' } }, { heavily: 'sampled a lot', some: 'sampled some', rarely: 'rarely sampled', unknown: 'no known samples' }[r.known])); };
+    const b = el('button', { type: 'button', class: 'chip', style: { height: '30px', fontSize: '12px' }, onclick: async (e) => { e.preventDefault(); e.stopPropagation(); b.disabled = true; b.textContent = '…'; try { const r = await askJSON(`Record: ${t.artist} — ${t.title}${t.year ? ' (' + t.year + ')' : ''}. From what you know of sample databases and hip-hop/electronic production history, how heavily has this recording been sampled? "known": heavily (a well-known break or sample source), some (a handful of documented uses), rarely (one or two obscure uses), or unknown (you know of none — the default for obscure records; never guess). "note": one short sentence, naming the best-known use if any.`, SCHEMA.sampled, 1200, { effort: 'low' }); const d = { t: Date.now(), known: r.known || 'unknown', note: String(r.note || '') }; store.set(key, d); paint(b, d); } catch (err) { b.disabled = false; b.textContent = 'Sampled?'; toast(err.message); } } }, 'Sampled?');
+    if (c) { const span = el('span'); setTimeout(() => paint(span, c), 0); return span; }
+    return b;
+  }
+  function drawList() {
+    const d = Dig.load(); list.innerHTML = '';
+    if (!d) { summary.textContent = ''; return; }
+    const rs = rows(d);
+    summary.textContent = `${rs.length} of ${d.tracks.reduce((n, t) => n + t.segments.length, 0)}`;
+    if (!rs.length) { list.append(el('div', { class: 'empty' }, 'Nothing matches these filters.')); return; }
+    const page = rs.slice(0, 200); for (const r of page) list.append(row(r));
+    if (rs.length > page.length) list.append(el('div', { class: 'muted', style: { fontSize: '13px', padding: '12px 0' } }, `Showing the first ${page.length}. Narrow the filters to see the rest.`));
+  }
+  function draw() {
+    if (rid !== routeSeq) return;
+    const d = Dig.load(); status.innerHTML = '';
+    if (!d) {
+      status.append(el('div', { class: 'notice' }, el('div', { style: { fontWeight: 700, paddingBottom: '4px' } }, 'No scan loaded yet'), 'Run the dig tool on a computer (it downloads free records from the Internet Archive and listens through them), then load the results file it writes here.', el('div', { style: { paddingTop: '10px' } }, el('button', { class: 'btn sm primary', onclick: () => file.click() }, 'Load results file'))));
+      filters.innerHTML = ''; drawList(); return;
+    }
+    const n = d.tracks.reduce((a, t) => a + t.segments.length, 0);
+    status.append(el('div', { class: 'mono', style: { flex: 1 } }, `${d.tracks.length} tracks · ${n} passages · scanned ${(d.generated || '').slice(0, 10)}`), el('button', { class: 'btn sm quiet', onclick: () => file.click() }, 'Load another'), el('button', { class: 'btn sm quiet', onclick: () => { Dig.clear(); draw(); } }, 'Clear'));
+    drawFilters(d); drawList();
+  }
+  draw();
 }
 async function resolveArtist(name) {
   try {
